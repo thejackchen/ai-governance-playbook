@@ -108,6 +108,8 @@
 
 8. **知识由 AI 编译，而非人工整理**：⚠️ 知识库由 AI 在 ingest 时**自主编译生长**（非人工归档）、**面向 AI 消费**（宁全勿简），人只输入 + 决策。最大的坑是把「精简到人脑可记忆」套到知识库——恰与 Karpathy LLM wiki 原意**相反**（人管的部分才精简，KB 内容宁全勿简）；另一个坑是讨论「沉淀机制」的会话本身零沉淀（靠记得必漏，编译要上关键路径）。详见 [`principles/knowledge-compiled-by-ai.md`](principles/knowledge-compiled-by-ai.md)。
 
+9. **声明式解析优于缓存状态**：⚠️「有 X 用 X 否则用 Y」的决策，声明成 fallback 链 + **读时解析**，别预存「赢家」再同步——写时缓存的隐藏成本是失效（数据变要重算、漏则 stale、重算有 bug：曾把高优先级值翻回低优先级）。读时解析没有「赢家状态」，数据变下次读自动反映、零同步。软工对应「物化视图 vs 视图」，电商对应「SKU 图 ?? 系列图 / 促销价 ?? 原价」。详见 [`principles/declarative-resolve-over-cached-state.md`](principles/declarative-resolve-over-cached-state.md)。
+
 ---
 
 ## 6. 核心机制
