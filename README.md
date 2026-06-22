@@ -9,13 +9,13 @@
 
 > **「读 setup.md，为本项目建立治理体系。」**
 
-AI 会**强制建出**：`CONSTITUTION.md`（北极星）+ `AGENTS.md`（工作规则全集）+ `CLAUDE.md`（启动入口 + 行为铁律）+ `PROJECT.md`（当前坐标），项目大了再加 ROADMAP / CHANGELOG / lint。**建完你项目就有了和本库参考体系一样的治理骨架。**
+AI 会**强制建出**：`CONSTITUTION.md`（北极星）+ `AGENTS.md`（工作规则全集）+ `CLAUDE.md`（启动入口 + 行为铁律）+ **状态线**（单线 `PROJECT.md` 当前坐标 / 多线并行 `ROADMAP.md` 当前游标 + 多线工作台），项目大了再加 CHANGELOG / lint（执行底座四点齐 + hook 随 clone）。**建完你项目就有了和本库参考体系一样的治理骨架。**
 
 ⚠️ `setup.md` 是**安装脚本**（建完使命完成）；建出来的那几个文件才是**常驻治理产物**——别搞混（这正是本库踩过、并写进反模式的「安装 vs 产物」角色混淆坑）。
 
 ## 想懂背后为什么
 
-读 [`governance-architecture-essence.md`](governance-architecture-essence.md)——完整方法论：三线一底座 + 9 条治理定律（每条带踩坑 why）+ 核心机制 + 反模式。**给人理解；AI 安装只需 `setup.md`。**
+读 [`governance-architecture-essence.md`](governance-architecture-essence.md)——完整方法论：三线一底座 + 11 条治理定律（每条带踩坑 why）+ 核心机制 + 反模式。**给人理解；AI 安装只需 `setup.md`。**
 
 ## 结构（就 3 样）
 

@@ -24,19 +24,23 @@
 
 ### ③ `CLAUDE.md` — Claude Code 启动入口 + 行为铁律
 必须含：
-- **启动顺序**：CONSTITUTION → AGENTS → 知识索引 → PROJECT。
+- **启动顺序**：CONSTITUTION → AGENTS → 知识索引 → 状态线（单线 `PROJECT` / 多线 `ROADMAP` 当前游标 + 对应线）。
 - **5 条工作铁律**：① 动手前核实（有成本操作前三问：做过没/真状态/权威记录，过不了不动手）② 简洁防过度 ③ 精准修改（只动任务相关）④ 目标驱动（先定成功标准）⑤ 验证后宣称（实证，别拿残缺信息下结论）。
 
-### ④ `PROJECT.md` — 当前坐标（≤30 行）
-必须含：当前阶段（一句话）· 当前焦点 · 指针（链向其他治理文件）。
+### ④ 状态线 — 当前坐标（按项目并行度选形态）
+- **单线 / 早期 → 建 `PROJECT.md`**（≤30 行）：当前阶段（一句话）· 当前焦点 · 指针（链向其他治理文件）。
+- **多线并行**（同时推进多个长期方向）→ 别用单焦点 PROJECT，直接建 `ROADMAP.md` **多线工作台** = 顶部「当前游标」（≤3 行，此刻在哪条线）+ 每条线一块（状态 / 下一步 / 开放问题 / 指针）+ 折叠区。⚠️ 多线项目用单焦点 PROJECT 必漂（切线即过期），见 essence §2。**单线起步、长出多线时再把 PROJECT 并入 ROADMAP 升级。**
 
 ### 项目变大后再建（多人 / 多模块 / 决策频繁 / 跨多会话）
-- `ROADMAP.md`（主线表 + 开放问题）· `CHANGELOG.md`（事件流水，每轮追加）· **lint 门禁**（断链 / 行数 / 状态新鲜度——让机器强制，纯自觉必衰减）。
+- `ROADMAP.md`——单线时是主线表 + 开放问题；**多线并行时升级成多线工作台**（当前游标 + 每线块 + 折叠区，PROJECT 并入废除，见 essence §2）。
+- `CHANGELOG.md`（事件流水，每轮追加）。
+- **lint 门禁 + 执行底座「四点齐」**：lint 查（断链 / 行数 / 状态新鲜度 / 控制点注册表 / 当前游标段存在）；执行点要 **pre-commit + CI + 每轮 Stop hook + 季审 cron** 缺一不可，且 **hook 随 clone 生效**（`.githooks/` 版本化 + `package.json` 的 `prepare` 在 `npm install` 时自动 `git config core.hooksPath .githooks`）。⚠️ 纯自觉必衰减、hook 不随 clone = 没装，见 essence §3。
+- **跨工具同源**：Claude 读 `CLAUDE.md`、Codex 读 `AGENTS.md`——用 `@AGENTS.md` 导入或双文件同内容指向同一规则；各工具的 Stop hook 跑**同一个 lint 脚本**。
 
 ---
 
 ## 建完之后（常驻运转，写进上面的 AGENTS.md）
 
-- 每次启动：读 CLAUDE.md → CONSTITUTION → AGENTS → PROJECT。
-- 每轮结束：更新 PROJECT 焦点 + CHANGELOG 追加一行。
+- 每次启动：读 CLAUDE.md → CONSTITUTION → AGENTS → 状态线（单线 PROJECT / 多线 ROADMAP 当前游标 + 对应线）。
+- 每轮结束：更新 状态线（PROJECT 焦点 / 多线 ROADMAP 当前游标 + 对应线状态）+ CHANGELOG 追加一行。
 - 想懂这些规则背后的「为什么」（定律 / 机制 / 踩坑）：读同库 [`governance-architecture-essence.md`](governance-architecture-essence.md)（给人理解，AI 安装只需本文件）。
