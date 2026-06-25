@@ -11,16 +11,19 @@
 
 AI 会按四原理为你**强制建出**：`CONSTITUTION.md`（北极星 · 不变原理）+ `AGENTS.md`（给 AI 的接手主入口）+ `CLAUDE.md`（Claude 入口，import AGENTS）+ **工作台**（当前坐标 / 多线游标）+ 事件驱动的 lint 门禁与 evals 考试 + 验收套件。**建完你项目就有了和本库母版同构的精简治理骨架。**
 
+**更快**：直接复制 [`templates/`](templates/) 里的现成占位骨架到你项目根、填掉 `{占位}`（见 [`templates/README.md`](templates/README.md)）——这是一套首跑 `lint` 即 0 error 的完整最小治理项目。`setup.md` 讲「每块**为什么**这么建」，`templates/` 给「现成的那一块」。
+
 ⚠️ `setup.md` 是**安装脚本**（建完使命完成）；建出来的那几个文件才是**常驻治理产物**——别搞混（这正是母版踩过、并写进反模式的「安装 vs 产物」角色混淆坑）。
 
 ## 想懂背后为什么
 
 读 [`governance-architecture-essence.md`](governance-architecture-essence.md)——完整方法论：总纲 + 四条不变原理（每条带踩坑 why 与业内佐证）+ 核心机制 + 反模式 + 演化故事。**给人理解；AI 安装只读 `setup.md`。**
 
-## 结构（就 3 块）
+## 结构
 
 ```
 setup.md                            ★ 安装：给 AI 的安装指令（建出完整治理）← 交给你项目的 AI
+templates/                          ★ 现成占位骨架：复制到你项目填空即用（首跑 lint 0 error）
 governance-architecture-essence.md  方法论：为什么这么建（成本观 + 四原理 + 为 AI 写 + 演化故事）
 acceptance-test.md                  验收套件：用 AI 验 AI，端到端回归标准
 README.md                           本文（导航）

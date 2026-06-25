@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# pre-commit hook：治理 lint 真门禁。
+# 版本化随 clone 生效（core.hooksPath=.githooks，由 package.json 的 prepare 在 npm install 时配置）。
+# 单一信源：直接调 knowledge-lint（阈值/路径只在该脚本里定义一次，此处不重抄）。
+# pre-commit 是提交前真门禁；CI（push 后）只是事后审计 + 留痕。
+# 紧急可用 --no-verify 绕过，但宪法铁律要求 AI 不主动绕过。
+
+set -e
+
+if command -v npx >/dev/null 2>&1; then
+  echo "🔍 治理 lint（pre-commit 真门禁）..."
+  npx tsx scripts/knowledge-lint.ts
+  echo "✅ 治理 lint 通过"
+else
+  echo "⚠️  未找到 npx/node，跳过治理 lint（CI 会兜底）。装 node 后 pre-commit 才是真门禁。"
+fi
