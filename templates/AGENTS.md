@@ -34,7 +34,7 @@
 | 内容 | 去哪 |
 |---|---|
 | 需求 / 任务 | [{需求清单文件}](docs/requirements/backlog.md) |
-| 已定决策 | {决策目录}（用户拍 + INDEX 登记） |
+| 已定决策 | [docs/decisions/](docs/decisions/INDEX.md)（用户拍 + INDEX 登记） |
 | 领域 / 品牌 / 数据源事实 | {知识库目录}/（归口见 index） |
 | 踩坑 / 洞察 | {知识库目录}/insights/ |
 | 历史事件 | [CHANGELOG.md](CHANGELOG.md) |

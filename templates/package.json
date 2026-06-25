@@ -1,8 +1,10 @@
 {
-  "_comment": "骨架示例——别整体覆盖你项目已有的 package.json，只把下面 scripts.prepare、scripts.lint 和三个 devDependencies 合并进去。prepare 让 git hooksPath 在 npm install 时自动指向版本化的 .githooks/；否则 hook 不随 clone 生效 = 等于没装门禁（这是必须项，不是可选）。",
+  "_comment": "两种用法：① 全新项目——把 name 改掉直接用本文件。② 已有 package.json——别覆盖，只把 scripts.prepare、scripts['lint:governance'] 和三个 devDependencies 合并进你的文件。prepare 让 git hooksPath 在 npm install 时自动指向 .githooks/，否则 hook 不随 clone 生效=等于没装门禁（必须项）。lint 脚本特意叫 lint:governance，避开框架自带的 lint（eslint / next lint）。",
+  "name": "your-project-name",
+  "private": true,
   "scripts": {
     "prepare": "git config core.hooksPath .githooks || true",
-    "lint": "tsx scripts/knowledge-lint.ts"
+    "lint:governance": "tsx scripts/knowledge-lint.ts"
   },
   "devDependencies": {
     "@types/node": "^20",
