@@ -26,8 +26,15 @@ setup.md                            ★ 安装：给 AI 的安装指令（建出
 templates/                          ★ 现成占位骨架：复制到你项目填空即用（首跑 lint 0 error）
 governance-architecture-essence.md  方法论：为什么这么建（成本观 + 四原理 + 为 AI 写 + 演化故事）
 acceptance-test.md                  验收套件：用 AI 验 AI，端到端回归标准
+SELF-CHECK.md                       自检：建完怎么验它行不行（机器查门槛 + 考新 AI 体检）
+MIGRATION.md                        老项目怎么对齐（先砍后补、菜单不是清单）
 README.md                           本文（导航）
 ```
+
+## 建完之后 · 老项目对齐
+
+- **建完怎么验它行不行** → [SELF-CHECK.md](SELF-CHECK.md)：机器查当硬门槛、考新 AI 当体检报告（**不打分判达标**，只告诉你哪块没写清）。
+- **已有项目（有 / 无 / 差的治理）怎么对齐** → [MIGRATION.md](MIGRATION.md)：**先砍后补、少而够用**，`templates/` 是取用菜单不是合规清单。
 
 ## 核心（这套东西的内核）
 

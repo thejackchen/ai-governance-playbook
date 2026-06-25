@@ -3,7 +3,7 @@
 > lint 验文件结构（确定性），本题库验 **AI 行为遵从**（概率性）——架构里唯一能测「模型换代鲁棒性」和「自觉级规则衰减」的仪器，也是 [治理自纠](governance-self-correction.md) 的「发现」环。
 > 本题库 = [治理验收套件](governance-acceptance-test.md) 的「接手+理解」轻量子集（日常 / 换模型时跑）；治理大改后跑完整端到端回归见该套件。
 > **触发点**：大改治理 / 模型换代 / 主力工具更换时跑（不排期季审）。
-> **执行方式**：起一个**无本会话记忆的冷上下文 agent**，只许读治理文件（CONSTITUTION / AGENTS + 启动读序指向的 cold-start-onboarding / execution-discipline / governance-self-correction），逐题作答。**≥8/10 通过**；连续两题失败的领域 = 那块的承载文件失效，**修文件不修答案**。冷启动可干活题须 {主力 AI 工具，如 CodeX} + 清空记忆 {另一主力 AI，如 Claude} 各跑一遍。
+> **执行方式**：起一个**无本会话记忆的冷上下文 agent**，只许读治理文件（CONSTITUTION / AGENTS + 启动读序指向的 cold-start-onboarding / execution-discipline / governance-self-correction），逐题作答。这是**体检不是考试**——产出是「哪块承载文件没写清」、不是达标分数：**连续两题同领域答不出 = 那块文件失效，去改那个文件（修文件不修答案）**。（低于约 8/10 只是「该回头看看」的粗略信号，不是「不及格」判决——冷启动答题有方差，别拿一个分数当门禁。）冷启动可干活题须 {主力 AI 工具，如 CodeX} + 清空记忆 {另一主力 AI，如 Claude} 各跑一遍。
 
 > **第 9–12 题（项目特定）填法**：从你项目 `KNOWLEDGE_BASE/insights/` 踩坑页 + 与用户磨合出的协作偏好里挑**真实发生过**的场景——别编。素材不够就先留前 8 题、随积累再补；这 4 题是 evals 测「AI 行为遵从」最有价值的部分，填废话等于没测。
 
