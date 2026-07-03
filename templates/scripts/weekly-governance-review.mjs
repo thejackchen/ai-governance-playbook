@@ -73,6 +73,8 @@ const registry = read(REGISTRY_FILE);
 const ruleCount = (registry.match(/^\| R\d+ /gm) || []).length;
 const genMatch = registry.match(/当前执行者代际[::]\s*([^((\n]+)[((](?:登记\s*)?(\d{4}-\d{2}-\d{2})/);
 const generation = genMatch ? { id: genMatch[1].trim(), since: genMatch[2] } : null;
+const baseMatch = registry.match(/治理基版[::]\s*([^((\n]+)[((](?:登记\s*)?(\d{4}-\d{2}-\d{2})/);
+const baseVer = baseMatch ? { id: baseMatch[1].trim(), since: baseMatch[2] } : null;
 // 复审清单:解析规则表行,列出指定频率的条目(季初列「季」,年初再加「年」)
 const reviewDue = [];
 if (isQuarterly) {
@@ -99,7 +101,7 @@ ${openIncidents.map((x) => `  - [${x.date}] ${x.brief}…`).join("\n")}
 - ${flag(weekEntries === 0, `回路活性:近 7 天 CHANGELOG **${weekEntries} 条** / commit **${weekCommits}** 个(连续为 0 = 回路停转或记录纪律死了)`)}
 - ${constitutionAge === null ? `⚠️ 宪法(${CONSTITUTION_FILE})尚无 commit 记录(首次安装属正常;入库后此项开始计年龄)` : flag(constitutionAge > 30, `意图纲领:宪法上次改动 **${constitutionAge} 天前**(${constitutionTouched})——超过 30 天该自问:纲领还反映负责人的真实想法吗?`)}
 - ${flag(ruleCount >= 30, `规则台账:**${ruleCount}/30**(触顶必须先删后加)`)}
-- ${generation ? flag(false, `执行者代际:**${generation.id}**(登记 ${generation.since},${daysSince(generation.since)} 天)——如已换用更强模型,更新 registry 登记行并触发 \`[cap]\` 清仓审查`) : "⚠️ registry 未登记执行者代际(换代清仓失去传感器)"}${
+- ${generation ? flag(false, `执行者代际:**${generation.id}**(登记 ${generation.since},${daysSince(generation.since)} 天)——如已换用更强模型,更新 registry 登记行并触发 \`[cap]\` 清仓审查`) : "⚠️ registry 未登记执行者代际(换代清仓失去传感器)"}\n- ${baseVer ? flag(false, `治理基版:**${baseVer.id}**(登记 ${baseVer.since},${daysSince(baseVer.since)} 天)——上游新版比对由 AI 审计执行`) : "⚠️ registry 未登记治理基版(上游回流/升级失去锚点)"}${
   isMonthly ? `
 
 ### 📅 本期附加 · 月度腐烂审计(任务书,交给一个全新 session 执行)

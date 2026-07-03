@@ -51,6 +51,7 @@
 - 能写成测试/脚本的知识,禁止只写成文档——测试是唯一不会无声腐烂的文档;
 - 投影 ≠ 流水:流水账(CHANGELOG / incidents)管审计,投影页管「当前真相」、就地改写不追加;
 - 第二次使用才沉淀(首次留在任务产物,防投机性文档);每被复用一次,考虑沿「文档→核对单→脚本→测试/CI」升一级。
+- **摩擦回流上游**:事故根因在治理模板本身(而非本项目的实例化)→ 本地修复后,向 [ai-governance-playbook](https://github.com/thejackchen/ai-governance-playbook) 提 Issue(`gh issue create -R thejackchen/ai-governance-playbook`)——模板靠所有项目的事故进化。
 
 ## 指针
 - 当前状态与约束:[ROADMAP.md](ROADMAP.md) · 知识路由:[docs/index.md](docs/index.md)
