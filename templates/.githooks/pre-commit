@@ -26,3 +26,8 @@ if ! {治理 lint 命令,如 node scripts/governance-lint.mjs}; then
 fi
 
 echo "[pre-commit] 全部门禁通过"
+
+# ── 能力清单保鲜(代码即注册表;没装该机制可删本段) ──
+if [ -f scripts/generate-capabilities.mjs ]; then
+  node scripts/generate-capabilities.mjs --check || { echo "[pre-commit] 跑 node scripts/generate-capabilities.mjs 后再提交" >&2; exit 1; }
+fi

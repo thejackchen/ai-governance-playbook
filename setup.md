@@ -60,6 +60,11 @@
 - GitHub 项目 → 复制 `templates/.github/workflows/weekly-governance.yml`(每周 cron 开 Issue;配置 `ANTHROPIC_API_KEY` secret 后 AI 判断层自动启用,未配则优雅降级——把"配 key 可启用 AI 审计"写进交付报告)。非 GitHub → 用你环境的定时器(CI schedule / 本地 cron)达成同等效果,并在 registry 如实登记载体。
 - ✅ 验收:本地跑一次生成器,输出对账包;用日期参数(`GOV_REVIEW_DATE=下月第一个周一`)验证月度附加段出现。
 
+### 1.6 能力清单(代码即注册表,防跨 session 重复实现)
+- 复制 `templates/scripts/generate-capabilities.mjs`,顶部 SCAN_DIRS 按项目目录改;首跑生成 `docs/capabilities.md`,登记进 docs/index.md 路由。
+- pre-commit 与 CI 各挂一步 `node scripts/generate-capabilities.mjs --check`(漂移即拦)。宪法骨架已含「写新功能前先查清单」行。
+- ✅ 验收:清单已生成且 `--check` 通过;故意给任一导出改名后 `--check` 变红(测完还原)。
+
 ## 第 2 步:首任务演练(安装的冒烟测试)
 
 用一个真实的小任务(哪怕只是修 README 一处错误)走完全流程:任务契约三行 → 执行 → 附证据宣称 → landing 五步 → 提交。
