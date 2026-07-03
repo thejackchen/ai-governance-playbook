@@ -71,7 +71,7 @@ const constitutionAge = constitutionTouched ? daysSince(constitutionTouched) : n
 // ── ⑤ registry 预算 + 执行者代际 + 复审清单 ──
 const registry = read(REGISTRY_FILE);
 const ruleCount = (registry.match(/^\| R\d+ /gm) || []).length;
-const genMatch = registry.match(/当前执行者代际[::]\s*([^(\n]+)\((?:登记\s*)?(\d{4}-\d{2}-\d{2})/);
+const genMatch = registry.match(/当前执行者代际[::]\s*([^((\n]+)[((](?:登记\s*)?(\d{4}-\d{2}-\d{2})/);
 const generation = genMatch ? { id: genMatch[1].trim(), since: genMatch[2] } : null;
 // 复审清单:解析规则表行,列出指定频率的条目(季初列「季」,年初再加「年」)
 const reviewDue = [];
