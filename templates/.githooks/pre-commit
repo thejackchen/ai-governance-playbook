@@ -1,16 +1,28 @@
-#!/usr/bin/env bash
-# pre-commit hook：治理 lint 真门禁。
-# 版本化随 clone 生效（core.hooksPath=.githooks，由 package.json 的 prepare 在 npm install 时配置）。
-# 单一信源：直接调 knowledge-lint（阈值/路径只在该脚本里定义一次，此处不重抄）。
-# pre-commit 是提交前真门禁；CI（push 后）只是事后审计 + 留痕。
-# 紧急可用 --no-verify 绕过，但宪法铁律要求 AI 不主动绕过。
+#!/bin/sh
+# 模板:提交前门禁(L1)。谁填:把 {占位命令} 换成项目真实命令;没有对应工具的整段删掉——空壳门禁比没有门禁更糟(假安全感)。
+# 安装(必做,hook 不随 clone 自动生效):git config core.hooksPath .githooks
+#   建议把这行写进项目的安装脚本或 package.json 的 "prepare",保证每个 clone 都装上。
+# 结构:每段一个门禁,不过就阻止提交;临时跳过用 git commit --no-verify(跳过本身应有理由并留痕)。
 
-set -e
-
-if command -v npx >/dev/null 2>&1; then
-  echo "🔍 治理 lint（pre-commit 真门禁）..."
-  npx tsx scripts/knowledge-lint.ts
-  echo "✅ 治理 lint 通过"
-else
-  echo "⚠️  未找到 npx/node，跳过治理 lint（CI 会兜底）。装 node 后 pre-commit 才是真门禁。"
+# ── 门禁 1:类型检查(没有类型系统的项目删掉本段) ──
+echo "[pre-commit] 类型检查..."
+if ! {类型检查命令,如 npm run -s typecheck}; then
+  echo "[pre-commit] 类型检查未通过 — 提交已阻止,修复后重试"
+  exit 1
 fi
+
+# ── 门禁 2:快速测试(测试太慢就只跑受影响子集或删掉本段、留给 CI) ──
+echo "[pre-commit] 测试..."
+if ! {测试命令,如 npm test -s}; then
+  echo "[pre-commit] 测试未通过 — 提交已阻止,修复后重试"
+  exit 1
+fi
+
+# ── 门禁 3:治理 lint(若你写了结构校验脚本:关键文件存在/断链/流水完成度;没有就删掉本段) ──
+echo "[pre-commit] 治理 lint..."
+if ! {治理 lint 命令,如 node scripts/governance-lint.mjs}; then
+  echo "[pre-commit] 治理 lint 未通过 — 提交已阻止,修复后重试"
+  exit 1
+fi
+
+echo "[pre-commit] 全部门禁通过"

@@ -1,0 +1,77 @@
+# 模板:单一心跳 workflow。谁填:一般照搬即用;时区(cron)与模型名按需改,非 GitHub 环境用等效定时器替代并在 registry 如实登记载体。
+# 周治理对账(登记进 registry 的心跳条目 · L1):每周一自动生成对账包并开 Issue。
+# 前提假设:人的记忆最不可靠(S1 对负责人同样成立)——触发与备料交给机器。
+# AI 判断层(建议模式):配置 ANTHROPIC_API_KEY secret 后,AI 审计员自动执行例行判断并评论到 Issue;
+#   人退为抽检。未配 key 时优雅降级为纯对账包。contents:read 物理保证 AI 无写权限(L0 兜底)。
+name: weekly-governance-review
+
+on:
+  schedule:
+    - cron: "0 0 * * 1" # UTC 周一 00:00 = 北京周一 08:00;时区按需改
+  workflow_dispatch: {} # 手动触发入口(测试/补开)
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 脚本要用 git log 算活性与宪法年龄
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 生成对账包
+        run: node scripts/weekly-governance-review.mjs > /tmp/body.md
+
+      - name: 上期积压检查(未关的旧对账 Issue → 本期置顶警告)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          OPEN=$(gh issue list --repo "$GITHUB_REPOSITORY" --label governance-review --state open --json number,title --jq 'length')
+          if [ "$OPEN" != "0" ]; then
+            LIST=$(gh issue list --repo "$GITHUB_REPOSITORY" --label governance-review --state open --json number,title --jq '.[] | "- #\(.number) \(.title)"')
+            printf '> ⚠️ **上期对账未完成(%s 期未关)——先清旧账再开新账:**\n%s\n\n%s\n' "$OPEN" "$LIST" "$(cat /tmp/body.md)" > /tmp/body2.md
+            mv /tmp/body2.md /tmp/body.md
+          fi
+
+      - name: 开对账 Issue
+        id: issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create governance-review --repo "$GITHUB_REPOSITORY" --description "周治理对账(心跳自动)" --color 5319e7 || true
+          URL=$(gh issue create --repo "$GITHUB_REPOSITORY" \
+            --title "周治理对账 · $(date -u +%Y-%m-%d)" \
+            --label governance-review \
+            --body-file /tmp/body.md)
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "number=${URL##*/}" >> "$GITHUB_OUTPUT"
+
+      - name: AI 判断层(建议模式;未配 ANTHROPIC_API_KEY 则优雅降级)
+        timeout-minutes: 20
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL }} # 空则走官方端点
+          AUDIT_MODEL: ${{ vars.AUDIT_MODEL || 'claude-fable-5' }} # 模型名按需换:设仓库变量 AUDIT_MODEL,或改此默认值
+          ISSUE_NUMBER: ${{ steps.issue.outputs.number }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+              --body "🤖 AI 判断层未启用(仓库未配置 \`ANTHROPIC_API_KEY\` secret)。配置后,AI 审计员将自动执行例行判断,你只需抽检。"
+            exit 0
+          fi
+          npm install -g @anthropic-ai/claude-code
+          { cat scripts/heartbeat-audit-prompt.md; echo; echo "---以下是本期对账包---"; cat /tmp/body.md; } > /tmp/audit-input.md
+          claude --model "$AUDIT_MODEL" --strict-mcp-config \
+            --allowedTools "Read,Glob,Grep,Bash" \
+            -p "$(cat /tmp/audit-input.md)" > /tmp/audit.md 2> /tmp/audit.err || {
+              printf '🤖 AI 审计运行失败(本期降级为纯对账包)。stderr 尾部:\n```\n%s\n```\n' "$(tail -5 /tmp/audit.err)" > /tmp/audit.md
+            }
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file /tmp/audit.md
