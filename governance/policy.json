@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "denyCommandPatterns": [
+    "(^|\\s)git(?:\\s+(?:-C\\s+\\S+|-c\\s+\\S+|--git-dir(?:=\\S+|\\s+\\S+)|--work-tree(?:=\\S+|\\s+\\S+)))*\\s+reset\\s+--hard(?:\\s|$)",
+    "(^|\\s)git(?:\\s+(?:-C\\s+\\S+|-c\\s+\\S+|--git-dir(?:=\\S+|\\s+\\S+)|--work-tree(?:=\\S+|\\s+\\S+)))*\\s+clean\\s+-[^\\n]*[fx]",
+    "(^|\\s)git(?:\\s+(?:-C\\s+\\S+|-c\\s+\\S+|--git-dir(?:=\\S+|\\s+\\S+)|--work-tree(?:=\\S+|\\s+\\S+)))*\\s+push(?:\\s+[^\\n]+)*\\s+--force(?:-with-lease)?(?:\\s|$)",
+    "(^|\\s)rm\\s+-rf\\s+/(?:\\s|$)",
+    "(^|\\s)rm\\s+-rf\\s+\\.git(?:\\s|$)"
+  ],
+  "fastChecks": [
+    "npm run check"
+  ],
+  "ciChecks": [
+    "npm run check",
+    "npm test"
+  ],
+  "protectedPaths": [],
+  "allowedTopLevelEntries": [
+    ".codex",
+    ".githooks",
+    ".github",
+    ".gitignore",
+    "ADAPTERS.md",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "CLAUDE.md",
+    "CORE.md",
+    "LICENSE",
+    "MIGRATION.md",
+    "README.md",
+    "ROADMAP.md",
+    "SELF-CHECK.md",
+    "adapters",
+    "docs",
+    "extensions",
+    "governance",
+    "governance.lock.json",
+    "package.json",
+    "profiles",
+    "scripts",
+    "setup.md",
+    "skill",
+    "templates",
+    "tests"
+  ]
+}

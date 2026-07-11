@@ -1,0 +1,6 @@
+{
+  "name": "lite",
+  "ruleBudget": 12,
+  "components": ["common", "runtime", "hooks", "doctor"],
+  "manualRequirements": []
+}

@@ -1,0 +1,42 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/session-start.mjs\"",
+            "timeout": 30,
+            "statusMessage": "读取治理状态"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-tool-use.mjs\"",
+            "timeout": 30,
+            "statusMessage": "检查治理策略"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/stop.mjs\"",
+            "timeout": 120,
+            "statusMessage": "运行收尾验证"
+          }
+        ]
+      }
+    ]
+  }
+}

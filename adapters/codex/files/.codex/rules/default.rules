@@ -1,0 +1,34 @@
+# Codex命令策略是PreToolUse Hook之外的第二层保护。
+# 使用 codex execpolicy check --pretty --rules .codex/rules/default.rules -- <command> 验证。
+
+prefix_rule(
+    pattern = ["git", "reset", "--hard"],
+    decision = "forbidden",
+    justification = "禁止破坏工作树；使用可逆的文件级修复。",
+    match = ["git reset --hard", "git reset --hard HEAD~1"],
+    not_match = ["git reset --soft HEAD~1"],
+)
+
+prefix_rule(
+    pattern = ["git", "clean"],
+    decision = "prompt",
+    justification = "git clean可能删除未跟踪用户文件，必须逐次审查。",
+    match = ["git clean -fd", "git clean -fdx"],
+    not_match = ["git status --short"],
+)
+
+prefix_rule(
+    pattern = ["git", "-C", ".", "reset", "--hard"],
+    decision = "forbidden",
+    justification = "禁止通过git -C绕过破坏性工作树保护。",
+    match = ["git -C . reset --hard", "git -C . reset --hard HEAD~1"],
+    not_match = ["git -C . status", "git reset --soft HEAD~1"],
+)
+
+prefix_rule(
+    pattern = ["git", "-C"],
+    decision = "prompt",
+    justification = "git -C可绕过固定子命令前缀策略，必须逐次审查；PreToolUse仍负责阻断已知破坏性组合。",
+    match = ["git -C . status", "git -C /tmp/repo reset --hard"],
+    not_match = ["git status --short"],
+)

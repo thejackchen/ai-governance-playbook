@@ -1,0 +1,6 @@
+{
+  "name": "high-assurance",
+  "ruleBudget": 40,
+  "components": ["common", "runtime", "hooks", "doctor", "registry", "precommit", "ci", "heartbeat", "high-assurance"],
+  "manualRequirements": ["branch-protection", "required-checks", "codeowners", "secret-isolation", "release-approval"]
+}

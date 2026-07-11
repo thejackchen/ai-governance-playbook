@@ -1,0 +1,6 @@
+{
+  "name": "generic",
+  "instructionFile": "AGENTS.md",
+  "bridgeFile": "CLAUDE.md",
+  "filesRoot": null
+}

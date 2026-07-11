@@ -1,0 +1,6 @@
+{
+  "name": "standard",
+  "ruleBudget": 24,
+  "components": ["common", "runtime", "hooks", "doctor", "registry", "precommit", "ci", "heartbeat"],
+  "manualRequirements": ["branch-protection", "required-checks"]
+}

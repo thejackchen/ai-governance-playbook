@@ -1,0 +1,13 @@
+{
+  "name": "ai-governance-playbook",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "check": "node scripts/validate-kit.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
