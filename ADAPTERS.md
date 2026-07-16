@@ -8,11 +8,12 @@
 | 机制 | Claude Code | Codex / 会自动读 AGENTS.md 的工具 | 裸 agent + CI |
 |---|---|---|---|
 | **宪法注入**(每 session 自动在场) | `CLAUDE.md` 平台自动注入(L2);另建同内容 `AGENTS.md` 给其他工具 | `AGENTS.md` 自动读取(L2)为正本;`CLAUDE.md` 留一行引用 | 无自动注入:宪法全文进每次任务的 prompt 模板;做不到则人工粘贴(降 L3,**如实登记**,靠心跳月审补偿抽查) |
-| **收尾校验**(landing 结构侧兜底) | Stop hook 每轮真跑结构校验(L1),pre-commit + CI 双保险 | 无会话 hook:全部压到 pre-commit + CI(L1/L0;registry 里**写 L1/CI,不写 hook**) | pre-commit + CI(L1/L0);连 pre-commit 都装不了就只剩 CI(L0,校验点后移,接受更晚发现) |
+| **收尾校验**(landing 结构侧兜底) | 默认 pre-commit + CI 承载(L1/L0);Stop hook 每轮真跑结构校验为可选增强(L1,模板未提供样例,需自行编写;装了才登记为 hook 载体) | 无会话 hook:全部压到 pre-commit + CI(L1/L0;registry 里**写 L1/CI,不写 hook**) | pre-commit + CI(L1/L0);连 pre-commit 都装不了就只剩 CI(L0,校验点后移,接受更晚发现) |
 | **危险命令拦截**(不可逆动作) | 权限配置 deny 清单 + PreToolUse hook(L0/L1) | 工具自带的 approval / sandbox 配置(有则 L0);没有 → 宪法红线承载(L2)+ registry 显式接受风险 | 运行环境权限收缴:容器隔离 / 只读 token / 无生产凭据(L0);做不到 → L2 + 显式接受风险 |
 | **心跳触发**(周对账 + 月审 + 季审 + 代际传感器) | GitHub Actions cron 开 Issue(L1,与开发工具无关) | 同左(心跳挂在仓库,不挂在开发工具上) | 非 GitHub:CI 的 schedule 任务 / 服务器 cron 发通知 / 最次日历提醒人工跑脚本(逐级降,**如实登记实际级别**) |
 | **AI 判断层**(审计员建议模式) | 心跳 Action 内嵌 `claude -p`(`contents:read` 物理只读);未配 API key 优雅降级为纯对账包 | 同左(审计 CLI 独立于开发工具);也可换等效 agent CLI,保持「只读 + 附证据 + 输出评论」契约 | 有任一 agent CLI + API key 即可装;都没有 → 纯对账包,判断全留给人(这也是合法形态) |
-| **CI 门禁**(测试/构建/lint 全绿) | GitHub Actions(L0) | 等效 CI 均可(L0) | 没有 CI = 没有 L0 地基:setup 第 1.1 步**先建最小 CI**(哪怕只跑 lint),再谈其他 |
+| **CI 门禁**(测试/构建/lint 全绿) | GitHub Actions(L0) | 等效 CI 均可(L0) | 没有 CI = 没有 L0 地基:setup 第 1.1 步**先建最小 CI**(哪怕只跑 lint),再谈其他。仓库无远端时:pre-commit 承载同等检查 + registry 登记「CI 就绪未激活」,推远端后补跑一次空提交验收 |
+| **能力清单**(代码即注册表,防跨 session 重复实现) | `scripts/generate-capabilities.mjs` 生成 + pre-commit 与 CI 挂 `--check` 保鲜(L1/L0);宪法「写新功能前先查清单」行(L2) | 同左(生成器与门禁独立于开发工具) | 同左;没有 pre-commit 就只挂 CI `--check`(L0,发现点后移) |
 
 ## 自适配协议(装的时候怎么用这张表)
 

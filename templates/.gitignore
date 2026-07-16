@@ -1,0 +1,9 @@
+# 模板:最小忽略清单。谁填:按项目技术栈增删;.env* 各行是宪法「真实凭据只放已被 ignore 的文件」红线的结构前提,不可删。
+node_modules/
+dist/
+build/
+*.log
+.DS_Store
+.env
+.env.local
+.env.*.local

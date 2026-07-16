@@ -5,12 +5,16 @@
 > 完成安装不需要读本仓库其他文档;想懂为什么,装完再读 README 的核心模型段。
 > 全程使用负责人的工作语言(本模板为中文;负责人用其他语言则全部产物随之)。
 
+## 第 -1 步:通读判例库(先于一切)
+
+通读本仓库 [governance/cases/](governance/cases/README.md) 的全部判例——前人踩过的坑不再踩。它们是历次真实纠正的沉淀(负责人当场纠正当场落档);安装与后续执行中遇到同族场景,直接类比引用,别重新交学费。
+
 ## 第 0 步:环境探测与自适配(先回答三问,再动手)
 
 **适配总原则:机制不变,载体就地取材**——每条规则找你环境里执行率最高的载体,并在 registry 里**如实登记实际载体级别**(诚实优先于完备;详细映射表见 [ADAPTERS.md](ADAPTERS.md))。
 
 **Q1 你的运行环境是什么?**
-- **Claude Code** → 宪法文件 = `CLAUDE.md`;会话注入用 SessionStart hook、收尾校验用 Stop hook(`.claude/settings.json`);另建 `AGENTS.md` 与宪法同内容(给其他工具读)。
+- **Claude Code** → 宪法文件 = `CLAUDE.md`,会话注入 = 平台自动注入(L2,无需任何 hook);收尾校验默认由 pre-commit + CI 承载;SessionStart/Stop hook(`.claude/settings.json`)为可选增强(模板未提供样例,需自行编写,装了才在 registry 登记为 hook 载体);另建 `AGENTS.md` 与宪法同内容(给其他工具读)。
 - **Codex / 其他会自动读 AGENTS.md 的工具** → 宪法文件 = `AGENTS.md`;没有会话 hook → 收尾校验全部压到 pre-commit + CI(载体降一级,registry 里如实写 L1/CI 而不是 L1/hook);另建 `CLAUDE.md` 一行引用 AGENTS.md。
 - **裸 agent / 不确定** → 宪法 = `AGENTS.md` + `CLAUDE.md` 引用行;一切校验走 pre-commit + CI。
 
@@ -29,7 +33,8 @@
 
 ### 1.1 结构层
 - 主分支保护(或等效:禁止直推的约定+CI 必过);CI 骨架(测试/构建/lint,能跑就行);若环境支持,装破坏性命令拦截 hook。
-- ✅ 验收:CI 在一个空提交上真实跑过一次。
+- `.gitignore`:复制 `templates/.gitignore`(或合并进已有的),至少含 `.env.local` / `node_modules`——宪法「真实凭据只放已被 ignore 的文件」红线的 day-1 结构前提。
+- ✅ 验收:有远端仓库 → CI 在一个空提交上真实跑过一次;无远端 → pre-commit 承载同等检查并真实跑过一次,registry 登记「CI 就绪未激活」,推远端后补跑一次空提交验收。
 
 ### 1.2 宪法(核心文件)
 以 `templates/CLAUDE.md` 为骨架填充,九段结构不增不减:
@@ -56,13 +61,14 @@
 - ✅ 验收:三个文件存在;ROADMAP 有真实的第一条线。
 
 ### 1.5 心跳(单一心跳,全部节律挂一个 cron)
-- 复制 `templates/scripts/weekly-governance-review.mjs`(对账包生成器)+ `templates/scripts/heartbeat-audit-prompt.md`(AI 审计任务书)。
+- 复制 `templates/scripts/weekly-governance-review.mjs`(对账包生成器)+ `templates/scripts/heartbeat-audit-prompt.md`(AI 审计任务书)。复制 heartbeat-audit-prompt.md 后填写其中 `{占位符}`(项目名/路径等),SELF-CHECK 前自查无字面占位残留。
 - GitHub 项目 → 复制 `templates/.github/workflows/weekly-governance.yml`(每周 cron 开 Issue;配置 `ANTHROPIC_API_KEY` secret 后 AI 判断层自动启用,未配则优雅降级——把"配 key 可启用 AI 审计"写进交付报告)。非 GitHub → 用你环境的定时器(CI schedule / 本地 cron)达成同等效果,并在 registry 如实登记载体。
 - ✅ 验收:本地跑一次生成器,输出对账包;用日期参数(`GOV_REVIEW_DATE=下月第一个周一`)验证月度附加段出现。
 
 ### 1.6 能力清单(代码即注册表,防跨 session 重复实现)
 - 复制 `templates/scripts/generate-capabilities.mjs`,顶部 SCAN_DIRS 按项目目录改;首跑生成 `docs/capabilities.md`,登记进 docs/index.md 路由。
 - pre-commit 与 CI 各挂一步 `node scripts/generate-capabilities.mjs --check`(漂移即拦)。宪法骨架已含「写新功能前先查清单」行。
+- 适用性:生成器覆盖 TS/JS 的 ESM 导出与 CommonJS(`module.exports = {…}` / `exports.X =`,含 `.cjs`)、Python 顶层 def/class、Next.js 路由、脚本头注;项目主要导出形态不在其列(如 Go/Rust)时,先扩生成器匹配再挂门禁,别让清单静默漏项。
 - ✅ 验收:清单已生成且 `--check` 通过;故意给任一导出改名后 `--check` 变红(测完还原)。
 
 ## 第 2 步:首任务演练(安装的冒烟测试)
@@ -80,6 +86,10 @@
    - ③ **没装什么 + 为什么**(见下方"刻意不装");
    - ④ **可选启用项**:AI 判断层(需 ANTHROPIC_API_KEY)等;
    - ⑤ **首任务演练记录**。
+
+## 最小档(单人/本地小项目的显式豁免)
+
+单人、本地、无远端的小项目可以显式豁免:① `AGENTS.md` 副本(只用一种工具时双入口无意义,留单一宪法文件);② GitHub 心跳 → 改本地 cron 跑生成器,最次日历提醒人工跑(逐级降);③ 能力清单(代码量一屏可尽览时)。**每项豁免必须在 registry 登记一行**(载体列写「豁免」+ 理由 + 复审条件,如「项目上远端/多人协作时重装」)——豁免是显式决策,不是静默缺席。
 
 ## 刻意不装清单(防臃肿——这是特性,不是偷懒)
 

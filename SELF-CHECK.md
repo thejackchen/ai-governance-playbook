@@ -11,7 +11,8 @@
 - [ ] 所选载体与 [ADAPTERS.md](ADAPTERS.md) 对应列一致;降级承载的机制在 registry 里写的是**实际**级别(抽一条核对:如无会话 hook 的环境,收尾校验载体写的是 L1/CI 而非 hook)。
 
 ### 1.1 · 结构层
-- [ ] CI 在一个空提交上**真实跑过一次**(附运行链接或输出摘要);
+- [ ] CI 在一个空提交上**真实跑过一次**(附运行链接或输出摘要);仓库无远端时按 setup 1.1 降级路径:pre-commit 真实跑过 + registry 已登记「CI 就绪未激活」;
+- [ ] `.gitignore` 在位且至少含 `.env.local` / `node_modules`(宪法「凭据不进 git」红线的结构前提);
 - [ ] pre-commit 已装(`git config core.hooksPath` 输出 `.githooks`)且样例中无残留 `{占位命令}`——没有对应工具的段落已删除,不是留着空转。
 
 ### 1.2 · 宪法
@@ -25,7 +26,8 @@
 - [ ] registry 条数 ≤30,每条六字段齐全(ID/摘要/载体/层/出处/死亡条件+复审);
 - [ ] 代际登记行已填真实模型标识 + 日期(不是占位符);
 - [ ] 宪法里每条红线/协议都能在 registry 找到户口(逐条对照过);
-- [ ] incidents / questions / cases 三件表头规则完整(棘轮必填 / 回答强制入库 / 判例四字段),示例占位行已删或已被真实条目替代。
+- [ ] incidents / questions / cases 三件表头规则完整(棘轮必填 / 回答强制入库 / 判例六字段),示例占位行已删或已被真实条目替代;
+- [ ] decisions:项目已有 ADR 目录则宪法与 docs/index.md 指向它;没有则已建 `docs/decisions/`(含 ADR-000 采纳记录)。
 
 ### 1.4 · 状态层
 - [ ] ROADMAP(游标 + 约束登记段 + 战线表)、CHANGELOG、docs/index.md 三件存在;

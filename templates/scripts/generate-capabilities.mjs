@@ -4,7 +4,7 @@
 //       node scripts/generate-capabilities.mjs --check  → 与落盘 diff,不一致 exit 1(挂 pre-commit / CI 保鲜)
 // 原理(为什么是生成制):人工注册会腐烂(Backstage 教训)→ 从代码生成,写完即注册;
 //   清单会过期 → --check 让漂移物理上过不了提交;没人记得查 → 宪法「写新功能前先查」每 session 注入。
-// 支持:TS/JS 导出 · Python 顶层 def/class · 任意脚本头注 · Next.js API 路由(无则自动跳过)。
+// 支持:TS/JS 导出(ESM,以及 CommonJS 的 `module.exports = { X }` 与 `exports.X =`,含 .cjs 文件) · Python 顶层 def/class · 任意脚本头注 · Next.js API 路由(无则自动跳过)。
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -56,20 +56,27 @@ const docstringBelow = (lines, i) => {
 // ── ① 代码导出/定义 ──
 const srcRows = [];
 for (const dir of SCAN_DIRS) {
-  for (const f of walk(join(ROOT, dir), (p) => /\.(ts|tsx|js|mjs|py)$/.test(p) && !p.endsWith(".d.ts") && !/route\.(ts|js)$/.test(p) && !isTest(p))) {
+  for (const f of walk(join(ROOT, dir), (p) => /\.(ts|tsx|js|mjs|cjs|py)$/.test(p) && !p.endsWith(".d.ts") && !/route\.(ts|js)$/.test(p) && !isTest(p))) {
     const lines = readClean(f).split("\n");
     const group = rel(f).split("/").slice(0, 3).join("/");
     lines.forEach((line, i) => {
-      let name, kind;
+      const found = []; // {kind, name};一行可含多个导出(CommonJS 对象字面量)
       let m = line.match(/^export (?:async )?(function|const|class) (\w+)/);
-      if (m) { kind = m[1]; name = m[2]; }
-      else if (f.endsWith(".py")) {
+      if (m) found.push({ kind: m[1], name: m[2] });
+      else if ((m = line.match(/^(?:module\.)?exports\.(\w+)\s*=/))) found.push({ kind: "cjs", name: m[1] }); // CommonJS:exports.X = / module.exports.X =
+      else if ((m = line.match(/^module\.exports\s*=\s*\{([^}]*)\}/))) {
+        // CommonJS:module.exports = { X, Y: impl }(单行形态;多行对象请在各定义处补注释并改用上面两种形态之一)
+        for (const part of m[1].split(",")) {
+          const n = part.trim().split(":")[0].trim();
+          if (/^\w+$/.test(n)) found.push({ kind: "cjs", name: n });
+        }
+      } else if (f.endsWith(".py")) {
         m = line.match(/^(?:async )?(def|class) (\w+)/);
-        if (m && !m[2].startsWith("_")) { kind = m[1]; name = m[2]; }
+        if (m && !m[2].startsWith("_")) found.push({ kind: m[1], name: m[2] });
       }
-      if (!name) return;
+      if (!found.length) return;
       const desc = commentAbove(lines, i, f.endsWith(".py") ? "#" : "//") || (f.endsWith(".py") ? docstringBelow(lines, i) : "") || NO_DESC;
-      srcRows.push({ group, name, kind, desc, loc: `${rel(f)}:${i + 1}` });
+      for (const { kind, name } of found) srcRows.push({ group, name, kind, desc, loc: `${rel(f)}:${i + 1}` });
     });
   }
 }
@@ -87,7 +94,7 @@ for (const f of walk(join(ROOT, API_DIR), (p) => p.endsWith("route.ts") || p.end
 // ── ③ 独立脚本(文件级能力) ──
 const scriptRows = [];
 for (const dir of SCRIPT_DIRS) {
-  for (const f of walk(join(ROOT, dir), (p) => /\.(mjs|js|py|sh|ts)$/.test(p) && !isTest(p))) {
+  for (const f of walk(join(ROOT, dir), (p) => /\.(mjs|cjs|js|py|sh|ts)$/.test(p) && !isTest(p))) {
     const lines = readClean(f).split("\n").slice(0, 6);
     const c = lines.find((l) => /^(\/\/|#)\s*\S/.test(l.trim()) && !l.startsWith("#!"));
     scriptRows.push({ name: rel(f), desc: c ? c.trim().replace(/^(\/\/|#)\s?/, "") : NO_DESC });

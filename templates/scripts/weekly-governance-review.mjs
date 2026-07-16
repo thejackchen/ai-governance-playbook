@@ -14,9 +14,12 @@ const REGISTRY_FILE = "governance/registry.md";
 
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8"); // 本脚本假定位于 scripts/,上一级即仓库根
 const git = (cmd) => { try { return execSync(cmd, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim(); } catch { return ""; } }; // 首次安装尚无 commit 时不崩
+// 日期一律用本地时区——toISOString / new Date("YYYY-MM-DD") 按 UTC 解释,非零时区会算出「-1 天」负数(实测缺陷)
+const localISO = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const parseLocal = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); }; // 本地时区零点
 // GOV_REVIEW_DATE=YYYY-MM-DD 可覆盖今日(测试节拍分支用)
-const today = process.env.GOV_REVIEW_DATE ? new Date(process.env.GOV_REVIEW_DATE) : new Date();
-const daysSince = (iso) => Math.floor((today - new Date(iso)) / 86400000);
+const today = parseLocal(process.env.GOV_REVIEW_DATE || localISO(new Date()));
+const daysSince = (iso) => Math.round((today - parseLocal(iso)) / 86400000); // round 抹平夏令时 ±1h
 // 节拍:cron 保证每周一跑;当月第一个周一 = 月度期;1/4/7/10 月的月度期 = 季度期;1 月的 = 年度期
 const isMonthly = today.getDate() <= 7;
 const isQuarterly = isMonthly && [0, 3, 6, 9].includes(today.getMonth());
@@ -86,7 +89,7 @@ if (isQuarterly) {
 }
 
 // ── 输出对账包 ──
-const iso = today.toISOString().slice(0, 10);
+const iso = localISO(today);
 const flag = (bad, txt) => (bad ? `⚠️ ${txt}` : `✅ ${txt}`);
 console.log(`## 周治理对账包 · ${iso}
 
