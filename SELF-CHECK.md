@@ -36,7 +36,7 @@
 ### 1.5 · 心跳
 - [ ] 本地 `node scripts/weekly-governance-review.mjs` 跑通,输出完整对账包(附输出摘要);
 - [ ] `GOV_REVIEW_DATE={下月第一个周一}` 复跑,「月度腐烂审计」段出现(月度分支验证);
-- [ ] workflow 已挂上(或非 GitHub 环境的等效定时器已配置),且该心跳已在 registry 上户口;
+- [ ] workflow 已挂上(或非 GitHub 环境的等效定时器已配置,或降级形态已在 registry 如实登记(最小档)),且该心跳已在 registry 上户口;
 - [ ] AI 判断层状态写进交付报告:已配 key 启用 / 未配(附「配 key 即启用」说明)。
 
 ### 第 2 步 · 首任务演练
