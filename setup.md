@@ -62,7 +62,7 @@
 
 ### 1.5 心跳(单一心跳,全部节律挂一个 cron)
 - 复制 `templates/scripts/weekly-governance-review.mjs`(对账包生成器)+ `templates/scripts/heartbeat-audit-prompt.md`(AI 审计任务书)。复制 heartbeat-audit-prompt.md 后填写其中 `{占位符}`(项目名/路径等),SELF-CHECK 前自查无字面占位残留。
-- GitHub 项目 → 复制 `templates/.github/workflows/weekly-governance.yml`(每周 cron 开 Issue;配置 `ANTHROPIC_API_KEY` secret 后 AI 判断层自动启用,未配则优雅降级——把"配 key 可启用 AI 审计"写进交付报告)。非 GitHub → 用你环境的定时器(CI schedule / 本地 cron)达成同等效果,并在 registry 如实登记载体。
+- GitHub 项目 → 复制 `templates/.github/workflows/weekly-governance.yml`(每周 cron 开 Issue;配置 `ANTHROPIC_API_KEY` secret 后 AI 判断层自动启用,未配则优雅降级——把"配 key 可启用 AI 审计"写进交付报告)。非 GitHub → 用你环境的定时器(CI schedule / 本地 cron)达成同等效果,并在 registry 如实登记载体。本地定时器(cron/日历提醒)属仓库外动作:安装 AI 备好脚本与运行说明、把「负责人自设提醒」列入交付报告即算这一步完成,不必虚报「已配置」。
 - ✅ 验收:本地跑一次生成器,输出对账包;用日期参数(`GOV_REVIEW_DATE=下月第一个周一`)验证月度附加段出现。
 
 ### 1.6 能力清单(代码即注册表,防跨 session 重复实现)
