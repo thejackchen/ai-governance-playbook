@@ -21,7 +21,7 @@ const command = String(toolInput.command || toolInput.cmd || "");
 const normalizedCommand = normalizeCommand(command);
 // 候选串集合:原始 + 归一化 + 逐层拆 shell 包裹(bash -c/sh -c/eval,最多 3 层)。
 // 已知边界(诚实披露,不伪装完美门禁):命令替换 $()、管道拼装、解释器执行(python -c)、base64 编解码
-// 不在字符串防线射程内——由 Codex execpolicy(codex runtime)、人工责任与事故簿兜底,见 ADAPTERS.md。
+// 不在字符串防线射程内——由运行时自带的深度命令解析(如有)、人工责任与事故簿兜底,详见发行包 ADAPTERS 已知边界节。
 const candidates = [command, normalizedCommand];
 {
   let cur = normalizedCommand;
