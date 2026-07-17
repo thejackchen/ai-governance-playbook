@@ -1,0 +1,4 @@
+interface:
+  display_name: "Governance Bootstrap"
+  short_description: "为Codex或Claude Code项目安装、迁移并验证AI治理载体"
+  default_prompt: "Use $governance-bootstrap to install or migrate governance for this project and verify the selected runtime and profile."

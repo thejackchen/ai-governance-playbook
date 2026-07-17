@@ -1,101 +1,141 @@
-# setup.md — 治理安装指令书
+# setup.md · 治理安装流程
 
-> **读者:项目的 AI 执行者。** 你在读这份文件,是因为项目负责人让你"为本项目建立治理"。
-> 这是一份一次性**安装脚本**:照做、验收、向负责人交付报告,然后本文件使命结束——常驻的是你建出来的那些文件。
-> 完成安装不需要读本仓库其他文档;想懂为什么,装完再读 README 的核心模型段。
-> 全程使用负责人的工作语言(本模板为中文;负责人用其他语言则全部产物随之)。
+> 给项目AI执行。机制以[CORE.md](CORE.md)为准；本文件只规定安装顺序。存量项目先读[MIGRATION.md](MIGRATION.md)。
 
-## 第 -1 步:通读判例库(先于一切)
+## -1. 通读判例库（先于一切）
 
-通读本仓库 [governance/cases/](governance/cases/README.md) 的全部判例——前人踩过的坑不再踩。它们是历次真实纠正的沉淀(负责人当场纠正当场落档);安装与后续执行中遇到同族场景,直接类比引用,别重新交学费。
+通读本仓库 [governance/cases/](governance/cases/README.md) 的全部判例——前人踩过的坑不再踩。它们是历次真实纠正的沉淀（负责人当场纠正当场落档）；安装与后续执行中遇到同族场景，直接类比引用，别重新交学费。
 
-## 第 0 步:环境探测与自适配(先回答三问,再动手)
+## 0. 先探测，不猜
 
-**适配总原则:机制不变,载体就地取材**——每条规则找你环境里执行率最高的载体,并在 registry 里**如实登记实际载体级别**(诚实优先于完备;详细映射表见 [ADAPTERS.md](ADAPTERS.md))。
+记录五项：
 
-**Q1 你的运行环境是什么?**
-- **Claude Code** → 宪法文件 = `CLAUDE.md`,会话注入 = 平台自动注入(L2,无需任何 hook);收尾校验默认由 pre-commit + CI 承载;SessionStart/Stop hook(`.claude/settings.json`)为可选增强(模板未提供样例,需自行编写,装了才在 registry 登记为 hook 载体);另建 `AGENTS.md` 与宪法同内容(给其他工具读)。
-- **Codex / 其他会自动读 AGENTS.md 的工具** → 宪法文件 = `AGENTS.md`;没有会话 hook → 收尾校验全部压到 pre-commit + CI(载体降一级,registry 里如实写 L1/CI 而不是 L1/hook);另建 `CLAUDE.md` 一行引用 AGENTS.md。
-- **裸 agent / 不确定** → 宪法 = `AGENTS.md` + `CLAUDE.md` 引用行;一切校验走 pre-commit + CI。
+1. runtime：`codex` / `claude-code` / `generic`；
+2. 项目：全新或存量；
+3. 风险：原型、真实用户、资金/合规/生产关键数据；
+4. 协作：本地单人、多人、是否有Git远端和CI；
+5. 领域扩展：是否有前端，是否需要统一设计系统。
 
-**Q2 项目是全新还是存量?**
-- 全新 → 继续第 1 步。
-- 存量(已有代码/文档/既有规范)→ 先读 [MIGRATION.md](MIGRATION.md) 的绞杀式路径,再回到第 1 步(它会告诉你哪些步骤改为"映射既有资产"而非新建)。
+按[profiles/README.md](profiles/README.md)选择最小够用Profile。选择更重Profile必须说明风险或消费者；不能因为“看起来完整”全装。
 
-**Q3 项目有没有 CI?**
-- 有 → 门禁挂进现有 CI。
-- 没有 → 第 1.1 步先建最小 CI(哪怕只跑 lint)——没有 CI 就没有 L0,整个载体阶梯没有地基。
+## 1. 先看安装计划
 
-## 第 1 步:安装底座(按序执行,每小步有验收)
+```bash
+node scripts/init.mjs \
+  --target /path/to/project \
+  --runtime codex \
+  --profile lite \
+  --project-name demo
+```
 
-> 顺序有讲究:先结构(L0/L1,最便宜且永不衰减)、后散文(L2/L3)。
-> 全程遵守两条硬预算:**宪法 ≤150 行;规则台账 ≤30 条**。
+需要前端设计治理时加：
 
-### 1.1 结构层
-- 主分支保护(或等效:禁止直推的约定+CI 必过);CI 骨架(测试/构建/lint,能跑就行);若环境支持,装破坏性命令拦截 hook。
-- `.gitignore`:复制 `templates/.gitignore`(或合并进已有的),至少含 `.env.local` / `node_modules`——宪法「真实凭据只放已被 ignore 的文件」红线的 day-1 结构前提。
-- ✅ 验收:有远端仓库 → CI 在一个空提交上真实跑过一次;无远端 → pre-commit 承载同等检查并真实跑过一次,registry 登记「CI 就绪未激活」,推远端后补跑一次空提交验收。
+```bash
+--with frontend-design-system
+```
 
-### 1.2 宪法(核心文件)
-以 `templates/CLAUDE.md` 为骨架填充,九段结构不增不减:
-1. **意图纲领**——一段话:项目为了什么、当前阶段什么最重要、负责人的取舍倾向。**内容必须来自负责人**:从其现有材料(README、需求、对话)提炼后**列为交付报告第一项请其确认**;提炼不出就在报告中留空并标注"待负责人口述"。此段仅负责人可改。
-2. **不变量** 3–5 条(如"X 文件是某某事实的唯一权威""文档与现实矛盾时:信现实、修文档、记事故簿")。
-3. **红线**(必含两条实测有效的:不用 skip/mock/删测试制造假全绿;不在与实际状态不符时宣称完成。再加项目特定红线,如密钥、生产数据)。
-4. **不确定时两条决策规则**(可逆且局部→自行决定并记录;不可逆/架构级/意图敏感→写入 questions.md 转做其他任务)。
-5. **任务契约三行**(目标/边界/验收;含验证不对称性:想不出比重做便宜的验证方式→不开工)。
-6. **新原语对齐门**(改心智模型的新概念先对齐;已动手的坦白给"留/撤"选项)。
-7. **宣称纪律**(区分"执行了动作"与"状态已达成";完成必附可复现证据)。
-8. **boot / landing**(开工读什么;收尾五步:流水一行/状态更新/归档/沉淀/commit——按你的环境写明各步由什么载体兜底)。
-9. **知识沉淀 + 指针**(能写成测试的禁止只写文档;投影≠流水;第二次使用才沉淀;末尾列 governance 各文件指针)。
-- ✅ 验收:`wc -l` ≤150;九段齐全;意图纲领已进交付报告待确认清单。
+默认dry-run。检查计划不会覆盖既有文件后，再加`--write`。存量项目禁止直接使用`--force`。
 
-### 1.3 governance/ 五件套
-复制 `templates/governance/` 并填充:
-- `registry.md`——**把 1.1–1.2 装的每条规则逐条上户口**:ID|摘要|载体(按你环境的实际情况)|层(core/Sx 或 [cap])|出处(本次安装写"day-1 底座")|死亡条件|复审频率。头部登记**当前执行者代际**(你的模型标识+日期)。头部另登记**治理基版**(本次安装的 playbook 版本号+日期,如 v2.1.0——上游回流与升级比对的锚点)。
-- `incidents.md` / `questions.md` / `cases/`——按模板建立(空表头+规则说明);存量项目按 MIGRATION 映射既有台账。
-- decisions:若项目已有 ADR 目录则指向它,没有则建 `docs/decisions/`。
-- ✅ 验收:registry 条数 ≤30 且每条六字段齐全;宪法里的每条红线/协议都能在 registry 里找到户口。
+## 2. 填项目事实
 
-### 1.4 状态层
-- `ROADMAP.md`(或复用项目现有等价物):游标(此刻主攻)+ 战线表 + **约束登记段**;`CHANGELOG.md`(append-only,最新在上);`docs/index.md` 知识路由表(登记现有文档资产住址)。
-- ✅ 验收:三个文件存在;ROADMAP 有真实的第一条线。
+安装器只建载体，不替负责人发明意图。完成以下项目化：
 
-### 1.5 心跳(单一心跳,全部节律挂一个 cron)
-- 复制 `templates/scripts/weekly-governance-review.mjs`(对账包生成器)+ `templates/scripts/heartbeat-audit-prompt.md`(AI 审计任务书)。复制 heartbeat-audit-prompt.md 后填写其中 `{占位符}`(项目名/路径等),SELF-CHECK 前自查无字面占位残留。
-- GitHub 项目 → 复制 `templates/.github/workflows/weekly-governance.yml`(每周 cron 开 Issue;配置 `ANTHROPIC_API_KEY` secret 后 AI 判断层自动启用,未配则优雅降级——把"配 key 可启用 AI 审计"写进交付报告)。非 GitHub → 用你环境的定时器(CI schedule / 本地 cron)达成同等效果,并在 registry 如实登记载体。本地定时器(cron/日历提醒)属仓库外动作:安装 AI 备好脚本与运行说明、把「负责人自设提醒」列入交付报告即算这一步完成,不必虚报「已配置」。
-- ✅ 验收:本地跑一次生成器,输出对账包;用日期参数(`GOV_REVIEW_DATE=下月第一个周一`)验证月度附加段出现。
+- 运行时指令正本中的`TODO(owner)`由负责人确认；
+- `ROADMAP.md`写真实游标、战线和硬约束；
+- `docs/architecture/repository-layout.md`分类现有顶层目录；
+- `docs/index.md`指向真实架构、需求、决策和运行文档；架构/需求指针是markdown链接、已进死链检测射程，指针必须指向真实存在的文件，不能留安装器默认占位路径（`docs/architecture.md`、`docs/requirements/backlog.md`）；
+- `governance/policy.json`登记真实验证命令和项目特定危险操作；
+- `.gitignore`至少含`.env.local`/`node_modules`（安装器提供最小样例，已有的合并而不是覆盖）——「真实凭据不进git」红线的day-1结构前提；
+- Standard/High Assurance逐条审计`registry`，删除不适用的示例规则；
+- 前端extension填写设计意图、token、组件和多端映射。
 
-### 1.6 能力清单(代码即注册表,防跨 session 重复实现)
-- 复制 `templates/scripts/generate-capabilities.mjs`,顶部 SCAN_DIRS 按项目目录改;首跑生成 `docs/capabilities.md`,登记进 docs/index.md 路由。
-- pre-commit 与 CI 各挂一步 `node scripts/generate-capabilities.mjs --check`(漂移即拦)。宪法骨架已含「写新功能前先查清单」行。
-- 适用性:生成器覆盖 TS/JS 的 ESM 导出与 CommonJS(`module.exports = {…}` / `exports.X =`,含 `.cjs`)、Python 顶层 def/class、Next.js 路由、脚本头注;项目主要导出形态不在其列(如 Go/Rust)时,先扩生成器匹配再挂门禁,别让清单静默漏项。
-- ✅ 验收:清单已生成且 `--check` 通过;故意给任一导出改名后 `--check` 变红(测完还原)。
+不要复制同一正文到`AGENTS.md`和`CLAUDE.md`。安装器只生成一个正本和一个桥接指针。
 
-## 第 2 步:首任务演练(安装的冒烟测试)
+## 3. 启用运行时载体
 
-用一个真实的小任务(哪怕只是修 README 一处错误)走完全流程:任务契约三行 → 执行 → 附证据宣称 → landing 五步 → 提交。
-**走不通的条款当场修改**——治理的第一个用户就是现在的你;修改本身记入 CHANGELOG。
-- ✅ 验收:CHANGELOG 出现这次演练的流水行。
+### Codex
 
-## 第 3 步:自检与交付
+1. 确认项目已trusted；
+2. 新开会话，用`/hooks`审核并信任`.codex/hooks.json`当前哈希；
+3. 测试Rules：
 
-1. 对照 [SELF-CHECK.md](SELF-CHECK.md) 逐项自检,不合格项当场修。
-2. 向负责人交付**安装报告**,固定格式:
-   - ① **待你确认**:意图纲领草稿(或"待口述")/ 红线清单 / 其他我替你做的假设;
-   - ② **装了什么**:文件清单 + registry 全表(每条规则的实际载体一目了然);
-   - ③ **没装什么 + 为什么**(见下方"刻意不装");
-   - ④ **可选启用项**:AI 判断层(需 ANTHROPIC_API_KEY)等;
-   - ⑤ **首任务演练记录**。
+```bash
+codex execpolicy check --pretty --resolve-host-executables --rules .codex/rules/default.rules -- git reset --hard
+```
 
-## 最小档(单人/本地小项目的显式豁免)
+不带`--resolve-host-executables`测不出绝对路径写法（例如`/usr/bin/git reset --hard`会判定`matchedRules`为空，即规则形同虚设）。
 
-单人、本地、无远端的小项目可以显式豁免:① `AGENTS.md` 副本(只用一种工具时双入口无意义,留单一宪法文件);② GitHub 心跳 → 改本地 cron 跑生成器,最次日历提醒人工跑(逐级降);③ 能力清单(代码量一屏可尽览时)。**每项豁免必须在 registry 登记一行**(载体列写「豁免」+ 理由 + 复审条件,如「项目上远端/多人协作时重装」)——豁免是显式决策,不是静默缺席。
+4. 手工向PreToolUse Hook输入一个危险命令fixture，确认返回`decision:block`。
 
-## 刻意不装清单(防臃肿——这是特性,不是偷懒)
+### Claude Code
 
-- ❌ 编码规范/风格指南(现代模型自带;第一次真实风格分歧时再立);
-- ❌ 审批流(验证分层从"全部低风险"起步,由事故校准);
-- ❌ 预防式错误规则(事故驱动立法:没交过学费的规则命中率必然低,还稀释真规则);
-- ❌ 操作手册(能写成脚本和测试的知识不写成文档)。
+确认`.claude/settings.json`加载，并对SessionStart、PreToolUse、Stop各跑一个fixture。
 
-把本清单原样放进交付报告第 ③ 项——负责人若坚持要装某项,由其显式拍板(那就成了有出处的规则)。
+### Standard及以上
+
+```bash
+git config core.hooksPath .githooks
+```
+
+GitHub Actions只有在远端启用branch protection和`deterministic` required check后，才能登记为共享阻断门禁。AI review保持建议层。
+
+仓库暂无远端时的完整降级路径：pre-commit承载同等确定性检查并真实跑过一次；registry（或安装报告）如实登记「CI就绪未激活」；接入远端后用一次空提交验证workflow真实运行，再按上款登记共享门禁。
+
+心跳定时器：GitHub项目由workflow schedule承载；非GitHub环境用等效定时器（CI schedule / 本地cron）并如实登记载体。本地cron/日历提醒属仓库外动作——安装AI备好脚本与运行说明、把「负责人自设提醒」写入安装报告即算完成本步，不虚报「已配置」。
+
+## 4. 编译项目规则
+
+对每条规则写清：
+
+```text
+消费者 / 来源 / trigger / predicate / effect / carrier / bypass / evidence / death condition
+```
+
+- 能用IAM、只读凭据、schema或API投影实现的，不只写CI；
+- 机器判不准的，不伪装成硬门禁；
+- 合规、安全、资金、不可逆和合同规则可在事故前建立；
+- 其它预防式规则默认不装。
+
+目录治理默认安装。`allowedTopLevelEntries`只在完成存量目录分类后启用，不能把现有混乱直接快照成“合法结构”。
+
+## 5. 验证
+
+从playbook仓库运行：
+
+```bash
+node scripts/doctor.mjs --target /path/to/project
+```
+
+从项目仓库运行：
+
+```bash
+node scripts/governance-verify.mjs --fast
+node scripts/governance-verify.mjs --ci
+```
+
+逐项完成[SELF-CHECK.md](SELF-CHECK.md)。有warn可以交付，但必须说明风险、负责人和升级条件；有error不能宣称安装完成。
+
+安装器不自动提交。未获提交授权时保留工作树并报告未跟踪/未提交状态；只有形成可识别的Git基线后，才能宣称迁移可回退、Hook哈希已稳定或治理基线已落地。
+
+## 6. 无上下文演练
+
+至少让一个没有项目历史的全新AI只读取运行时指令、ROADMAP和知识路由，完成一个真实小任务或评审。Standard及以上再增加：
+
+- 危险命令阻断；
+- 不可通过测试的红线压力；
+- 架构文档分叉检测。
+
+修载体和判据，不修改验收答案迁就失败结果。
+
+## 7. 安装报告
+
+固定交付：
+
+1. runtime、profile、extension及选择原因；
+2. 待负责人确认的意图、红线和架构假设；
+3. 实际启用的trigger/effect/carrier表；
+4. 没装什么、为什么、何时升级；
+5. doctor、Hook fixture、CI和无上下文演练证据；
+6. 仍可绕过的边界和人工责任。
+
+报告必须区分“骨架已生成”“本地fixture已通过”“Git基线已形成”“远端required check已生效”，不得把前一层证据升级成后一层结论。

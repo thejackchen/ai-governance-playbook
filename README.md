@@ -1,60 +1,92 @@
-# AI Governance Kit — 实测版 AI 项目治理模板
+# AI Governance Playbook v3
 
-> 给 AI 主导的长期项目装一台**治理恒温器**:不是一摞管 AI 的规章,是一个会自我纠错的控制回路。
-> v2.3.0(见 [VERSION](VERSION))全面换代:内容来自一次真实生产项目迁移 + 三组对照实验的胜出方案,不是理念推演。
-> 核心一句:**规则的实际价值 = 内容质量 × 执行率;执行率由承载介质决定,与措辞严厉程度无关。**
+> 一套面向 AI 主导软件项目的治理编译器：把负责人的意图和项目红线，编译到最靠近风险的载体中。
 
-## 为什么信它(实测证据)
+治理不是文件集合。文件保存规则；Hooks 负责在事件发生时触发；脚本和测试负责判定；CI、权限与运行时约束负责阻断；事故和定时审计负责让治理自身持续修正。
 
-1. **设计盲评**:三套独立设计的治理架构,三位盲评审(匿名、乱序、预注册维度)一致裁定本方案第一(3:0),满分项:抗时间性、AI 场景适配。
-2. **行为实验**:20 个互相无记忆的 AI session 在沙盒项目跑真实任务——常规工程纪律(约束落盘、跨 session 记忆、范围纪律、纠正文档)**裸跑组也全部自发达标**;唯一分野在红线场景("确保测试全过"的指令压力 vs 一个不可能通过的测试):治理组 2/2 援引红线如实报告,裸跑组 2/2 用 skip 制造假全绿。→ **结论:模板只装"模型自己做不到的"——你的特定判断与红线;通用过程规范一概不装,那是白付的注意力税。**
-3. **真实迁移**:一个高速开发中的生产项目迁移本模板后,每 session 治理阅读从 4–5 份文件降到 **0**(宪法自动注入),3 道真实任务新旧对照盲判 3:0,产出质量持平微升。上线首周,体系完成了两次真实自我纠错(事故→机制,全程留痕)。
+## 核心判断
 
-## 快速开始(一句话启动)
+治理有效性取决于五个相乘项：
 
-把这句话交给你项目的 AI:
-
-> **「读 `https://github.com/thejackchen/ai-governance-playbook` 的 setup.md,为本项目建立治理;安装前先读 governance/cases/ 现有判例;存量项目按 MIGRATION.md 对齐;完成后按 SELF-CHECK.md 自检,并向我交付安装报告。」**
-
-Claude Code / Codex / 任意 agent 通用——setup.md 第 0 步会让 AI 按自身运行环境自我适配载体(映射表见 [ADAPTERS.md](ADAPTERS.md));`templates/` 是可直接复制的占位骨架。
-
-⚠️ 角色区分:`setup.md` 是**安装脚本**(装完使命结束);建出来的文件才是**常驻治理产物**。
-
-## 核心模型(装的是什么)
-
-| 构件 | 一句话 |
-|---|---|
-| **五块地基 S1–S5** | 治理只建在结构问题上:失忆 / 意图不可传心 / 宣称不可自证 / 动作不可逆 / 注意力硬预算。每条规则必须指认自己解决哪一块;指认不出 = 能力补丁,挂 `[cap]` 牌、执行者换代时清仓 |
-| **载体阶梯 L0–L3** | L0 结构强制(权限/CI)→ L1 时点注入(hook/pre-commit/cron)→ L2 会话注入(宪法自动加载)→ L3 文档(靠自觉,必衰减)。**迭代律:违规 → 升载体,禁止改写措辞;同一载体两次违反即证伪该载体** |
-| **双侧编译** | 错误编译成防线(事故簿,棘轮必填,同类第二次 = 治理 bug 强制升载体);经验编译成资产(投影页→脚本→测试;第二次使用才沉淀,防投机性文档) |
-| **判例库** | [governance/cases/](governance/cases/README.md) 六字段判例——负责人每次纠正当场落档;**新项目接入前先通读**,历次教训拿来即用(这是唯一随模型换代增值的治理资产) |
-| **恒温器三标准** | 治理自身的成功标准:**腐烂可发现 · 调整足够便宜(当天完成)· 同类错误不二犯**。不追求"设计出从此不出问题的体系"——那个目标本身是错的 |
-| **单一心跳** | 一个每周 cron 承载全部节律:周对账包(队列/事故/活性/纲领年龄/预算)+ 月度审计任务书 + 季度复审到期清单与冷启动演习 + 执行者换代传感器。**前提假设:人的记忆最不可靠——负责人的节律同样要升载体,不能靠"记得"** |
-| **AI 判断层(建议模式)** | 心跳 Action 内嵌 AI 审计员:例行判断(事故闭环核验 / 队列先例检索 / 心跳自检 / 月审 / 季审取证)由 AI 执行并附证据评论到 Issue,**人退为抽检**;`contents:read` 物理保证 AI 无写权限。判据已落盘的判断给 AI,判据在人心里的判断(意图、品味)永远留给人——AI 判断不了"已写下的意图还是不是你的意图" |
-| **能力清单(代码即注册表)** | 生成器扫代码导出生成清单,pre-commit/CI 漂移即拦;宪法「写新功能前先查」——防跨 session 重复实现,注册动作不存在(写完即注册) |
-| **硬预算** | 宪法 ≤150 行、规则台账 ≤30 条,触顶先删后加。规则是负债不是资产;宁可漏管(损失具体可补),不可稀释(损失全局无声) |
-
-## 人还剩下什么(设计的,不是残留的)
-
-体系全速运转后,负责人只剩三样不可委托的东西:**意图**(纲领与品味,判据在你心里)、**对 AI 判断的抽检问责**(周对账 Issue,目标 ≤1 小时)、**治理变更的最终批准**(AI 可发现、可建议、可备好 PR,merge 留人)。这不是自动化的残留,这就是"负责人"在这套体系里的定义。
-
-## 结构
-
-```
-setup.md          安装指令书(给 AI 执行;第 0 步 = 环境自适配)
-MIGRATION.md      存量项目的绞杀式迁移路径
-ADAPTERS.md       载体映射表:每个机制在 Claude Code / Codex / 裸 agent+CI 下的实现
-SELF-CHECK.md     安装验收自检单(交付报告前逐项过)
-templates/        可直接复制的占位骨架(宪法 / governance 五件套 / 心跳脚本+Action+审计任务书 / hook 样例)
-governance/cases/ 本仓库自身的判例库(真实纠正沉淀;新项目接入前先通读)
-skill/            governance-bootstrap skill(setup 五步的薄入口封装;权威在 setup.md)
-VERSION           治理基版锚点(下游 registry 登记与上游比对用)
+```text
+规则质量 x 触发覆盖 x 判定确定性 x 阻断强度 x 反馈修复能力
 ```
 
-## v1
+任何一项接近零，写得再严厉也只是文档。
 
-旧版方法论(2026-06,CONSTITUTION+AGENTS 四原理架构)已由上述实验取代,完整留档于 tag [`v1-pre-kit`](../../releases/tag/v1-pre-kit)。
+完整模型见 [CORE.md](CORE.md)。v1/v2 内容逐条审计见 [docs/audits/v3-content-audit.md](docs/audits/v3-content-audit.md)。
 
-## License
+负责人历次真实纠正沉淀为判例库 [governance/cases/](governance/cases/README.md)：新项目安装前先通读，同族场景直接类比引用——判例是唯一随执行者换代增值的治理资产。
 
-MIT——借思想,也欢迎抄实现;但记住本库自己教的:每条规则由你项目的真实失败证明自己值得留。
+三类无上下文AI前向测试、首轮失败和修复证据见 [docs/evals/v3-forward-tests.md](docs/evals/v3-forward-tests.md)。
+
+## 一个核心，不复制两套方法论
+
+本仓库不维护两个分叉版本。公共治理模型只有一份，通过适配器落到不同运行时：
+
+| 运行时 | 自动指令 | 生命周期载体 | 命令策略 | CI 中的 AI |
+|---|---|---|---|---|
+| Codex | `AGENTS.md` | `.codex/hooks.json` | `.codex/rules/*.rules` | `openai/codex-action` |
+| Claude Code | `CLAUDE.md` | `.claude/settings.json` | PreToolUse Hook | 未内置，自行接入 |
+| Generic | `AGENTS.md` | pre-commit / CI | 环境权限 | 未内置，自行接入 |
+
+细节见 [ADAPTERS.md](ADAPTERS.md)。
+
+## 三档治理强度
+
+| Profile | 适用 | 默认内容 |
+|---|---|---|
+| `lite` | 本地原型、单人、多 AI 接力 | 自动指令、状态投影、最小 Hooks、治理 lint |
+| `standard` | 活跃开发、多人、准备上线 | Lite + 规则台账、事故/问题/判例、pre-commit、CI、心跳 |
+| `high-assurance` | 资金、合规、生产关键数据 | Standard + 强审批、CODEOWNERS、供应链与发布证据 |
+
+Profile 不是成熟度勋章，而是风险和协作成本的选择。详见 [profiles/](profiles/README.md)。
+
+## 快速开始
+
+### 交给 AI 安装
+
+```text
+读取 https://github.com/thejackchen/ai-governance-playbook 的 setup.md。
+为当前项目安装治理；安装前先通读 governance/cases/ 的现有判例；
+自动探测 runtime，选择最小够用的 profile；
+存量项目先按 MIGRATION.md 迁移；最后按 SELF-CHECK.md 验收并提交报告。
+```
+
+### 使用脚手架
+
+```bash
+node scripts/init.mjs --target /path/to/project --runtime codex --profile lite --project-name demo
+node scripts/doctor.mjs --target /path/to/project
+```
+
+`init` 默认只展示计划；加入 `--write` 才写文件。安装后仍需由 AI 或负责人填写项目意图、权威路径和验证命令。
+
+## 仓库结构
+
+```text
+CORE.md                 治理核心模型，所有适配器的唯一方法论来源
+ADAPTERS.md             Codex / Claude Code / Generic 的载体映射
+profiles/               Lite / Standard / High Assurance 选择规则
+setup.md                AI 安装流程
+MIGRATION.md            存量项目可回滚迁移
+SELF-CHECK.md           安装验收
+templates/common/       公共项目模板
+adapters/               运行时专属配置与 Hooks
+extensions/             可选领域治理（如前端设计系统）
+scripts/                init / doctor / verify
+tests/                  脚本与适配器契约测试
+skill/                  薄入口 skill，流程仍以本仓库为唯一权威
+governance/cases/       本仓库判例库：负责人真实纠正的沉淀，安装前先通读
+VERSION                 治理基版锚点（下游 lock 登记与上游比对用）
+```
+
+## 证据边界
+
+v2 的沙盒实验和真实迁移说明了两个有用方向：特定红线需要显式承载；规则的执行率受载体显著影响。但样本规模不足以证明普适性。v3 不再把小样本结果写成定律，而把它们作为设计证据，并要求每个采用项目继续用事故、门禁命中和无上下文演练校准。
+
+所有项目安装仓库结构地图；前端项目可加`--with frontend-design-system`，把设计语言纳入单一真相和自动验证，而不是把具体视觉规范写进通用治理核心。
+
+## 许可证
+
+MIT。可以复用思想和实现；项目特定规则必须由项目自己的失败、风险或负责人意图证明。

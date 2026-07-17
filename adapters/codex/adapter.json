@@ -1,0 +1,6 @@
+{
+  "name": "codex",
+  "instructionFile": "AGENTS.md",
+  "bridgeFile": "CLAUDE.md",
+  "filesRoot": "adapters/codex/files"
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "denyCommandPatterns": [
+    "(^|\\s)git(?:\\s+(?:-C\\s+\\S+|-c\\s+\\S+|--git-dir(?:=\\S+|\\s+\\S+)|--work-tree(?:=\\S+|\\s+\\S+)))*\\s+reset\\s+--hard(?:\\s|$)",
+    "(^|\\s)git(?:\\s+(?:-C\\s+\\S+|-c\\s+\\S+|--git-dir(?:=\\S+|\\s+\\S+)|--work-tree(?:=\\S+|\\s+\\S+)))*\\s+clean\\s+-[^\\n]*[fx]",
+    "(^|\\s)git(?:\\s+(?:-C\\s+\\S+|-c\\s+\\S+|--git-dir(?:=\\S+|\\s+\\S+)|--work-tree(?:=\\S+|\\s+\\S+)))*\\s+push(?:\\s+[^\\n]+)*\\s+--force(?:-with-lease)?(?:\\s|$)",
+    "(^|\\s)rm\\s+-rf\\s+/(?:\\s|$)",
+    "(^|\\s)rm\\s+-rf\\s+\\.git(?:\\s|$)"
+  ],
+  "fastChecks": [],
+  "ciChecks": [],
+  "protectedPaths": [],
+  "allowedTopLevelEntries": []
+}

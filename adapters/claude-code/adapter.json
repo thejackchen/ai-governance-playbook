@@ -1,0 +1,6 @@
+{
+  "name": "claude-code",
+  "instructionFile": "CLAUDE.md",
+  "bridgeFile": "AGENTS.md",
+  "filesRoot": "adapters/claude-code/files"
+}

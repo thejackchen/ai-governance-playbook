@@ -1,0 +1,39 @@
+name: governance
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: "17 1 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Governance verification
+        run: node scripts/governance-verify.mjs --ci
+
+  heartbeat:
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Weekly governance reconciliation
+        run: node scripts/weekly-governance-review.mjs >> "$GITHUB_STEP_SUMMARY"
+
+# deterministic job配合branch protection后才是共享阻断门禁。
+# 本文件是运行时通用的base版本，不含任何AI审查job；只读AI评审按ADAPTERS.md「AI 审计统一契约」自行接入，建议层，不作为唯一required check。

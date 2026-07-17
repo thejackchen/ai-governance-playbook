@@ -1,0 +1,39 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/session-start.mjs\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-tool-use.mjs\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/stop.mjs\"",
+            "timeout": 120
+          }
+        ]
+      }
+    ]
+  }
+}

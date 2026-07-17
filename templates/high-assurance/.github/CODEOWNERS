@@ -1,0 +1,7 @@
+# 替换占位owner；未配置真实owner前High Assurance不算完成。
+* @{{GITHUB_OWNER}}
+
+/governance/ @{{GITHUB_OWNER}}
+/.codex/ @{{GITHUB_OWNER}}
+/.claude/ @{{GITHUB_OWNER}}
+/docs/decisions/ @{{GITHUB_OWNER}}
