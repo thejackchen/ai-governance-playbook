@@ -16,6 +16,13 @@ if (existsSync(join(KIT_ROOT, "VERSION"))) {
   const anchor = readFileSync(join(KIT_ROOT, "VERSION"), "utf8").trim();
   const pkg = JSON.parse(readFileSync(join(KIT_ROOT, "package.json"), "utf8"));
   if (pkg.version !== anchor) errors.push(`版本漂移: VERSION锚点=${anchor}，package.json version=${pkg.version}`);
+
+  // 本仓库自托管v3安装产物，governance.lock.json.playbookVersion同样必须追平VERSION锚点，
+  // 否则下游对账（events/上游比对）会用一个过期版本号误判基版
+  if (existsSync(join(KIT_ROOT, "governance.lock.json"))) {
+    const lock = JSON.parse(readFileSync(join(KIT_ROOT, "governance.lock.json"), "utf8"));
+    if (lock.playbookVersion !== anchor) errors.push(`自托管governance.lock.json版本漂移: VERSION锚点=${anchor}，playbookVersion=${lock.playbookVersion}`);
+  }
 }
 
 for (const file of walkFiles(KIT_ROOT).filter((p) => /\.(mjs|js)$/.test(p) && !p.includes("/.git/"))) {

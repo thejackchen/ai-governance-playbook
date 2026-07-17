@@ -22,7 +22,7 @@ Profile 按风险和协作方式选择，不按项目“成熟度”评奖。默
 
 在 Lite 上增加：
 
-- registry / incidents / questions / cases；
+- registry 台账与 cases 判例库（incidents/questions 空入口 Lite 已含）；
 - pre-commit 快速反馈；
 - GitHub Actions 确定性验证；
 - branch protection / required checks 操作清单；

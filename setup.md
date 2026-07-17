@@ -43,7 +43,7 @@ node scripts/init.mjs \
 - 运行时指令正本中的`TODO(owner)`由负责人确认；
 - `ROADMAP.md`写真实游标、战线和硬约束；
 - `docs/architecture/repository-layout.md`分类现有顶层目录；
-- `docs/index.md`指向真实架构、需求、决策和运行文档；
+- `docs/index.md`指向真实架构、需求、决策和运行文档；架构/需求指针是markdown链接、已进死链检测射程，指针必须指向真实存在的文件，不能留安装器默认占位路径（`docs/architecture.md`、`docs/requirements/backlog.md`）；
 - `governance/policy.json`登记真实验证命令和项目特定危险操作；
 - `.gitignore`至少含`.env.local`/`node_modules`（安装器提供最小样例，已有的合并而不是覆盖）——「真实凭据不进git」红线的day-1结构前提；
 - Standard/High Assurance逐条审计`registry`，删除不适用的示例规则；
@@ -60,8 +60,10 @@ node scripts/init.mjs \
 3. 测试Rules：
 
 ```bash
-codex execpolicy check --pretty --rules .codex/rules/default.rules -- git reset --hard
+codex execpolicy check --pretty --resolve-host-executables --rules .codex/rules/default.rules -- git reset --hard
 ```
+
+不带`--resolve-host-executables`测不出绝对路径写法（例如`/usr/bin/git reset --hard`会判定`matchedRules`为空，即规则形同虚设）。
 
 4. 手工向PreToolUse Hook输入一个危险命令fixture，确认返回`decision:block`。
 

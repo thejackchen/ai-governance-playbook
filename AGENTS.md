@@ -52,6 +52,7 @@
 - 当前状态：`ROADMAP.md`
 - 知识路由：`docs/index.md`
 - 规则台账：`governance/registry.md`（Profile启用时）
+- 判例库：`governance/cases`（Profile启用时；负责人历次纠正的沉淀，同族场景先类比判例再动手）
 - 事故：`governance/incidents.md`
 - 待裁决问题：`governance/questions.md`
 - ADR：`docs/decisions/`

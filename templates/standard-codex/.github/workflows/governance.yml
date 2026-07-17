@@ -24,6 +24,27 @@ jobs:
       - name: Governance verification
         run: node scripts/governance-verify.mjs --ci
 
+  ai-review:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Advisory Codex review
+        if: ${{ env.OPENAI_API_KEY != '' }}
+        uses: openai/codex-action@b11346a6fa031e2e164ab4b7c7ea201afffd7d59 # v1
+        with:
+          openai-api-key: ${{ env.OPENAI_API_KEY }}
+          prompt-file: .github/codex/prompts/governance-review.md
+          sandbox: read-only
+          output-file: codex-governance-review.md
+
   heartbeat:
     if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
@@ -35,5 +56,5 @@ jobs:
       - name: Weekly governance reconciliation
         run: node scripts/weekly-governance-review.mjs >> "$GITHUB_STEP_SUMMARY"
 
+# ai-review是建议层，不应配置为唯一required check。
 # deterministic job配合branch protection后才是共享阻断门禁。
-# 本文件是运行时通用的base版本，不含任何AI审查job；只读AI评审按ADAPTERS.md「AI 审计统一契约」自行接入，建议层，不作为唯一required check。

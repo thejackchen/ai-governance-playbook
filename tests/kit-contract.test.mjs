@@ -24,16 +24,31 @@ test("runtime adapters do not duplicate the common instruction template", () => 
 });
 
 test("Standard workflow pins third-party actions and has a real scheduled heartbeat", () => {
-  const workflow = readFileSync(`${root}/templates/standard/.github/workflows/governance.yml`, "utf8");
-  assert.match(workflow, /schedule:/);
-  assert.match(workflow, /heartbeat:/);
-  assert.match(workflow, /weekly-governance-review\.mjs/);
-  assert.ok(!/uses:\s+[^\s]+@v\d+/m.test(workflow));
+  for (const path of [
+    `${root}/templates/standard/.github/workflows/governance.yml`,
+    `${root}/templates/standard-codex/.github/workflows/governance.yml`
+  ]) {
+    const workflow = readFileSync(path, "utf8");
+    assert.match(workflow, /schedule:/, path);
+    assert.match(workflow, /heartbeat:/, path);
+    assert.match(workflow, /weekly-governance-review\.mjs/, path);
+    assert.ok(!/uses:\s+[^\s]+@v\d+/m.test(workflow), path);
+  }
 });
 
 test("AI review is explicitly advisory", () => {
   const core = readFileSync(`${root}/CORE.md`, "utf8");
-  const workflow = readFileSync(`${root}/templates/standard/.github/workflows/governance.yml`, "utf8");
+  const workflow = readFileSync(`${root}/templates/standard-codex/.github/workflows/governance.yml`, "utf8");
   assert.match(core, /不把 LLM 单次结论作为唯一合并阻断条件/);
   assert.match(workflow, /不是唯一硬门禁|不应配置为唯一required check/);
+});
+
+test("Codex-only CI stowaway lives outside the shared Standard template", () => {
+  assert.ok(!existsSync(`${root}/templates/standard/.github/codex`), "templates/standard 不应再含 .github/codex");
+  const baseWorkflow = readFileSync(`${root}/templates/standard/.github/workflows/governance.yml`, "utf8");
+  assert.ok(!/codex|openai/i.test(baseWorkflow), "base Standard workflow 不应引用 codex/openai");
+  assert.ok(existsSync(`${root}/templates/standard-codex/.github/codex/prompts/governance-review.md`));
+  const codexWorkflow = readFileSync(`${root}/templates/standard-codex/.github/workflows/governance.yml`, "utf8");
+  assert.match(codexWorkflow, /ai-review:/);
+  assert.match(codexWorkflow, /openai\/codex-action/);
 });

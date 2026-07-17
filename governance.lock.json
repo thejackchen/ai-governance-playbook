@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "playbookVersion": "3.0.0",
+  "playbookVersion": "3.0.0-rc.1",
   "runtime": "codex",
   "profile": "standard",
   "ruleBudget": 24,

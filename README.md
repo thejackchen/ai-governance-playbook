@@ -27,8 +27,8 @@
 | 运行时 | 自动指令 | 生命周期载体 | 命令策略 | CI 中的 AI |
 |---|---|---|---|---|
 | Codex | `AGENTS.md` | `.codex/hooks.json` | `.codex/rules/*.rules` | `openai/codex-action` |
-| Claude Code | `CLAUDE.md` | `.claude/settings.json` | PreToolUse Hook | Claude 执行器 |
-| Generic | `AGENTS.md` | pre-commit / CI | 环境权限 | 可选 |
+| Claude Code | `CLAUDE.md` | `.claude/settings.json` | PreToolUse Hook | 未内置，自行接入 |
+| Generic | `AGENTS.md` | pre-commit / CI | 环境权限 | 未内置，自行接入 |
 
 细节见 [ADAPTERS.md](ADAPTERS.md)。
 

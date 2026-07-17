@@ -36,7 +36,7 @@
 
 ## 目录结构
 
-- [ ] `repository-layout.md`覆盖所有顶层职责；
+- [ ] `docs/architecture/repository-layout.md`覆盖所有顶层职责；
 - [ ] 临时文件、缓存和生成物有固定位置和ignore；
 - [ ] `.gitignore`在位且至少含`.env.local`/`node_modules`——「真实凭据不进git」红线的day-1结构前提；
 - [ ] 启用`allowedTopLevelEntries`前已完成人工分类；

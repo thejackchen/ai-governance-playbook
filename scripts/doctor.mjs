@@ -51,12 +51,14 @@ if (lock.runtime === "codex") {
       if (!settings.hooks?.[event]?.length) errors.push(`Claude Code缺少${event} Hook`);
     }
   } catch (e) { errors.push(`.claude/settings.json无法解析: ${e.message}`); }
+} else if (lock.runtime === "generic") {
+  warnings.push("generic运行时没有自动hook载体；SessionStart/PreToolUse/Stop不会被运行时自动触发，治理脚本需要人工或pre-commit/CI等效机制主动触发，需如实登记该降级");
 }
 
 const todoFiles = [];
 for (const p of lock.installedFiles || []) {
   if (!existsSync(join(target, p)) || !/\.(md|json|toml)$/.test(p)) continue;
-  if (/TODO(?:\(|:|\b)/.test(read(p))) todoFiles.push(p);
+  if (/TODO(?:\(|:|\b)|待负责人确认|待确认/.test(read(p))) todoFiles.push(p);
 }
 if (todoFiles.length) warnings.push(`仍有待项目化内容: ${todoFiles.join(", ")}`);
 

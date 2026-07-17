@@ -11,8 +11,8 @@
 ## 权威与边界
 
 - 当前状态唯一权威：`ROADMAP.md`。
-- 架构当前真相：{{ARCHITECTURE_SOURCE}}。
-- 需求权威：{{REQUIREMENTS_SOURCE}}。
+- 架构当前真相：[{{ARCHITECTURE_SOURCE}}]({{ARCHITECTURE_SOURCE}})。
+- 需求权威：[{{REQUIREMENTS_SOURCE}}]({{REQUIREMENTS_SOURCE}})。
 - 仓库结构权威：`docs/architecture/repository-layout.md`；新增顶层目录或跨层依赖先写ADR。
 - 同一事实只有一个正文权威；其它位置用链接或可验证生成物。
 - 文档与现实冲突时，以现实为准，修正文档；影响过真实执行时记`governance/incidents.md`。
@@ -50,6 +50,7 @@
 - 当前状态：`ROADMAP.md`
 - 知识路由：`docs/index.md`
 - 规则台账：`governance/registry.md`（Profile启用时）
+- 判例库：`governance/cases`（Profile启用时；负责人历次纠正的沉淀，同族场景先类比判例再动手）
 - 事故：`governance/incidents.md`
 - 待裁决问题：`governance/questions.md`
 - ADR：`docs/decisions/`

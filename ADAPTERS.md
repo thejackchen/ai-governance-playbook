@@ -13,7 +13,7 @@
 | 收尾 Hook | `Stop`，可要求继续修复 | `Stop` | pre-commit / CI |
 | 命令策略 | `.codex/rules/*.rules`，实验能力 | PreToolUse / permissions | 容器、sudo、shell policy |
 | 非交互执行 | `codex exec` | Claude CLI | 自选 agent CLI |
-| GitHub AI | `openai/codex-action` | Claude 执行器 | 可选 |
+| GitHub AI | `openai/codex-action` | 未内置，自行接入 | 未内置，自行接入 |
 | 本地定时任务 | Codex/ChatGPT Scheduled Tasks | 外部 cron / CI | 外部 cron / CI |
 
 ## Codex

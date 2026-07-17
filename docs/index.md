@@ -15,3 +15,4 @@
 | 事故 | `governance/incidents.md` | 事故发生时追加 |
 | 待裁决问题 | `governance/questions.md` | 裁决后链接ADR/判例/commit |
 | 规则 | `governance/registry.md` | Profile启用时使用 |
+| 判例库 | `governance/cases/` | Profile启用时使用；同族场景先类比判例再动手 |

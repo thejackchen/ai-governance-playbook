@@ -9,6 +9,9 @@ if (!args.target || !existsSync(target)) fail("必须提供已存在的 --target
 
 const runtime = args.runtime === "auto" || !args.runtime ? detectRuntime(target) : String(args.runtime);
 if (!new Set(["codex", "claude-code", "generic"]).has(runtime)) fail(`不支持runtime: ${runtime}`);
+if (runtime === "generic") {
+  console.log("[警告] generic运行时没有自动hook载体：SessionStart/PreToolUse/Stop不会被运行时自动触发，governance-verify/governance-lint等治理脚本需要人工或pre-commit/CI等效机制主动触发，否则治理不会真实生效。");
+}
 const profile = String(args.profile || "lite");
 if (!new Set(["lite", "standard", "high-assurance"]).has(profile)) fail(`不支持profile: ${profile}`);
 const profileInfo = JSON.parse(readFileSync(join(KIT_ROOT, "profiles", `${profile}.json`), "utf8"));
@@ -68,6 +71,10 @@ const map = [
   ["docs/index.md", "docs/index.md"],
   ["docs/architecture/repository-layout.md", "docs/architecture/repository-layout.md"],
   ["docs/decisions/ADR-000.md", "docs/decisions/ADR-000.md"],
+  // 架构/需求指针在INSTRUCTIONS.md与docs/index.md中是markdown链接（进死链检测射程），
+  // 必须有真实存在的默认落点，否则刚init完的项目会立刻报死链错误
+  ["docs/architecture.md", "docs/architecture.md"],
+  ["docs/requirements/backlog.md", "docs/requirements/backlog.md"],
   ["governance/policy.json", "governance/policy.json"],
   ["governance/incidents.md", "governance/incidents.md"],
   ["governance/questions.md", "governance/questions.md"],
@@ -94,6 +101,12 @@ if (adapter.filesRoot) {
 if (profile !== "lite") {
   const standard = join(KIT_ROOT, "templates", "standard");
   for (const source of files(standard)) writes.push({ source, dest: join(target, relative(standard, source)) });
+  // Codex专属CI夹带（.github/codex/** + 含ai-review job的workflow变体）只在runtime=codex时叠加；
+  // 覆盖同名workflow路径（数组靠后者在下面的Map去重中胜出），其它runtime保持零codex/openai引用的base版本。
+  if (runtime === "codex") {
+    const standardCodex = join(KIT_ROOT, "templates", "standard-codex");
+    for (const source of files(standardCodex)) writes.push({ source, dest: join(target, relative(standardCodex, source)) });
+  }
 }
 if (profile === "high-assurance") {
   const high = join(KIT_ROOT, "templates", "high-assurance");

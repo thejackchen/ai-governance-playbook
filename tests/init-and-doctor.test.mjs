@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 
@@ -64,6 +64,33 @@ test("PreToolUse blocks destructive commands and allows safe commands", () => {
   assert.equal(safe.stdout, "");
 });
 
+test("PreToolUse command normalization catches equivalent bypass spellings", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
+  const hook = join(dir, "scripts/governance-hooks/pre-tool-use.mjs");
+  for (const command of [
+    "/usr/bin/git reset --hard",
+    "\\git reset --hard",
+    "(git reset --hard)",
+    "git reset '--hard'"
+  ]) {
+    const result = run(process.execPath, [hook], dir, JSON.stringify({ tool_name: "Bash", tool_input: { command } }));
+    assert.equal(result.status, 0, command);
+    assert.equal(JSON.parse(result.stdout).decision, "block", `expected block for: ${command}`);
+  }
+  const safe = run(process.execPath, [hook], dir, JSON.stringify({ tool_name: "Bash", tool_input: { command: "git status" } }));
+  assert.equal(safe.status, 0);
+  assert.equal(safe.stdout, "");
+
+  const policyPath = join(dir, "governance/policy.json");
+  const policy = JSON.parse(readFileSync(policyPath, "utf8"));
+  policy.protectedPaths = ["governance/policy.json"];
+  writeFileSync(policyPath, JSON.stringify(policy, null, 2) + "\n");
+  const redirected = run(process.execPath, [hook], dir, JSON.stringify({ tool_name: "Bash", tool_input: { command: "echo x > governance/policy.json" } }));
+  assert.equal(redirected.status, 0);
+  assert.equal(JSON.parse(redirected.stdout).decision, "block");
+});
+
 test("Codex hooks resolve governance state from a nested working directory", () => {
   const dir = project();
   assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
@@ -85,8 +112,49 @@ test("Claude Code Standard installs shared gates and passes doctor", () => {
   assert.ok(readFileSync(join(dir, ".claude/settings.json"), "utf8").includes("SessionStart"));
   assert.ok(readFileSync(join(dir, ".github/workflows/governance.yml"), "utf8").includes("deterministic"));
   assert.ok(readFileSync(join(dir, "governance/registry.md"), "utf8").includes("判定条件"));
+  // 架构/需求指针是markdown链接（进死链检测射程），默认落点必须真实存在，否则刚装完就会死链报错
+  assert.match(readFileSync(join(dir, "CLAUDE.md"), "utf8"), /\[docs\/architecture\.md\]\(docs\/architecture\.md\)/);
+  assert.ok(existsSync(join(dir, "docs/architecture.md")));
+  assert.ok(existsSync(join(dir, "docs/requirements/backlog.md")));
+  const lint = run(process.execPath, [join(dir, "scripts/governance-lint.mjs"), "--root", dir], dir);
+  assert.equal(lint.status, 0, lint.stderr);
+  assert.doesNotMatch(lint.stdout + lint.stderr, /死链/);
   const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
   assert.equal(doctor.status, 0, doctor.stderr);
+});
+
+test("Standard profile carries no Codex/OpenAI stowaway outside Codex runtime", () => {
+  // scripts/governance-lint.mjs 对每个runtime都相同地包含 `lock.runtime === "codex"` 分支——
+  // 这是共享的跨runtime校验逻辑（本身在Lite也会安装，与Standard的CI夹带问题无关），不算作item 3要清除的
+  // Codex专属CI工具引用（.github/codex/**、openai/codex-action、OPENAI_API_KEY）。其余任何文件都不应提及。
+  const exempt = new Set(["scripts/governance-lint.mjs"]);
+  const findLeaks = (dir) => {
+    const hits = [];
+    const walk = (d) => {
+      for (const entry of readdirSync(d, { withFileTypes: true })) {
+        if (entry.name === ".git") continue;
+        const full = join(d, entry.name);
+        if (entry.isDirectory()) { walk(full); continue; }
+        if (exempt.has(relative(dir, full))) continue;
+        let body = "";
+        try { body = readFileSync(full, "utf8"); } catch { continue; }
+        if (/codex|openai/i.test(body)) hits.push(full);
+      }
+    };
+    walk(dir);
+    return hits;
+  };
+
+  for (const runtime of ["claude-code", "generic"]) {
+    const dir = project();
+    assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", runtime, "--profile", "standard", "--write"]).status, 0);
+    assert.deepEqual(findLeaks(dir), [], `${runtime}+standard 不应残留 codex/openai 引用`);
+  }
+
+  const codexDir = project();
+  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", codexDir, "--runtime", "codex", "--profile", "standard", "--write"]).status, 0);
+  assert.ok(existsSync(join(codexDir, ".github/codex/prompts/governance-review.md")));
+  assert.match(readFileSync(join(codexDir, ".github/workflows/governance.yml"), "utf8"), /ai-review:/);
 });
 
 test("doctor rejects an old instruction file that init skipped", () => {
