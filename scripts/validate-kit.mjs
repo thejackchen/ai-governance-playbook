@@ -42,6 +42,15 @@ for (const runtime of ["codex", "claude-code", "generic"]) {
   } catch (e) { errors.push(`${runtime} adapter无法解析: ${e.message}`); }
 }
 
+// root 自托管 hook 与 templates/common 副本必须字节一致(自托管不变式;root 副本保护本仓库自身,漂移即失守)
+for (const hook of ["session-start.mjs", "pre-tool-use.mjs", "stop.mjs"]) {
+  const a = join(KIT_ROOT, "scripts/governance-hooks", hook);
+  const b = join(KIT_ROOT, "templates/common/scripts/governance-hooks", hook);
+  if (existsSync(a) && existsSync(b) && readFileSync(a, "utf8") !== readFileSync(b, "utf8")) {
+    errors.push(`root 与 templates/common 的 governance-hooks/${hook} 已漂移(必须字节一致)`);
+  }
+}
+
 for (const error of errors) console.error(`[kit] ERROR ${error}`);
 console.log(`[kit] ${errors.length} error`);
 process.exit(errors.length ? 1 : 0);

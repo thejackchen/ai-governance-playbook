@@ -8,7 +8,7 @@
 | `ADAPTERS.md` | 运行时能力地图 | Codex、Claude Code、Generic载体差异 | 第二套核心原则 | contract测试 + review |
 | `setup.md` / `MIGRATION.md` / `SELF-CHECK.md` | 安装、迁移和验收入口 | 面向采用者的流程 | 模板正文副本 | 链接lint + 前向测试 |
 | `adapters/` | 运行时发行包 | adapter manifest、专属配置、Hooks和Rules | 通用方法论副本 | adapter契约测试 |
-| `templates/` | 跨运行时项目模板 | common、standard、high-assurance分层文件 | 运行时专属配置 | init集成测试 |
+| `templates/` | 跨运行时项目模板 | common、standard、standard-codex(仅codex叠加层)、high-assurance分层文件 | 运行时专属配置混入跨运行时层(codex专属只进standard-codex) | init集成测试 |
 | `profiles/` | 治理强度配置 | Lite/Standard/High Assurance结构化清单 | 项目特定规则 | schema/contract测试 |
 | `extensions/` | 可选领域治理 | 前端设计系统等显式扩展 | 强制所有项目采用的领域规则 | 扩展安装测试 |
 | `scripts/` | 可重复执行工具 | init、doctor、verify、lint、验证脚本 | 一次性临时输出 | `npm run check`、`npm test` |

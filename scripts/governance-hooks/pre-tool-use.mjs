@@ -19,11 +19,25 @@ const toolName = input.tool_name || input.toolName || "";
 const toolInput = input.tool_input || input.toolInput || {};
 const command = String(toolInput.command || toolInput.cmd || "");
 const normalizedCommand = normalizeCommand(command);
+// 候选串集合:原始 + 归一化 + 逐层拆 shell 包裹(bash -c/sh -c/eval,最多 3 层)。
+// 已知边界(诚实披露,不伪装完美门禁):命令替换 $()、管道拼装、解释器执行(python -c)、base64 编解码
+// 不在字符串防线射程内——由 Codex execpolicy(codex runtime)、人工责任与事故簿兜底,见 ADAPTERS.md。
+const candidates = [command, normalizedCommand];
+{
+  let cur = normalizedCommand;
+  for (let i = 0; i < 3; i++) {
+    const inner = unwrapShell(cur);
+    if (!inner || inner === cur) break;
+    const innerNorm = normalizeCommand(inner);
+    candidates.push(inner, innerNorm);
+    cur = innerNorm;
+  }
+}
 const serialized = JSON.stringify(toolInput);
 
 for (const pattern of policy.denyCommandPatterns || []) {
   const re = new RegExp(pattern, "i");
-  if (re.test(command) || re.test(normalizedCommand)) block(`命令命中治理禁止模式: ${pattern}`);
+  if (candidates.some((c) => re.test(c))) block(`命令命中治理禁止模式: ${pattern}`);
 }
 
 if (/apply_patch|Edit|Write/i.test(toolName)) {
@@ -34,7 +48,7 @@ if (/apply_patch|Edit|Write/i.test(toolName)) {
 
 if (/Bash/i.test(toolName)) {
   for (const path of policy.protectedPaths || []) {
-    if (command.includes(path) || normalizedCommand.includes(path)) {
+    if (candidates.some((c) => c.includes(path))) {
       block(`受保护路径不能经 Bash 重定向/写入: ${path}`);
     }
   }
@@ -59,6 +73,19 @@ function normalizeCommand(raw) {
   const tokens = s.split(/\s+/).filter(Boolean).map(stripQuotesAndEscapes);
   if (tokens.length && tokens[0].includes("/")) tokens[0] = tokens[0].split("/").pop();
   return tokens.join(" ");
+}
+
+// 拆一层 shell 包裹:bash -c "…" / sh -c '…' / eval … → 返回内层命令串(去包裹引号)
+function unwrapShell(s) {
+  let m = s.match(/^(?:bash|sh|zsh)\s+(?:-\S+\s+)*-c\s+([\s\S]+)$/i);
+  if (!m) m = s.match(/^eval\s+([\s\S]+)$/i);
+  if (!m) return null;
+  let inner = m[1].trim();
+  if (inner.length >= 2) {
+    const f = inner[0], l = inner[inner.length - 1];
+    if ((f === "'" && l === "'") || (f === '"' && l === '"')) inner = inner.slice(1, -1);
+  }
+  return inner.trim();
 }
 
 function stripQuotesAndEscapes(token) {

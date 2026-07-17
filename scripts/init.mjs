@@ -123,6 +123,15 @@ const bridgeText = runtime === "claude-code"
   ? "# AGENTS.md\n\n项目执行宪法见 [CLAUDE.md](CLAUDE.md)。\n"
   : "# CLAUDE.md\n\n项目执行宪法见 [AGENTS.md](AGENTS.md)。\n";
 const bridgePath = join(target, adapter.bridgeFile);
+  // 非 codex runtime:CODEOWNERS 中的 .codex 条目无宿主,过滤避免夹带
+  if (runtime !== "codex") {
+    const co = join(target, ".github", "CODEOWNERS");
+    if (existsSync(co)) {
+      const lines = readFileSync(co, "utf8").split("\n").filter((l) => !l.includes(".codex"));
+      writeFileSync(co, lines.join("\n"));
+    }
+  }
+
 const installedFiles = [...new Set(finalWrites.map((x) => relative(target, x.dest)).concat([adapter.bridgeFile, "governance.lock.json"]))].sort();
 
 console.log(`治理安装计划: target=${target} runtime=${runtime} profile=${profile}`);

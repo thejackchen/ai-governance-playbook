@@ -31,7 +31,7 @@
 
 ### 已知边界
 
-- PreToolUse 不是完整安全边界，部分等价工具路径可能绕过；真正高风险约束仍应落到 sandbox、IAM、只读凭据和 CI。
+- PreToolUse 不是完整安全边界。字符串防线已覆盖:目录前缀(`/usr/bin/git`)、引号/转义包裹、括号包裹、一至三层 `bash -c`/`sh -c`/`eval` 包裹;**仍可绕过**:命令替换 `$()`、管道拼装、解释器执行(`python -c`)、base64 编解码、多层混合嵌套。真正高风险约束仍应落到 sandbox、IAM、只读凭据和 CI;codex runtime 另有 execpolicy 深度解析(验证须带 `--resolve-host-executables`)。
 - Stop Hook 提供本地修复回路，但不能替代远端 required check。
 - `.rules` 需要用 `codex execpolicy check` 测试 match/not_match。
 
