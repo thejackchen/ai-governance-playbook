@@ -8,6 +8,7 @@
 - [ ] Codex只有`AGENTS.md`正文，Claude Code只有`CLAUDE.md`正文，另一文件是桥接；
 - [ ] 项目意图已由负责人确认；
 - [ ] ROADMAP、架构、需求、目录结构各有唯一权威；
+- [ ] 决策权威唯一：存量项目已有ADR目录则指令与`docs/index.md`指向它；否则`docs/decisions/`已建且ADR-000记录治理采纳；
 - [ ] `governance.lock.json`记录版本、runtime、profile和已安装文件。
 - [ ] 已形成获授权的Git基线，或明确报告全部未跟踪/未提交文件；没有基线时不宣称可回退或Hook哈希稳定。
 
@@ -21,6 +22,8 @@
 - [ ] `.rules`用`codex execpolicy check`验证match/not_match（Codex）；
 - [ ] pre-commit已启用或明确不安装（Standard及以上）；
 - [ ] CI deterministic job真实运行；required check状态如实登记；
+- [ ] 无远端仓库时按降级路径执行：pre-commit已真实承载同等检查，「CI就绪未激活」已如实登记，接入远端后用空提交补验；
+- [ ] 心跳定时器已挂（workflow schedule或等效定时器），或降级形态（本地cron/负责人自设提醒）已如实登记进安装报告（Standard及以上）；
 - [ ] AI review只读且不是唯一硬门禁。
 
 ## 内容审计
@@ -35,6 +38,7 @@
 
 - [ ] `repository-layout.md`覆盖所有顶层职责；
 - [ ] 临时文件、缓存和生成物有固定位置和ignore；
+- [ ] `.gitignore`在位且至少含`.env.local`/`node_modules`——「真实凭据不进git」红线的day-1结构前提；
 - [ ] 启用`allowedTopLevelEntries`前已完成人工分类；
 - [ ] 新顶层目录和跨层依赖需要ADR。
 

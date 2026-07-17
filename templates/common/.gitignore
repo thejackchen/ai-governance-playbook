@@ -1,0 +1,9 @@
+# 模板：最小忽略清单。按项目技术栈增删；.env* 各行是「真实凭据不进git」红线的结构前提，不可删。
+node_modules/
+dist/
+build/
+*.log
+.DS_Store
+.env
+.env.local
+.env.*.local

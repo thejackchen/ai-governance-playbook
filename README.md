@@ -16,6 +16,8 @@
 
 完整模型见 [CORE.md](CORE.md)。v1/v2 内容逐条审计见 [docs/audits/v3-content-audit.md](docs/audits/v3-content-audit.md)。
 
+负责人历次真实纠正沉淀为判例库 [governance/cases/](governance/cases/README.md)：新项目安装前先通读，同族场景直接类比引用——判例是唯一随执行者换代增值的治理资产。
+
 三类无上下文AI前向测试、首轮失败和修复证据见 [docs/evals/v3-forward-tests.md](docs/evals/v3-forward-tests.md)。
 
 ## 一个核心，不复制两套方法论
@@ -46,7 +48,8 @@ Profile 不是成熟度勋章，而是风险和协作成本的选择。详见 [p
 
 ```text
 读取 https://github.com/thejackchen/ai-governance-playbook 的 setup.md。
-为当前项目安装治理；自动探测 runtime，选择最小够用的 profile；
+为当前项目安装治理；安装前先通读 governance/cases/ 的现有判例；
+自动探测 runtime，选择最小够用的 profile；
 存量项目先按 MIGRATION.md 迁移；最后按 SELF-CHECK.md 验收并提交报告。
 ```
 
@@ -74,6 +77,8 @@ extensions/             可选领域治理（如前端设计系统）
 scripts/                init / doctor / verify
 tests/                  脚本与适配器契约测试
 skill/                  薄入口 skill，流程仍以本仓库为唯一权威
+governance/cases/       本仓库判例库：负责人真实纠正的沉淀，安装前先通读
+VERSION                 治理基版锚点（下游 lock 登记与上游比对用）
 ```
 
 ## 证据边界

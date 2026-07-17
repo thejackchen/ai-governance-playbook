@@ -3,7 +3,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 
 const read = (p) => existsSync(p) ? readFileSync(p, "utf8") : "";
-const today = new Date().toISOString().slice(0, 10);
+// 日期用本地时区——toISOString 按 UTC 输出，非零时区在跨日窗口会给出错误日期（v2.3.0 实测缺陷）
+const localISO = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const today = localISO(new Date());
 const datedRows = (body) => (body.match(/^\|\s*\d{4}-\d{2}-\d{2}\s*\|/gm) || []).length;
 const questions = datedRows(read("governance/questions.md"));
 const incidents = datedRows(read("governance/incidents.md"));

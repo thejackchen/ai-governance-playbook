@@ -2,6 +2,10 @@
 
 > 给项目AI执行。机制以[CORE.md](CORE.md)为准；本文件只规定安装顺序。存量项目先读[MIGRATION.md](MIGRATION.md)。
 
+## -1. 通读判例库（先于一切）
+
+通读本仓库 [governance/cases/](governance/cases/README.md) 的全部判例——前人踩过的坑不再踩。它们是历次真实纠正的沉淀（负责人当场纠正当场落档）；安装与后续执行中遇到同族场景，直接类比引用，别重新交学费。
+
 ## 0. 先探测，不猜
 
 记录五项：
@@ -41,6 +45,7 @@ node scripts/init.mjs \
 - `docs/architecture/repository-layout.md`分类现有顶层目录；
 - `docs/index.md`指向真实架构、需求、决策和运行文档；
 - `governance/policy.json`登记真实验证命令和项目特定危险操作；
+- `.gitignore`至少含`.env.local`/`node_modules`（安装器提供最小样例，已有的合并而不是覆盖）——「真实凭据不进git」红线的day-1结构前提；
 - Standard/High Assurance逐条审计`registry`，删除不适用的示例规则；
 - 前端extension填写设计意图、token、组件和多端映射。
 
@@ -71,6 +76,10 @@ git config core.hooksPath .githooks
 ```
 
 GitHub Actions只有在远端启用branch protection和`deterministic` required check后，才能登记为共享阻断门禁。AI review保持建议层。
+
+仓库暂无远端时的完整降级路径：pre-commit承载同等确定性检查并真实跑过一次；registry（或安装报告）如实登记「CI就绪未激活」；接入远端后用一次空提交验证workflow真实运行，再按上款登记共享门禁。
+
+心跳定时器：GitHub项目由workflow schedule承载；非GitHub环境用等效定时器（CI schedule / 本地cron）并如实登记载体。本地cron/日历提醒属仓库外动作——安装AI备好脚本与运行说明、把「负责人自设提醒」写入安装报告即算完成本步，不虚报「已配置」。
 
 ## 4. 编译项目规则
 

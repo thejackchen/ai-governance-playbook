@@ -62,6 +62,7 @@ const values = {
 const writes = [];
 const common = join(KIT_ROOT, "templates", "common");
 const map = [
+  [".gitignore", ".gitignore"], // 「真实凭据不进git」红线的day-1结构前提；已有则跳过，由安装AI合并
   ["ROADMAP.md", "ROADMAP.md"],
   ["CHANGELOG.md", "CHANGELOG.md"],
   ["docs/index.md", "docs/index.md"],

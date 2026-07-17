@@ -17,7 +17,7 @@
 | `docs/` | 知识投影 | 架构地图、ADR、审计、评估报告 | 生成缓存、运行时状态 | governance lint |
 | `governance/` | 本仓库治理状态 | policy、事故、问题、规则、案例 | 通用模板正文 | governance lint |
 | `.codex/` / `.githooks/` / `.github/` | 本仓库已安装载体 | Hooks、Rules、pre-commit、CI | 核心方法论 | doctor + CI |
-| 根目录元数据 | 项目入口与工具配置 | README、LICENSE、package、lock、git配置 | 临时报告、截图、缓存 | allowedTopLevelEntries |
+| 根目录元数据 | 项目入口与工具配置 | README、LICENSE、package、lock、VERSION版本锚点、git配置 | 临时报告、截图、缓存 | allowedTopLevelEntries |
 
 ## 顶层目录准入
 

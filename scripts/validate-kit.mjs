@@ -6,10 +6,17 @@ import { KIT_ROOT, walkFiles } from "./lib.mjs";
 
 const errors = [];
 for (const p of [
-  "CORE.md", "ADAPTERS.md", "setup.md", "MIGRATION.md", "SELF-CHECK.md",
+  "CORE.md", "ADAPTERS.md", "setup.md", "MIGRATION.md", "SELF-CHECK.md", "VERSION",
   "profiles/lite.json", "profiles/standard.json", "profiles/high-assurance.json",
   "adapters/codex/adapter.json", "adapters/claude-code/adapter.json", "adapters/generic/adapter.json"
 ]) if (!existsSync(join(KIT_ROOT, p))) errors.push(`缺少kit文件: ${p}`);
+
+// VERSION是治理基版锚点（下游lock登记与上游比对用）；package.json是其副本，漂移即错
+if (existsSync(join(KIT_ROOT, "VERSION"))) {
+  const anchor = readFileSync(join(KIT_ROOT, "VERSION"), "utf8").trim();
+  const pkg = JSON.parse(readFileSync(join(KIT_ROOT, "package.json"), "utf8"));
+  if (pkg.version !== anchor) errors.push(`版本漂移: VERSION锚点=${anchor}，package.json version=${pkg.version}`);
+}
 
 for (const file of walkFiles(KIT_ROOT).filter((p) => /\.(mjs|js)$/.test(p) && !p.includes("/.git/"))) {
   const result = spawnSync(process.execPath, ["--check", file], { encoding: "utf8" });
