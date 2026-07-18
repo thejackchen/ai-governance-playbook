@@ -17,7 +17,7 @@
 | README.md(本页) | **人** | 唯一需要人读的页 |
 | CORE.md | AI | 方法论权威(控制回路/五个结构问题/载体规范+运行时适配) |
 | setup.md | AI | 安装流程(+附A 存量迁移/附B 验收自检) |
-| governance/cases/ | AI | **判例库(11 条)——历次真实教训,新项目安装第一步通读** |
+| governance/cases/ | AI | **判例库(12 条)——历次真实教训,新项目安装第一步通读** |
 | profiles/ · adapters/ · templates/ | AI | 三档规格 · 运行时适配 · 安装模板 |
 | scripts/ | 机器 | init 安装器 · doctor 体检 · verify 校验 |
 | governance/ 其余 · ROADMAP · CHANGELOG | 机器+AI | 本仓库自己的治理(自食其力) |
