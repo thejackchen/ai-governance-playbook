@@ -19,7 +19,9 @@ const adapter = JSON.parse(readFileSync(join(KIT_ROOT, "adapters", runtime, "ada
 const extensions = String(args.with || "").split(",").map((x) => x.trim()).filter(Boolean);
 for (const ext of extensions) if (!existsSync(join(KIT_ROOT, "extensions", ext))) fail(`未知extension: ${ext}`);
 
-const today = new Date().toISOString().slice(0, 10);
+// 日期用本地时区——toISOString 按 UTC 输出，非零时区在跨日窗口会给出错误日期（v2.3.0 已在心跳脚本修过，此处 3.1.2 补齐）
+const now = new Date();
+const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 const projectName = String(args["project-name"] || basename(target));
 const values = {
   PROJECT_NAME: projectName,

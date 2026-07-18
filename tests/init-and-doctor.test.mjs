@@ -89,6 +89,14 @@ test("PreToolUse command normalization catches equivalent bypass spellings", () 
   const redirected = run(process.execPath, [hook], dir, JSON.stringify({ tool_name: "Bash", tool_input: { command: "echo x > governance/policy.json" } }));
   assert.equal(redirected.status, 0);
   assert.equal(JSON.parse(redirected.stdout).decision, "block");
+
+  // 3.1.2 判定面最小化:直接改保护文件被拦;引用/读取不误伤(首个安装项目当场误伤的回归)
+  const editProtected = run(process.execPath, [hook], dir, JSON.stringify({ tool_name: "Write", tool_input: { file_path: `${dir}/governance/policy.json`, content: "x" } }));
+  assert.equal(JSON.parse(editProtected.stdout).decision, "block", "Write 保护文件应被拦");
+  const editMention = run(process.execPath, [hook], dir, JSON.stringify({ tool_name: "Edit", tool_input: { file_path: `${dir}/docs/index.md`, new_string: "见 [policy](../governance/policy.json)" } }));
+  assert.equal(editMention.stdout, "", "他文件内容提及保护路径不应误拦");
+  const readProtected = run(process.execPath, [hook], dir, JSON.stringify({ tool_name: "Bash", tool_input: { command: "cat governance/policy.json" } }));
+  assert.equal(readProtected.stdout, "", "读保护文件不应误拦");
 });
 
 test("Codex hooks resolve governance state from a nested working directory", () => {

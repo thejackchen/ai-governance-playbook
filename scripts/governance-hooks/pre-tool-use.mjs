@@ -33,22 +33,33 @@ const candidates = [command, normalizedCommand];
     cur = innerNorm;
   }
 }
-const serialized = JSON.stringify(toolInput);
-
 for (const pattern of policy.denyCommandPatterns || []) {
   const re = new RegExp(pattern, "i");
   if (candidates.some((c) => re.test(c))) block(`命令命中治理禁止模式: ${pattern}`);
 }
 
+// protectedPaths 判定面最小化(3.1.2):判「改什么」只看目标路径字段,不做全输入序列化子串匹配——
+// 被保护文件名必然被合法引用(文档链接/注释/commit message),全文匹配首启即误伤(首个安装项目当场实证);
+// 误伤率决定门禁存活率(高误伤门禁终被 --no-verify 或拆除,保护归零)。
 if (/apply_patch|Edit|Write/i.test(toolName)) {
+  const targetPath = String(toolInput.file_path || toolInput.notebook_path || toolInput.path || "");
   for (const path of policy.protectedPaths || []) {
-    if (serialized.includes(path)) block(`受保护路径不能由自动工具直接修改: ${path}`);
+    if (targetPath === path || targetPath.endsWith(`/${path}`)) {
+      block(`受保护路径不能由自动工具直接修改: ${path}`);
+    }
   }
 }
 
 if (/Bash/i.test(toolName)) {
   for (const path of policy.protectedPaths || []) {
-    if (candidates.some((c) => c.includes(path))) {
+    const esc = path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    // 只拦写入形态:重定向(>/>>)、tee、sed -i、mv/cp 目标位;纯读(cat/grep)放行。
+    // 解释器写文件等旁路不在字符串防线射程(与上方 denyCommandPatterns 同款诚实披露)。
+    const writeRe = new RegExp(
+      `(?:>>?\\s*|\\btee\\s+(?:-a\\s+)?|\\bsed\\s+-i[^|;&]*\\s|\\b(?:mv|cp)\\s+[^|;&]*\\s)(?:\\S*/)?${esc}(?:\\s|$|["'])`,
+      "i"
+    );
+    if (candidates.some((c) => writeRe.test(c))) {
       block(`受保护路径不能经 Bash 重定向/写入: ${path}`);
     }
   }
