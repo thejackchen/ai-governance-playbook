@@ -12,7 +12,7 @@
 
 - 当前状态唯一权威：`ROADMAP.md`。
 - 治理核心唯一权威：`CORE.md`。
-- 运行时能力与映射唯一权威：`ADAPTERS.md`。
+- 运行时能力与映射唯一权威：`CORE.md 附(运行时适配)`。
 - 仓库结构权威：`docs/architecture/repository-layout.md`；新增顶层目录或跨层依赖先写ADR。
 - 同一事实只有一个正文权威；其它位置用链接或可验证生成物。
 - 文档与现实冲突时，以现实为准，修正文档；影响过真实执行时记`governance/incidents.md`。

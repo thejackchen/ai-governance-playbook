@@ -6,7 +6,7 @@ import { KIT_ROOT, walkFiles } from "./lib.mjs";
 
 const errors = [];
 for (const p of [
-  "CORE.md", "ADAPTERS.md", "setup.md", "MIGRATION.md", "SELF-CHECK.md", "VERSION",
+  "CORE.md", "setup.md", "VERSION",
   "profiles/lite.json", "profiles/standard.json", "profiles/high-assurance.json",
   "adapters/codex/adapter.json", "adapters/claude-code/adapter.json", "adapters/generic/adapter.json"
 ]) if (!existsSync(join(KIT_ROOT, p))) errors.push(`缺少kit文件: ${p}`);

@@ -6,5 +6,5 @@
 
 | 日期 | 现象 | 根因 | 修复 | 永久动作或接受风险 | 证据 |
 |---|---|---|---|---|---|
-| 2026-07-11 | v2文档声称Codex缺少Hooks，导致Codex落地方案被错误降级为纯文档约束 | 运行时能力快照陈旧，且能力判断没有版本化验证 | v3新增Codex Hooks、Rules和CI适配器，并在`ADAPTERS.md`登记信任与边界 | 运行时能力只在适配器维护；发布前执行真实CLI契约测试 | `adapters/codex/`、`tests/kit-contract.test.mjs` |
-| 2026-07-11 | v2自动审计流程硬编码Anthropic执行器，与“可移植治理”目标冲突 | 把特定供应商实现写进公共模板，核心与载体没有分层 | 删除公共硬编码审计，改为运行时adapter和统一只读AI审计契约 | 核心、适配器、模板分层；contract测试防止再次混入 | `ADAPTERS.md`、`docs/audits/v3-content-audit.md` |
+| 2026-07-11 | v2文档声称Codex缺少Hooks，导致Codex落地方案被错误降级为纯文档约束 | 运行时能力快照陈旧，且能力判断没有版本化验证 | v3新增Codex Hooks、Rules和CI适配器，并在`CORE.md 附(运行时适配)`登记信任与边界 | 运行时能力只在适配器维护；发布前执行真实CLI契约测试 | `adapters/codex/`、`tests/kit-contract.test.mjs` |
+| 2026-07-11 | v2自动审计流程硬编码Anthropic执行器，与“可移植治理”目标冲突 | 把特定供应商实现写进公共模板，核心与载体没有分层 | 删除公共硬编码审计，改为运行时adapter和统一只读AI审计契约 | 核心、适配器、模板分层；contract测试防止再次混入 | `CORE.md 附(运行时适配)`、`docs/audits/v3-content-audit.md` |

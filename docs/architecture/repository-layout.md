@@ -5,8 +5,8 @@
 | 路径 | 所有者/职责 | 允许内容 | 禁止内容 | 验证 |
 |---|---|---|---|---|
 | `CORE.md` | 治理方法论唯一权威 | 运行时无关原则 | 供应商专属命令、项目模板 | contract测试 + review |
-| `ADAPTERS.md` | 运行时能力地图 | Codex、Claude Code、Generic载体差异 | 第二套核心原则 | contract测试 + review |
-| `setup.md` / `MIGRATION.md` / `SELF-CHECK.md` | 安装、迁移和验收入口 | 面向采用者的流程 | 模板正文副本 | 链接lint + 前向测试 |
+| `CORE.md 附(运行时适配)` | 运行时能力地图 | Codex、Claude Code、Generic载体差异 | 第二套核心原则 | contract测试 + review |
+| `setup.md` / `setup.md 附A(存量迁移)` / `setup.md 附B(验收自检)` | 安装、迁移和验收入口 | 面向采用者的流程 | 模板正文副本 | 链接lint + 前向测试 |
 | `adapters/` | 运行时发行包 | adapter manifest、专属配置、Hooks和Rules | 通用方法论副本 | adapter契约测试 |
 | `templates/` | 跨运行时项目模板 | common、standard、standard-codex(仅codex叠加层)、high-assurance分层文件 | 运行时专属配置混入跨运行时层(codex专属只进standard-codex) | init集成测试 |
 | `profiles/` | 治理强度配置 | Lite/Standard/High Assurance结构化清单 | 项目特定规则 | schema/contract测试 |
