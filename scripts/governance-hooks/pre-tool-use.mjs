@@ -18,21 +18,44 @@ try {
 const toolName = input.tool_name || input.toolName || "";
 const toolInput = input.tool_input || input.toolInput || {};
 const command = String(toolInput.command || toolInput.cmd || "");
-const normalizedCommand = normalizeCommand(command);
-// 候选串集合:原始 + 归一化 + 逐层拆 shell 包裹(bash -c/sh -c/eval,最多 3 层)。
-// 已知边界(诚实披露,不伪装完美门禁):命令替换 $()、管道拼装、解释器执行(python -c)、base64 编解码
+// 命令链必须按连接符拆成独立候选;否则跨段拼接会把前段 push 与后段 --force 串成假命中,
+// 该误报已在 2026-07-19 的真实安装项目中复现两次。含连接符的整串故意不进入 candidates,只匹配各段原始/归一化形式。
+// 这是字符串级防线而非真正 shell parser,不解析引号内的连接符(如参数字面量 &&);误拆最多令危险模式匹配失败,不会新增误拦;
+// 真正的 wrapper 伪装先由 unwrapShell 解包,再回到同一队列重新分段。
+// 已知边界(诚实披露,不伪装完美门禁):命令替换 $()、管道拼装、解释器执行(python -c)、base64 编解码等
 // 不在字符串防线射程内——由运行时自带的深度命令解析(如有)、人工责任与事故簿兜底,详见发行包 ADAPTERS 已知边界节。
-const candidates = [command, normalizedCommand];
-{
-  let cur = normalizedCommand;
-  for (let i = 0; i < 3; i++) {
-    const inner = unwrapShell(cur);
-    if (!inner || inner === cur) break;
-    const innerNorm = normalizeCommand(inner);
-    candidates.push(inner, innerNorm);
-    cur = innerNorm;
+const candidates = gatherCandidates(command);
+
+function gatherCandidates(rawCommand) {
+  const out = new Set();
+  const seen = new Set();
+  const queue = [String(rawCommand || "")];
+  while (queue.length && seen.size < 48) {
+    const cur = queue.shift();
+    if (!cur || seen.has(cur)) continue;
+    seen.add(cur);
+    for (const whole of new Set([cur, normalizeCommand(cur)])) {
+      const inner = unwrapShell(whole);
+      if (inner && inner !== whole) queue.push(inner);
+      for (const seg of splitShellChain(whole)) {
+        const segNorm = normalizeCommand(seg);
+        out.add(seg);
+        out.add(segNorm);
+        const segInner = unwrapShell(segNorm);
+        if (segInner && segInner !== segNorm) queue.push(segInner);
+      }
+    }
   }
+  return [...out];
 }
+
+function splitShellChain(s) {
+  return String(s || "")
+    .split(/(?:\|\||&&|[;|&\n])+/)
+    .map((seg) => seg.trim())
+    .filter(Boolean);
+}
+
 for (const pattern of policy.denyCommandPatterns || []) {
   const re = new RegExp(pattern, "i");
   if (candidates.some((c) => re.test(c))) block(`命令命中治理禁止模式: ${pattern}`);

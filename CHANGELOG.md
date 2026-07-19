@@ -4,6 +4,8 @@
 
 ## 2026-07-19
 
+- [fix] PreToolUse 跨命令误报回流(来源:AI-OS 会话同日实测两次误拦)——denyCommandPatterns 原对整串候选匹配,`git push … && git worktree remove … --force` 被跨 && 拼成假命中;改为候选生成按 shell 连接符(&&/||/;/|/&/换行)拆独立命令段、逐段匹配,含连接符整串不再进候选(连接符伪装由 unwrapShell 解包后重新分段覆盖)。顺带补一个漏拦:链中非首命令的目录前缀(`cd /tmp && /usr/bin/git reset --hard`)原可绕过 (^|\s) 锚点,拆段后逐段归一化拦住。测试 +1(9 block+3 allow 分段矩阵,19/19);root 自托管副本同步字节一致。
+
 - [cases] clearance-center 反哺:门禁判定面最小化——判「改什么」看目标不做全文匹配,误伤率决定门禁存活率(v3.1.2 修复的判例正本;负责人批准 promote,判例库 12→13)。
 
 - [fix] v3.1.2:两处实测缺陷回流(来源:clearance-center v3 安装,首个 v2→v3 存量迁移实践)——

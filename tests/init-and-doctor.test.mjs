@@ -99,6 +99,36 @@ test("PreToolUse command normalization catches equivalent bypass spellings", () 
   assert.equal(readProtected.stdout, "", "读保护文件不应误拦");
 });
 
+test("PreToolUse matches deny patterns per command segment, not across connectors", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
+  const hook = join(dir, "scripts/governance-hooks/pre-tool-use.mjs");
+  for (const command of [
+    "git reset --hard",
+    "git clean -fdx",
+    "git push --force",
+    "rm -rf /",
+    "rm -rf .git",
+    "/usr/bin/git push origin main --force",
+    'bash -c "git push --force"',
+    'bash -c "echo hi && git push --force"',
+    "cd /tmp && /usr/bin/git reset --hard"
+  ]) {
+    const result = run(process.execPath, [hook], dir, JSON.stringify({ tool_name: "Bash", tool_input: { command } }));
+    assert.equal(result.status, 0, `hook failed for: ${command}`);
+    assert.equal(JSON.parse(result.stdout).decision, "block", `expected block for: ${command}`);
+  }
+  for (const command of [
+    "git push origin main && git worktree remove /tmp/x --force",
+    "git status; git log --oneline | head -3",
+    'git commit -m "safe" && git push origin main'
+  ]) {
+    const result = run(process.execPath, [hook], dir, JSON.stringify({ tool_name: "Bash", tool_input: { command } }));
+    assert.equal(result.status, 0, `hook failed for: ${command}`);
+    assert.equal(result.stdout, "", `expected allow for: ${command}`);
+  }
+});
+
 test("Codex hooks resolve governance state from a nested working directory", () => {
   const dir = project();
   assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
