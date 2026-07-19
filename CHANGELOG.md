@@ -4,6 +4,8 @@
 
 ## 2026-07-19
 
+- [cases] clearance-center 反哺:门禁判定面最小化——判「改什么」看目标不做全文匹配,误伤率决定门禁存活率(v3.1.2 修复的判例正本;负责人批准 promote,判例库 12→13)。
+
 - [fix] v3.1.2:两处实测缺陷回流(来源:clearance-center v3 安装,首个 v2→v3 存量迁移实践)——
   ① protectedPaths 判定面最小化:模板原为全输入序列化子串匹配,保护文件名被文档链接引用即误拦(首启当场实证);改为 Edit/Write 只比对目标路径字段、Bash 只拦写入形态(重定向/tee/sed -i/mv·cp),纯读放行;测试补 3 条误伤回归断言。判例候选:vault「门禁判定面最小化」(validated,待拍板 promote)。
   ② init.mjs 日期本地时区:TODAY 与 lock.installedAt 原用 toISOString(UTC),跨日窗口日期错一天——v2.3.0 已在心跳脚本修过同款,init 漏改,本次补齐。
