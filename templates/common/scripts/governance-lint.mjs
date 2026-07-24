@@ -87,6 +87,31 @@ if (existsSync(join(root, "governance/registry.md"))) {
   if (count > Number(lock.ruleBudget || 0)) errors.push(`规则预算超限: ${count}/${lock.ruleBudget}`);
 }
 
+// ── 反向覆盖检查：载体在跑，却没登记进 registry ──
+// 既有检查只验「登记的东西是否存在」(installedFiles)；反过来「实际在跑却没登记」以前无人看守。
+// 母版(产品中心)2026-07-25 实证：手写台账停摆 15 天，4 类正在运行的载体(CI 步骤/新 hook/新门禁)全部漏登，
+// 而漏登的恰恰是被真实事故逼出来的那批——预算读数因此失真，「还能不能再加一条规则」的判断建立在假数上。
+// 判例：governance/cases/2026-07-25-自动账本活手写账本死.md（凡可枚举的事实交机器，手写只留判断）。
+// warn 而非 error：新检查对存量项目一律先观察，不在升级当天打断任何人的 CI。
+if (existsSync(join(root, "governance/registry.md"))) {
+  const registryBody = read("governance/registry.md");
+  const carriers = [];
+  const pushDir = (dir, label) => {
+    let names = [];
+    try { names = readdirSync(join(root, dir)); } catch { return; }
+    for (const name of names) {
+      try { if (!statSync(join(root, dir, name)).isFile()) continue; } catch { continue; }
+      carriers.push({ id: name, label: `${label} ${name}` });
+    }
+  };
+  pushDir(".githooks", "git hook");
+  pushDir(".github/workflows", "CI workflow");
+  const unregistered = carriers.filter((c) => !registryBody.includes(c.id));
+  for (const c of unregistered) {
+    warnings.push(`载体在跑但未登记进 registry.md: ${c.label}——登记它，或说明为何不算治理载体`);
+  }
+}
+
 finish();
 
 function finish() {

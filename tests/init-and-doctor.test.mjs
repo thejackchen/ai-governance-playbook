@@ -229,11 +229,13 @@ test("Standard heartbeat is scheduled and counts table entries", () => {
   const init = run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "standard", "--write"]);
   assert.equal(init.status, 0, init.stderr);
   writeFileSync(join(dir, "governance/incidents.md"), "| 日期 | 现象 |\n|---|---|\n| 2026-07-11 | example |\n");
-  writeFileSync(join(dir, "governance/questions.md"), "| 日期 | 问题 |\n|---|---|\n| 2026-07-11 | example |\n");
+  // 问题队列是 `##` 标题制(v3.2.0 起,与跨项目收件箱聚合器同一判据):一问一标题,标题行含「已裁决」即闭环
+  writeFileSync(join(dir, "governance/questions.md"), "# 待裁决问题\n\n## 未结的一个问题\n\n背景一行。\n\n## 已经拍过的问题 已裁决\n\n结论一行。\n");
   const review = run(process.execPath, ["scripts/weekly-governance-review.mjs"], dir);
   assert.equal(review.status, 0, review.stderr);
-  assert.match(review.stdout, /待裁决问题条目：1/);
+  assert.match(review.stdout, /待裁决问题\(未结\)：1/);   // 两个 ## 里只有一个未结
   assert.match(review.stdout, /事故条目：1/);
+  assert.match(review.stdout, /事故簿流量：/);              // 流量对账读数在位
   const workflow = readFileSync(join(dir, ".github/workflows/governance.yml"), "utf8");
   assert.match(workflow, /schedule:/);
   assert.match(workflow, /weekly-governance-review\.mjs/);
