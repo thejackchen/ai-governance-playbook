@@ -7,7 +7,9 @@ const read = (p) => existsSync(p) ? readFileSync(p, "utf8") : "";
 const localISO = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const today = localISO(new Date());
 const datedRows = (body) => (body.match(/^\|\s*\d{4}-\d{2}-\d{2}\s*\|/gm) || []).length;
-const questions = datedRows(read("governance/questions.md"));
+// 问题队列是 `##` 标题制(与收件箱聚合器同一判据:标题行含「已裁决」即闭环);表格/编号列表格式聚合不到,详见模板头
+const openQuestions = (body) => (body.match(/^##\s+(?!.*已裁决).+$/gm) || []).length;
+const questions = openQuestions(read("governance/questions.md"));
 const incidents = datedRows(read("governance/incidents.md"));
 const rules = (read("governance/registry.md").match(/^\| R\d+ \|/gm) || []).length;
 let commits = "0";
@@ -15,7 +17,7 @@ try { commits = execFileSync("git", ["rev-list", "--count", "--since=7 days ago"
 
 console.log(`# 周治理对账 · ${today}
 
-- 待裁决问题条目：${questions}
+- 待裁决问题(未结)：${questions}
 - 事故条目：${incidents}
 - 规则条目：${rules}
 - 近7天commit：${commits}
