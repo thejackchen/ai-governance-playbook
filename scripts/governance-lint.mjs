@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { execFileSync } from "node:child_process";
 
 const arg = (name) => {
   const i = process.argv.indexOf(name);
@@ -109,6 +110,28 @@ if (existsSync(join(root, "governance/registry.md"))) {
   const unregistered = carriers.filter((c) => !registryBody.includes(c.id));
   for (const c of unregistered) {
     warnings.push(`载体在跑但未登记进 registry.md: ${c.label}——登记它，或说明为何不算治理载体`);
+  }
+}
+
+// 凭据文件的派生形态必须一并被忽略(判例:2026-07-25-忽略规则要覆盖派生形态)。
+// 六个仓实测四个漏 —— 大家都写了 `.env.local`,但 `.bak/.old/.save/~` 是加在末尾的后缀,
+// 那条规则匹配不到。而造这类文件的不是人的疏忽,是工具的日常行为(编辑器备份/手工 cp/恢复脚本)。
+// 验证必须用 `git check-ignore` 而非读 .gitignore —— 读规则是「我以为」,check-ignore 是「确实挡住了」。
+{
+  const derived = [".env.local.bak", ".env.local.old", ".env.local.save", ".env.local~", ".env.production"];
+  const missing = derived.filter((name) => {
+    try {
+      execFileSync("git", ["check-ignore", "-q", name], { cwd: root, stdio: "ignore" });
+      return false;
+    } catch {
+      return true;   // 退出码非 0 = 未被忽略
+    }
+  });
+  if (missing.length) {
+    errors.push(
+      `凭据派生文件未被忽略(${missing.join(" / ")}) — 一次 \`git add -A\` 即入库。` +
+      "修法:.gitignore 用 `.env.*` + `!.env.example` 覆盖整族,别逐个列举文件名",
+    );
   }
 }
 

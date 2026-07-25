@@ -4,3 +4,7 @@ node_modules/
 .env
 .env.local
 .env.*.local
+# 派生形态(.bak/.old/.save/~)不被上面三条覆盖 —— 本仓自己的 governance-lint 会挡。
+# 判例:governance/cases/2026-07-25-忽略规则要覆盖派生形态.md
+.env.*
+!.env.example
