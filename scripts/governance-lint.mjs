@@ -113,6 +113,29 @@ if (existsSync(join(root, "governance/registry.md"))) {
   }
 }
 
+// 提交是否真到了远端(判例:成功信号本身要被验证,第三批实例)。
+// `git push` 的成功输出与推到临时仓的输出**格式一模一样**,只有 `To <url>` 那行不同 ——
+// 据此宣称"已推送"是拿发送方视角当接收方证据。判据换成数 rev-list:问"远端到底有没有"。
+// 另:「没有远端」与「已推送」必须分开说 —— 二者都静默 = 单点丢失风险被当成绿灯。
+{
+  const sh = (args) => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
+  try {
+    const branch = sh(["rev-parse", "--abbrev-ref", "HEAD"]);
+    const remotes = sh(["remote"]).split("\n").filter(Boolean);
+    if (remotes.length === 0) {
+      warnings.push("本仓没有配置任何远端 — 所有提交只存在本机一份,磁盘故障即全部丢失");
+    }
+    for (const remote of remotes) {
+      let ahead;
+      try { ahead = Number(sh(["rev-list", "--count", `${remote}/${branch}..${branch}`])); }
+      catch { continue; }   // 该远端无同名分支/未 fetch,不算问题
+      if (ahead > 0) {
+        warnings.push(`本地 ${branch} 领先 ${remote} ${ahead} 个提交 — 未推送到真远端(别拿 push 的成功输出当证据)`);
+      }
+    }
+  } catch { /* 非 git 环境 */ }
+}
+
 // 凭据文件的派生形态必须一并被忽略(判例:2026-07-25-忽略规则要覆盖派生形态)。
 // 六个仓实测四个漏 —— 大家都写了 `.env.local`,但 `.bak/.old/.save/~` 是加在末尾的后缀,
 // 那条规则匹配不到。而造这类文件的不是人的疏忽,是工具的日常行为(编辑器备份/手工 cp/恢复脚本)。

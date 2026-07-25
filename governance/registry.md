@@ -13,3 +13,4 @@
 | R7 | 确定性门禁优先于AI审计 | S3/S4 | commit/merge | 可机器判定红线仅由LLM审计承载 | block | architecture review+CI | policy/工作流diff | 核心原则；出现更强等价载体时更新 |
 | R8 | 发布需要自动与无上下文验证 | S1/S3 | manual/merge | 新版本缺少脚本测试或前向测试证据 | approval/block | 发布review+CI | 测试日志/`docs/evals/` | v3发布要求；评估机制变化时复审 |
 | R9 | 凭据忽略规则覆盖派生形态 | S4 | commit/lint | `.env.local.bak/.old/.save/~` 等派生名未被 `git check-ignore` 挡住 | block | governance-lint | check-ignore 退出码 | 2026-07-25 六仓实测四漏(含本仓)；凭据不再以文件形式存在时删除 |
+| R10 | 提交要真到远端 | S3 | commit/lint | `rev-list <remote>/HEAD..HEAD` 非零,或本仓无任何远端 | warn | governance-lint | rev-list 计数 | 2026-07-25 执行者把 CI 临时仓 push 输出当真推送(6 提交未出去)；全流程强制推送后删除 |
