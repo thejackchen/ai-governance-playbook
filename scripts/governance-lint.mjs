@@ -113,6 +113,50 @@ if (existsSync(join(root, "governance/registry.md"))) {
   }
 }
 
+// ── hook 载体实效检查:文件存在 ≠ 守卫在岗 ──
+// 判例(2026-07-28-绕过安装器手工抄治理必漏hook):aios 仓手工抄治理未跑 init,.claude/ 整目录缺失,
+// Stop hook 停摆数周——landing 纪律纯靠自觉,游标冻结 13 天无人察觉。既有检查只验 settings.json **存在**;
+// 手工抄的项目可能有文件而无 Stop 段(假绿比没装更危险:负责人以为守卫在岗)。
+// warn 而非 error:沿 v3.2.0 反向覆盖检查同款审慎——新检查对存量项目先观察,不打断升级当天的 CI。
+{
+  const checkHookCarrier = (path, extract, label) => {
+    const full = join(root, path);
+    if (!existsSync(full)) return;   // 文件缺失已由上方 required() 按 runtime 报 error
+    try {
+      const carrier = JSON.parse(readFileSync(full, "utf8"));
+      if (!extract(carrier)) warnings.push(`${path} 存在但未挂 ${label}——守卫文件是空壳,landing/拦截不会真跑(手工抄治理的典型残留,重跑 init 或补齐 hook 段)`);
+    } catch (e) {
+      warnings.push(`${path} 无法解析: ${e.message}`);
+    }
+  };
+  if (lock.runtime === "claude-code") {
+    checkHookCarrier(".claude/settings.json", (c) => Array.isArray(c?.hooks?.Stop) && c.hooks.Stop.length > 0, "Stop hook");
+  } else if (lock.runtime === "codex") {
+    checkHookCarrier(".codex/hooks.json", (c) => c && Object.keys(c).length > 0, "任何 hook");
+  }
+}
+
+// ── ROADMAP 游标新鲜度:记载的「当前」必须真的当前 ──
+// 判例同上:游标冻结在 13 天前的建造期,新 AI 接手会被误导成「项目还停在旧阶段」——
+// 「每轮要点全记载、随时无缝切换」的北极星,败给的不是缺文档,是文档陈旧。
+// 启发式:ROADMAP 正文出现的最新日期落后最新提交超过 7 天 → warn(容忍短假期,抓长期漂移)。
+{
+  try {
+    const sh = (args) => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
+    const lastCommit = sh(["log", "-1", "--format=%cI"]).slice(0, 10);
+    const roadmapPath = ["ROADMAP.md", "docs/ROADMAP.md"].find((p2) => existsSync(join(root, p2)));
+    if (roadmapPath && lastCommit) {
+      const body = readFileSync(join(root, roadmapPath), "utf8");
+      const dates = [...body.matchAll(/20\d{2}-\d{2}-\d{2}/g)].map((m) => m[0]).sort();
+      const newest = dates.at(-1);
+      if (newest) {
+        const gapDays = Math.floor((new Date(lastCommit) - new Date(newest)) / 86400000);
+        if (gapDays > 7) warnings.push(`${roadmapPath} 最新日期 ${newest} 落后最新提交 ${lastCommit} 达 ${gapDays} 天——游标疑陈旧,新 AI 接手会被误导;收尾请刷新当前活跃状态`);
+      }
+    }
+  } catch { /* 非 git 环境 */ }
+}
+
 // 提交是否真到了远端(判例:成功信号本身要被验证,第三批实例)。
 // `git push` 的成功输出与推到临时仓的输出**格式一模一样**,只有 `To <url>` 那行不同 ——
 // 据此宣称"已推送"是拿发送方视角当接收方证据。判据换成数 rev-list:问"远端到底有没有"。
