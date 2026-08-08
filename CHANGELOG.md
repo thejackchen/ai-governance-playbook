@@ -2,6 +2,10 @@
 
 > 只追加有意义的仓库、架构、运行状态或治理变化。只读评审、讨论和无落盘任务不写。
 
+## 2026-08-08 · 三句核心入 CORE(方法论最高纲领)
+- [feat] CORE.md 新增 0 章「三句核心」:真相在文本 / 行动跟文本 / 底线在机器——外部对标(甲壳虫宪法模板)与 AIOS 实践收敛,负责人定纲;一切治理零件必须回指其一。
+- [governance] 新增判例两条:事故驱动体系的慢性失血盲区(演化式治理防不住无报警声的损耗)、参考外部体系先对齐整条链再动手(三段法:原样摆清→逐环对账→只动差集)。AIOS 母版同日已装载体(收件箱+三层机器网+宪法锚点 doctor 校验)。
+
 ## 2026-07-29 · v3.3.1（fail-closed requirements/install governance）
 - [fix] local 需求校验固定运行 kit 内置语义 checker；`source_refs/spec_refs/acceptance/evidence`、规格相对路径、完成项证据和段落边界均纳入硬门。
 - [fix] external 需求权威要求 policy、运行时指令、`docs/index.md` 三处 URL 完全一致；已安装项目不能由普通 init 在 local 与 external 之间半迁移。
