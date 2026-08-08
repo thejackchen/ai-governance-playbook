@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join, resolve } from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
-import { parseArgs } from "./lib.mjs";
+import { parseArgs, KIT_ROOT, VERSION } from "./lib.mjs";
 
 const args = parseArgs(process.argv.slice(2));
 const target = resolve(String(args.target || ""));
@@ -15,7 +16,20 @@ if (!existsSync(lockPath)) fail("未找到governance.lock.json；项目尚未由
 let lock;
 try { lock = JSON.parse(readFileSync(lockPath, "utf8")); } catch (e) { fail(`lock无法解析: ${e.message}`); }
 
-const lint = spawnSync(process.execPath, [join(target, "scripts/governance-lint.mjs"), "--root", target], { encoding: "utf8" });
+const lockVersion = String(lock.playbookVersion || "").trim();
+if (!lockVersion) {
+  errors.push("governance.lock.json 缺少 playbookVersion；无法确认与kit版本一致性。按 setup.md 的存量版本升级流程审查差异并取得验证证据后再更新 lock；普通 init 不会覆盖旧文件，禁止直接 --force");
+} else if (lockVersion !== VERSION) {
+  errors.push(`governance.lock.json playbookVersion 漂移: lock=${lockVersion}, kit=${VERSION}；按 setup.md 的存量版本升级流程审查差异并取得验证证据后再更新 lock；普通 init 不会覆盖旧文件，禁止直接 --force`);
+}
+const currentFingerprint = fingerprintKit();
+if (!lock.kitFingerprint) {
+  errors.push("governance.lock.json 缺少 kitFingerprint；无法区分同版本的不同或 dirty kit 内容。按 setup.md 的存量版本升级流程审查差异后重新安装或显式迁移。");
+} else if (lock.kitFingerprint !== currentFingerprint) {
+  errors.push(`governance.lock.json kitFingerprint 漂移: lock=${lock.kitFingerprint}, kit=${currentFingerprint}；当前 kit 内容与安装时不同，审查差异后显式迁移，不能只更新版本字符串。`);
+}
+
+const lint = spawnSync(process.execPath, [join(KIT_ROOT, "scripts/governance-lint.mjs"), "--root", target], { encoding: "utf8" });
 process.stdout.write(lint.stdout || "");
 process.stderr.write(lint.stderr || "");
 if (lint.status !== 0) errors.push("governance-lint未通过");
@@ -80,3 +94,30 @@ console.log(`[doctor] ${errors.length} error / ${warnings.length} warn`);
 process.exit(errors.length ? 1 : 0);
 
 function fail(message) { console.error(`[doctor] ${message}`); process.exit(1); }
+
+function fingerprintKit() {
+  const hash = createHash("sha256");
+  const excluded = new Set([".git", "node_modules", "governance.lock.json"]);
+  const stack = [KIT_ROOT];
+  const contents = [];
+  while (stack.length) {
+    const dir = stack.pop();
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (excluded.has(entry.name)) continue;
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) stack.push(full);
+      else contents.push(full);
+    }
+  }
+  for (const file of contents.sort()) {
+    hash.update(fullPathRelative(file));
+    hash.update("\0");
+    hash.update(readFileSync(file));
+    hash.update("\0");
+  }
+  return `sha256:${hash.digest("hex")}`;
+}
+
+function fullPathRelative(file) {
+  return file.slice(KIT_ROOT.length + 1);
+}

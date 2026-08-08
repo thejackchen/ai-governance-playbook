@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { execFileSync } from "node:child_process";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { execFileSync, spawnSync } from "node:child_process";
 
 const arg = (name) => {
   const i = process.argv.indexOf(name);
@@ -10,9 +10,196 @@ const arg = (name) => {
 const root = resolve(arg("--root") || process.cwd());
 const errors = [];
 const warnings = [];
+const outputLimit = 32 * 1024;
+let reqCfg = null;
+const BUILT_IN_REQUIREMENTS_VALIDATOR = ["node", "scripts/requirements-check.mjs", "--root", "."];
+const LOCAL_REQUIREMENTS_SOURCE = "docs/requirements/backlog.md";
 const read = (p) => readFileSync(join(root, p), "utf8");
 const required = (p) => {
   if (!existsSync(join(root, p))) errors.push(`缺少文件: ${p}`);
+};
+function clampOutput(text) {
+  const raw = String(text || "");
+  return raw.length > outputLimit ? `${raw.slice(0, outputLimit)}…(已截断 ${raw.length - outputLimit} 字符)` : raw;
+}
+function parseRequirementsConfig(policy) {
+  const cfg = policy?.requirements;
+  if (!cfg) {
+    warnings.push("[需求系统] governance/policy.json 未声明 requirements；按兼容策略默认 local + built-in 校验");
+    return {
+      mode: "local",
+      source: LOCAL_REQUIREMENTS_SOURCE,
+      validators: [],
+    };
+  }
+  if (typeof cfg !== "object" || cfg === null || Array.isArray(cfg)) {
+    errors.push("governance/policy.json requirements 需为对象");
+    return null;
+  }
+  const mode = cfg.mode === "external" || cfg.mode === "local" ? cfg.mode : "local";
+  if (cfg.mode !== mode) errors.push(`governance/policy.json requirements.mode 必须为 local 或 external: ${cfg.mode}`);
+  const source = typeof cfg.source === "string" && cfg.source.trim() ? cfg.source.trim() : "";
+  if (!source) errors.push("governance/policy.json requirements.source 不能为空");
+  if (cfg.validator !== undefined && !Array.isArray(cfg.validator)) {
+    errors.push("governance/policy.json requirements.validator 形态非法；要求为 string[][]");
+    return null;
+  }
+  const validator = cfg.validator ?? [];
+  for (const item of validator) {
+    if (!Array.isArray(item) || !item.length || !item.every((x) => typeof x === "string")) {
+      errors.push(`governance/policy.json requirements.validator 形态非法: ${JSON.stringify(item)}；要求为 string[][]`);
+      return null;
+    }
+  }
+  if (mode === "external" && validator.length) errors.push("external 模式 requirements.validator 必须为空；外部权威只由三处同一 URL 指针承载");
+  return {
+    mode,
+    source,
+    validators: validator,
+  };
+}
+function isExternalRequirementsSource(source) {
+  return /^https?:\/\/[^\s]+$/i.test(source);
+}
+function isInsideRepoRoot(targetPath) {
+  const normalizedRoot = resolve(root);
+  const normalizedTarget = resolve(targetPath);
+  return normalizedTarget === normalizedRoot || normalizedTarget.startsWith(`${normalizedRoot}${sep}`);
+}
+function validateRequirementsConfig(cfg) {
+  if (!cfg) return;
+  const sourcePath = resolve(root, cfg.source);
+  const localBacklog = join(root, "docs/requirements/backlog.md");
+  const hasStatefulBacklog = existsSync(localBacklog)
+    ? /##\s*进行中需求/.test(read("docs/requirements/backlog.md")) || /^\s*-\s*\[\s\]\s+REQ-[A-Z0-9-]+/m.test(read("docs/requirements/backlog.md"))
+    : false;
+
+  if (cfg.mode === "external") {
+    if (!isExternalRequirementsSource(cfg.source)) {
+      errors.push(`requirements.source 必须是 https:// 或 http:// 外链: ${cfg.source}`);
+    }
+    if (hasStatefulBacklog) {
+      errors.push("external 模式检测到本地状态化 backlog，请移除状态字段；外部需求应仅保留外部指针");
+    }
+    validateExternalRequirementPointers(cfg.source);
+    return;
+  }
+
+  if (cfg.source !== LOCAL_REQUIREMENTS_SOURCE) {
+    errors.push(`local 模式 requirements.source 必须为 ${LOCAL_REQUIREMENTS_SOURCE}，以与内置 requirements-check 的唯一权威一致: ${cfg.source}`);
+    return;
+  }
+
+  if (!existsSync(sourcePath)) {
+    errors.push(`requirements.source 不存在: ${cfg.source}`);
+    return;
+  }
+  if (!isInsideRepoRoot(sourcePath)) {
+    errors.push(`requirements.source 越界: ${cfg.source}`);
+    return;
+  }
+}
+function validateExternalRequirementPointers(source) {
+  const instruction = lock?.runtime === "claude-code" ? "CLAUDE.md" : "AGENTS.md";
+  const pointers = [
+    ["governance/policy.json", source],
+    [instruction, extractLinkForLabel(read(instruction), "需求")],
+    ["docs/index.md", extractLinkForLabel(read("docs/index.md"), "需求")],
+  ];
+  for (const [file, actual] of pointers) {
+    if (actual !== source) {
+      errors.push(`external 需求指针不一致: ${file}=${actual || "缺少需求链接"}，应为 ${source}`);
+    }
+  }
+}
+function validateCredentialIgnoreRules() {
+  const targets = [".env.local.bak", ".env.local.old", ".env.local.save", ".env.local~", ".env.production"];
+  const results = targets.map((target) => [target, spawnSync("git", ["check-ignore", "-q", "--", target], { cwd: root, encoding: "utf8" })]);
+  const executionFailure = results.find(([, result]) => result.error);
+  if (executionFailure) {
+    errors.push(`无法运行 git check-ignore 以验证凭据忽略规则: ${executionFailure[1].error.message}`);
+    return;
+  }
+  const missing = results.filter(([, result]) => result.status !== 0).map(([target]) => target);
+  if (!missing.length) return;
+  errors.push(`.gitignore 未忽略凭据派生文件: ${missing.join(", ")}；补充 .env.* 或等效规则后重跑治理检查`);
+}
+function hasRecursiveRisk(argv) {
+  return argv.some((token) => {
+    const base = basename(String(token || "")).replace(/\.mjs$/i, "").toLowerCase();
+    return new Set(["governance-lint", "governance-verify", "init", "doctor"]).has(base);
+  });
+}
+function runValidator(argv) {
+  if (process.env.AIOS_REQUIREMENTS_GUARD === "1") {
+    errors.push("需求校验被要求阻断递归调用（AIOS_REQUIREMENTS_GUARD=1）");
+    return;
+  }
+  if (!Array.isArray(argv) || !argv.length) {
+    errors.push("非法 requirements.validator: 空向量");
+    return;
+  }
+  if (hasRecursiveRisk(argv)) {
+    errors.push(`需求校验器命中递归禁令: ${argv.join(" ")}`);
+    return;
+  }
+  const command = argv[0];
+  const args = argv.slice(1);
+  const started = Date.now();
+  const result = spawnSync(command, args, {
+    cwd: root,
+    env: { ...process.env, AIOS_REQUIREMENTS_GUARD: "1" },
+    encoding: "utf8",
+    timeout: 10000,
+  });
+  if (result.error) {
+    errors.push(`需求校验器执行异常: ${command} ${args.join(" ")}; ${result.error.message}`);
+    return;
+  }
+  if (result.status !== 0) {
+    const output = clampOutput([result.stdout, result.stderr].filter(Boolean).join("\n"));
+    errors.push(`需求校验器执行失败（${Date.now() - started}ms）: ${argv.join(" ")}; ${output}`);
+    return;
+  }
+}
+function isBuiltInRequirementsValidator(argv) {
+  return argv.length === BUILT_IN_REQUIREMENTS_VALIDATOR.length
+    && argv.every((part, index) => part === BUILT_IN_REQUIREMENTS_VALIDATOR[index]);
+}
+function runRequirementValidators(cfg) {
+  if (!cfg || cfg.mode !== "local") return;
+  // 内置 checker 是 local 合同的一部分，policy 只能追加，不能替换。
+  runValidator(BUILT_IN_REQUIREMENTS_VALIDATOR);
+  for (const validator of cfg.validators) {
+    if (!isBuiltInRequirementsValidator(validator)) runValidator(validator);
+  }
+}
+function resolveRequirementsSourceFromLegacy() {
+  const readInstruction = existsSync(join(root, ".codex/hooks.json"))
+    ? "AGENTS.md"
+    : existsSync(join(root, ".claude/settings.json"))
+      ? "CLAUDE.md"
+      : existsSync(join(root, "AGENTS.md"))
+        ? "AGENTS.md"
+        : "CLAUDE.md";
+  const linkFromInstruction = extractLinkForLabel(read(readInstruction), "需求");
+  if (linkFromInstruction) return linkFromInstruction;
+  return extractLinkForLabel(read("docs/index.md"), "需求") || extractLinkForLabel(read("docs/index.md"), "requirements");
+}
+const resolveRelativeLink = (fromFile, target) => {
+  const trimmed = target.trim().replace(/^<|>$/g, "").split("#")[0];
+  if (!trimmed || /^(https?:|mailto:|#)/.test(trimmed)) return null;
+  const resolved = isAbsolute(trimmed) ? trimmed : resolve(dirname(fromFile), trimmed);
+  return resolved;
+};
+const extractLinkForLabel = (body, label) => {
+  for (const m of body.matchAll(/\[([^\]]*)\]\(([^)]+)\)/g)) {
+    const text = m[1];
+    const target = m[2];
+    if (!text || !target) continue;
+    if (text.includes(label)) return target;
+  }
+  return null;
 };
 
 required("governance.lock.json");
@@ -27,6 +214,7 @@ try {
 }
 
 for (const p of lock.installedFiles || []) required(p);
+validateCredentialIgnoreRules();
 if (lock.runtime === "codex") {
   ["AGENTS.md", "CLAUDE.md", ".codex/config.toml", ".codex/hooks.json", ".codex/rules/default.rules"].forEach(required);
 } else if (lock.runtime === "claude-code") {
@@ -71,6 +259,9 @@ try {
   for (const pattern of policy.denyCommandPatterns || []) {
     try { new RegExp(pattern, "i"); } catch (e) { errors.push(`非法 denyCommandPatterns 正则: ${pattern}`); }
   }
+  reqCfg = parseRequirementsConfig(policy);
+  validateRequirementsConfig(reqCfg);
+  runRequirementValidators(reqCfg);
   if (lock.profile !== "lite" && !(policy.ciChecks || []).length) warnings.push("尚未登记项目级 ciChecks；当前CI只验证治理结构");
   if ((policy.allowedTopLevelEntries || []).length) {
     const allowed = new Set(policy.allowedTopLevelEntries);
@@ -88,12 +279,6 @@ if (existsSync(join(root, "governance/registry.md"))) {
   if (count > Number(lock.ruleBudget || 0)) errors.push(`规则预算超限: ${count}/${lock.ruleBudget}`);
 }
 
-// ── 反向覆盖检查：载体在跑，却没登记进 registry ──
-// 既有检查只验「登记的东西是否存在」(installedFiles)；反过来「实际在跑却没登记」以前无人看守。
-// 母版(产品中心)2026-07-25 实证：手写台账停摆 15 天，4 类正在运行的载体(CI 步骤/新 hook/新门禁)全部漏登，
-// 而漏登的恰恰是被真实事故逼出来的那批——预算读数因此失真，「还能不能再加一条规则」的判断建立在假数上。
-// 判例：governance/cases/2026-07-25-自动账本活手写账本死.md（凡可枚举的事实交机器，手写只留判断）。
-// warn 而非 error：新检查对存量项目一律先观察，不在升级当天打断任何人的 CI。
 if (existsSync(join(root, "governance/registry.md"))) {
   const registryBody = read("governance/registry.md");
   const carriers = [];
@@ -114,10 +299,6 @@ if (existsSync(join(root, "governance/registry.md"))) {
 }
 
 // ── hook 载体实效检查:文件存在 ≠ 守卫在岗 ──
-// 判例(2026-07-28-绕过安装器手工抄治理必漏hook):aios 仓手工抄治理未跑 init,.claude/ 整目录缺失,
-// Stop hook 停摆数周——landing 纪律纯靠自觉,游标冻结 13 天无人察觉。既有检查只验 settings.json **存在**;
-// 手工抄的项目可能有文件而无 Stop 段(假绿比没装更危险:负责人以为守卫在岗)。
-// warn 而非 error:沿 v3.2.0 反向覆盖检查同款审慎——新检查对存量项目先观察,不打断升级当天的 CI。
 {
   const checkHookCarrier = (path, extract, label) => {
     const full = join(root, path);
@@ -137,9 +318,6 @@ if (existsSync(join(root, "governance/registry.md"))) {
 }
 
 // ── ROADMAP 游标新鲜度:记载的「当前」必须真的当前 ──
-// 判例同上:游标冻结在 13 天前的建造期,新 AI 接手会被误导成「项目还停在旧阶段」——
-// 「每轮要点全记载、随时无缝切换」的北极星,败给的不是缺文档,是文档陈旧。
-// 启发式:ROADMAP 正文出现的最新日期落后最新提交超过 7 天 → warn(容忍短假期,抓长期漂移)。
 {
   try {
     const sh = (args) => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
@@ -157,10 +335,7 @@ if (existsSync(join(root, "governance/registry.md"))) {
   } catch { /* 非 git 环境 */ }
 }
 
-// 提交是否真到了远端(判例:成功信号本身要被验证,第三批实例)。
-// `git push` 的成功输出与推到临时仓的输出**格式一模一样**,只有 `To <url>` 那行不同 ——
-// 据此宣称"已推送"是拿发送方视角当接收方证据。判据换成数 rev-list:问"远端到底有没有"。
-// 另:「没有远端」与「已推送」必须分开说 —— 二者都静默 = 单点丢失风险被当成绿灯。
+// 交付真实性:禁止在本地宣称“已推送”却非真实远端。不能简单用 `git push` 输出替代。
 {
   const sh = (args) => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
   try {
@@ -171,34 +346,11 @@ if (existsSync(join(root, "governance/registry.md"))) {
     }
     for (const remote of remotes) {
       let ahead;
-      try { ahead = Number(sh(["rev-list", "--count", `${remote}/${branch}..${branch}`])); }
-      catch { continue; }   // 该远端无同名分支/未 fetch,不算问题
-      if (ahead > 0) {
-        warnings.push(`本地 ${branch} 领先 ${remote} ${ahead} 个提交 — 未推送到真远端(别拿 push 的成功输出当证据)`);
-      }
+      try { ahead = Number(sh(["rev-list", "--count", `${remote}/${branch}..${branch}`])); } catch { continue; }
+      if (ahead > 0) warnings.push(`本地 ${branch} 领先 ${remote} ${ahead} 个提交 — 未推送到真远端(别拿 push 的成功输出当证据)`);
     }
-  } catch { /* 非 git 环境 */ }
-}
-
-// 凭据文件的派生形态必须一并被忽略(判例:2026-07-25-忽略规则要覆盖派生形态)。
-// 六个仓实测四个漏 —— 大家都写了 `.env.local`,但 `.bak/.old/.save/~` 是加在末尾的后缀,
-// 那条规则匹配不到。而造这类文件的不是人的疏忽,是工具的日常行为(编辑器备份/手工 cp/恢复脚本)。
-// 验证必须用 `git check-ignore` 而非读 .gitignore —— 读规则是「我以为」,check-ignore 是「确实挡住了」。
-{
-  const derived = [".env.local.bak", ".env.local.old", ".env.local.save", ".env.local~", ".env.production"];
-  const missing = derived.filter((name) => {
-    try {
-      execFileSync("git", ["check-ignore", "-q", name], { cwd: root, stdio: "ignore" });
-      return false;
-    } catch {
-      return true;   // 退出码非 0 = 未被忽略
-    }
-  });
-  if (missing.length) {
-    errors.push(
-      `凭据派生文件未被忽略(${missing.join(" / ")}) — 一次 \`git add -A\` 即入库。` +
-      "修法:.gitignore 用 `.env.*` + `!.env.example` 覆盖整族,别逐个列举文件名",
-    );
+  } catch {
+    warnings.push("git 环境不可用，无法核验仓库分支/远端状态");
   }
 }
 
@@ -215,7 +367,8 @@ function collectMarkdownFiles(dir, out = []) {
   let entries = [];
   try { entries = readdirSync(dir); } catch { return out; }
   for (const name of entries) {
-    if (name === ".git" || name === "node_modules" || name === "templates") continue;
+    if (name === ".git" || name === "node_modules" || name === "templates" || name === ".claude") continue;
+    if (name === ".claude/worktrees") continue;
     const full = join(dir, name);
     let st;
     try { st = statSync(full); } catch { continue; }

@@ -38,6 +38,54 @@ node scripts/init.mjs \
 
 默认dry-run。检查计划不会覆盖既有文件后，再加`--write`。存量项目禁止直接使用`--force`。
 
+## 1.1 需求入口策略
+
+支持两种需求入口方式，默认本地化：
+
+- `local`（默认）：安装 `docs/requirements/backlog.md` 并以本文件为活要求；不能空白。
+- `external`：不写入本地 backlog，`docs/index.md` 与运行时指令中 `REQUIREMENTS_SOURCE` 必须直接指向外部系统（Issue、PRD、产品项目等），并说明映射关系。
+
+外部模式禁止再用本地 `docs/requirements/backlog.md` 维护状态字段（`[ ]/状态/负责人`），否则会被 `governance-lint` 阻断，防止“双套需求系统”。
+
+在命令中显式选择：
+
+```bash
+node scripts/init.mjs \
+  --target /path/to/project \
+  --requirements-mode local \
+  --write
+```
+
+或
+
+```bash
+node scripts/init.mjs \
+  --target /path/to/project \
+  --requirements-mode external \
+  --requirements-source https://issues.example.com/my-project \
+  --write
+```
+
+## 1.2 存量版本升级
+
+`doctor` 发现 `governance.lock.json.playbookVersion` 或 `kitFingerprint` 与当前 kit 不一致时会阻断完成声明；后者用于区分同版本但内容不同的 dirty kit。
+这不是让执行者直接运行 `init --force`：普通 `init --write` 会保护既有文件并跳过，
+`--force` 则可能覆盖项目事实，两者都不构成安全升级。
+
+升级必须走一次可回放的小迁移：
+
+1. 记录目标仓 HEAD、dirty 文件、当前 lock 版本和当前 kit 版本。
+2. 用 `init.mjs` dry-run 取得当前模板清单，逐文件比较目标仓与当前 kit；项目事实、ADR、
+   ROADMAP 和定制策略不得被模板正文覆盖。
+3. 只移植当前版本新增或修正的载体，执行目标仓门禁、当前 kit 的
+   `governance-lint` 和 `doctor`。
+4. 验证通过后才把 lock 的 `playbookVersion`、`kitFingerprint`、`installedFiles` 和实际 runtime/profile
+   更新为真实安装状态，并再次运行 `doctor`。
+5. 保存差异、命令和结果；未形成可识别 Git 基线时，只能报告“本地迁移已验证”。
+
+没有三方合并或文件校验和的旧 lock 不能自动证明哪些文件可覆盖，因此当前不提供
+“一键升级”假承诺。后续若引入自动升级器，必须先有内容哈希、三方合并和回滚合同。
+
 ## 2. 填项目事实
 
 安装器只建载体，不替负责人发明意图。完成以下项目化：
@@ -117,7 +165,7 @@ node scripts/governance-verify.mjs --ci
 
 逐项完成[setup.md 附B](setup.md)。有warn可以交付，但必须说明风险、负责人和升级条件；有error不能宣称安装完成。
 
-安装器不自动提交。未获提交授权时保留工作树并报告未跟踪/未提交状态；只有形成可识别的Git基线后，才能宣称迁移可回退、Hook哈希已稳定或治理基线已落地。
+安装器不自动提交。未获提交授权时保留工作树并报告未跟踪/未提交状态；多人或多AI项目在获授权后应由任务分支形成范围清楚的提交并push/MR，经共享门禁后再合并默认分支，默认不直接写`main`。只有形成可识别的Git基线后，才能宣称迁移可回退、Hook哈希已稳定或治理基线已落地。
 
 ## 6. 无上下文演练
 

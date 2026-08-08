@@ -9,6 +9,11 @@
   ],
   "fastChecks": [],
   "ciChecks": [],
+  "requirements": {
+    "mode": "local",
+    "source": "docs/requirements/backlog.md",
+    "validator": []
+  },
   "protectedPaths": [],
   "allowedTopLevelEntries": []
 }

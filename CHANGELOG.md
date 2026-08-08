@@ -2,6 +2,20 @@
 
 > 只追加有意义的仓库、架构、运行状态或治理变化。只读评审、讨论和无落盘任务不写。
 
+## 2026-07-29 · v3.3.1（fail-closed requirements/install governance）
+- [fix] local 需求校验固定运行 kit 内置语义 checker；`source_refs/spec_refs/acceptance/evidence`、规格相对路径、完成项证据和段落边界均纳入硬门。
+- [fix] external 需求权威要求 policy、运行时指令、`docs/index.md` 三处 URL 完全一致；已安装项目不能由普通 init 在 local 与 external 之间半迁移。
+- [fix] `.env.local` 派生形态和 `.env.production` 通过 `git check-ignore` 验证；lock 追加 kit 内容指纹，doctor 不再仅信任版本字符串。
+- [governance] AIOS 集成事故回流：共享 checkout 的多代理实现必须按文件单写者；负向测试必须同时证明失败状态与目标拒绝语义。两条均已写入判例和 `pro-supervised-delivery` 验收参考。
+
+## 2026-07-29 · v3.3.0（最小可执行合同）
+- [feat] `scripts/init.mjs` 增加 requirements 外部源模式（`--requirements-mode local|external` + `--requirements-source`），与 `templates/common/docs/index.md`/`INSTRUCTIONS.md` 指针对齐，`docs/requirements/backlog.md` 不再允许空白通过。
+- [feat] `scripts/governance-lint.mjs` 增加 requirements living-system 校验：本地 backlog 必须有有效需求条目；外部模式下禁止维护状态化本地 backlog 并要求指针可追溯。
+- [feat] `scripts/doctor.mjs` 增加 playbook 版本审计（当前 kit 与 `governance.lock.json` 漏斗一致性）、治理脚本兼容性提示；保留只读审计，不写变更。
+- [feat] `templates/common/docs/requirements` 新增 README 与 `specs/_TEMPLATE.md`，明确需求最小可执行语义与字段要求；`templates/common/docs/requirements/backlog.md` 从空白占位升级为最小可执行模板。
+- [feat] `templates/common/governance/cases/README.md` 与 `skill/README.md` 收敛为指针入口，新增 `skill/pro-supervised-delivery` 作为高阶交付边界 skill（不复制核心方法论正文）。
+- [governance] 明确多人/多AI的Git交付边界：活跃开发可暂时未提交；获授权后由任务分支形成提交并push/MR，经共享门禁后合并默认分支，默认不让多个执行者直接写`main`；无Git授权时必须标记`local-only`。
+
 ## 2026-07-28 · v3.3.0
 - [feat] **README 顶部立「北极星」**(负责人定纲):甩链接给任何 AI(新建或中途加入)= 一致治理水平、每轮要点全记载、随时无缝切换;附三条可检验收(lock+doctor / hook 实效 / 游标新鲜度),负责人随时抽查任何项目。
 - [feat] `governance-lint` 加 **hook 载体实效检查**:settings.json/hooks.json 存在但无 Stop 段 = 空壳假绿(手工抄治理的典型残留),warn。既有检查只验文件存在,「守卫文件是空壳」此前无人看守。

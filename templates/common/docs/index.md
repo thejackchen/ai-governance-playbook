@@ -6,7 +6,7 @@
 | 事件流水 | `CHANGELOG.md` | append-only |
 | 架构当前真相 | [{{ARCHITECTURE_SOURCE}}](../{{ARCHITECTURE_SOURCE}}) | 当前投影 |
 | 仓库目录与所有权 | `docs/architecture/repository-layout.md` | 新顶层目录先ADR |
-| 需求 | [{{REQUIREMENTS_SOURCE}}](../{{REQUIREMENTS_SOURCE}}) | 不复制到ROADMAP |
+| 需求 | [需求]({{REQUIREMENTS_LINK}}) | 单一入口：本地活文档/外部指针之一 |
 | 决策 | `docs/decisions/` | ADR append-only |
 | 事故 | `governance/incidents.md` | 事故发生时追加 |
 | 待裁决问题 | `governance/questions.md` | 裁决后链接ADR/判例/commit |

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
@@ -202,6 +202,234 @@ test("doctor rejects an old instruction file that init skipped", () => {
   const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
   assert.notEqual(doctor.status, 0);
   assert.match(doctor.stderr, /仍未对齐v3执行宪法/);
+});
+
+test("doctor reports lock version drift when playbookVersion不匹配", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
+  const lockPath = join(dir, "governance.lock.json");
+  const lock = JSON.parse(readFileSync(lockPath, "utf8"));
+  lock.playbookVersion = "0.0.0";
+  writeFileSync(lockPath, JSON.stringify(lock, null, 2) + "\n");
+  const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  assert.notEqual(doctor.status, 0);
+  assert.match(doctor.stderr, /playbookVersion.*漂移/);
+  assert.match(doctor.stderr, /普通 init 不会覆盖旧文件，禁止直接 --force/);
+});
+
+test("doctor rejects a mismatched kit fingerprint", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
+  const lockPath = join(dir, "governance.lock.json");
+  const lock = JSON.parse(readFileSync(lockPath, "utf8"));
+  lock.kitFingerprint = "sha256:not-the-installed-kit";
+  writeFileSync(lockPath, JSON.stringify(lock, null, 2) + "\n");
+  const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  assert.notEqual(doctor.status, 0);
+  assert.match(doctor.stderr, /kitFingerprint 漂移/);
+});
+
+test("requirements-mode local/external 由init与doctor联动", () => {
+  const local = project();
+  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", local, "--runtime", "generic", "--profile", "lite", "--write"]).status, 0);
+  const localBacklog = readFileSync(join(local, "docs/requirements/backlog.md"), "utf8");
+  assert.match(localBacklog, /^#\s*需求\s*Backlog/m);
+  assert.match(localBacklog, /^>\s*当前无已受理需求。$/m);
+  assert.ok(existsSync(join(local, "docs/requirements/README.md")));
+  assert.ok(existsSync(join(local, "docs/requirements/specs/_TEMPLATE.md")));
+  const localDoctor = run(process.execPath, ["scripts/doctor.mjs", "--target", local]);
+  assert.equal(localDoctor.status, 0, localDoctor.stderr);
+  mkdirSync(join(local, "docs/requirements/specs"), { recursive: true });
+  writeFileSync(
+    join(local, "docs/requirements/specs/REQ-2026-001-demo.md"),
+    "# 演示需求规格\n",
+  );
+  const activeBacklog = localBacklog.replace(
+    "> 当前无已受理需求。",
+    "- [ ] REQ-2026-001 | owner: team-a | priority: P1 | title: 交付一个可验收结果\n  - source_refs: customer-brief.md\n  - spec_refs: specs/REQ-2026-001-demo.md\n  - acceptance: 通过可执行验收清单\n  - evidence: pending",
+  );
+  writeFileSync(join(local, "docs/requirements/backlog.md"), activeBacklog);
+  const activeDoctor = run(process.execPath, ["scripts/doctor.mjs", "--target", local]);
+  assert.equal(activeDoctor.status, 0, activeDoctor.stderr);
+  writeFileSync(
+    join(local, "docs/requirements/backlog.md"),
+    activeBacklog.replace("## 进行中需求\n", "## 进行中需求\n\n> 当前无已受理需求。\n"),
+  );
+  const conflictingDoctor = run(process.execPath, ["scripts/doctor.mjs", "--target", local]);
+  assert.notEqual(conflictingDoctor.status, 0);
+  assert.match(conflictingDoctor.stderr, /不能同时声明空状态和进行中需求/);
+  const localPolicy = JSON.parse(readFileSync(join(local, "governance/policy.json"), "utf8"));
+  assert.equal(localPolicy.requirements.mode, "local");
+  assert.equal(localPolicy.requirements.source, "docs/requirements/backlog.md");
+  assert.deepEqual(localPolicy.requirements.validator, []);
+
+  const external = project();
+  const invalid = run(process.execPath, [
+    "scripts/init.mjs",
+    "--target", external,
+    "--runtime", "generic",
+    "--profile", "lite",
+    "--requirements-mode", "external",
+    "--requirements-source", "mailto:team@example.com",
+    "--write"
+  ]);
+  assert.notEqual(invalid.status, 0);
+  assert.equal(
+    run(process.execPath, [
+      "scripts/init.mjs",
+      "--target", external,
+      "--runtime", "generic",
+      "--profile", "lite",
+      "--requirements-mode", "external",
+      "--requirements-source", "https://issues.example.com/ai-governance-playbook",
+      "--write"
+    ]).status,
+    0,
+  );
+  const externalIndex = readFileSync(join(external, "docs/index.md"), "utf8");
+  const requirementsSource = "https://issues.example.com/ai-governance-playbook";
+  assert.match(externalIndex, new RegExp(`\\| 需求 \\| \\[需求\\]\\(${requirementsSource}\\) \\|`));
+  const hasBacklog = existsSync(join(external, "docs/requirements/backlog.md"));
+  assert.equal(hasBacklog, false);
+  const externalDoctor = run(process.execPath, ["scripts/doctor.mjs", "--target", external]);
+  assert.equal(externalDoctor.status, 0, externalDoctor.stderr);
+  const externalPolicy = JSON.parse(readFileSync(join(external, "governance/policy.json"), "utf8"));
+  assert.equal(externalPolicy.requirements.mode, "external");
+  assert.equal(externalPolicy.requirements.source, requirementsSource);
+  assert.deepEqual(externalPolicy.requirements.validator, []);
+});
+
+test("local semantic requirements checker cannot be replaced with a successful custom validator", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]).status, 0);
+  const policyPath = join(dir, "governance/policy.json");
+  const policy = JSON.parse(readFileSync(policyPath, "utf8"));
+  policy.requirements.validator = [["true"]];
+  writeFileSync(policyPath, JSON.stringify(policy, null, 2) + "\n");
+  writeFileSync(join(dir, "docs/requirements/backlog.md"), "# 需求 Backlog\n\n## 进行中需求\n\n- [ ] REQ-GOV-001 | title: invalid\n");
+  const lint = run(process.execPath, [join(dir, "scripts/governance-lint.mjs"), "--root", dir], dir);
+  assert.notEqual(lint.status, 0);
+  assert.match(lint.stderr, /requirements-check/);
+});
+
+test("credential derived files are a git-check-ignore hard gate", () => {
+  const dir = project();
+  writeFileSync(join(dir, ".gitignore"), ".env.local\n");
+  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]).status, 0);
+  for (const lintScript of [join(dir, "scripts/governance-lint.mjs"), "scripts/governance-lint.mjs"]) {
+    const lint = run(process.execPath, [lintScript, "--root", dir], kit);
+    assert.notEqual(lint.status, 0, lintScript);
+    assert.match(lint.stderr, /\.gitignore 未忽略凭据派生文件/);
+    assert.match(lint.stderr, /\.env\.production/);
+  }
+});
+
+test("external mode rejects pointer drift across policy, instruction, and docs index", () => {
+  const dir = project();
+  const source = "https://issues.example.com/requirements";
+  assert.equal(run(process.execPath, [
+    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
+    "--requirements-mode", "external", "--requirements-source", source, "--write",
+  ]).status, 0);
+  writeFileSync(join(dir, "AGENTS.md"), readFileSync(join(dir, "AGENTS.md"), "utf8").replace(source, "https://wrong.example.com/requirements"));
+  for (const lintScript of [join(dir, "scripts/governance-lint.mjs"), "scripts/governance-lint.mjs"]) {
+    const lint = run(process.execPath, [lintScript, "--root", dir], kit);
+    assert.notEqual(lint.status, 0, lintScript);
+    assert.match(lint.stderr, /external 需求指针不一致: AGENTS\.md/);
+  }
+});
+
+test("ordinary init preserves an installed external policy and lock when requirements arguments are omitted", () => {
+  const dir = project();
+  const source = "https://issues.example.com/requirements";
+  assert.equal(run(process.execPath, [
+    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
+    "--requirements-mode", "external", "--requirements-source", source, "--write",
+  ]).status, 0);
+  const policyPath = join(dir, "governance/policy.json");
+  const lockPath = join(dir, "governance.lock.json");
+  const beforePolicy = readFileSync(policyPath, "utf8");
+  const beforeLock = readFileSync(lockPath, "utf8");
+  const rerun = run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]);
+  assert.equal(rerun.status, 0, rerun.stderr);
+  assert.equal(readFileSync(policyPath, "utf8"), beforePolicy);
+  assert.equal(readFileSync(lockPath, "utf8"), beforeLock);
+  assert.ok(!existsSync(join(dir, "docs/requirements/backlog.md")));
+});
+
+test("local requirements source must match the built-in checker authority", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]).status, 0);
+  const policyPath = join(dir, "governance/policy.json");
+  const policy = JSON.parse(readFileSync(policyPath, "utf8"));
+  policy.requirements.source = "docs/other-requirements.md";
+  writeFileSync(policyPath, JSON.stringify(policy, null, 2) + "\n");
+  for (const lintScript of [join(dir, "scripts/governance-lint.mjs"), "scripts/governance-lint.mjs"]) {
+    const lint = run(process.execPath, [lintScript, "--root", dir], kit);
+    assert.notEqual(lint.status, 0, lintScript);
+    assert.match(lint.stderr, /local 模式 requirements\.source 必须为 docs\/requirements\/backlog\.md/);
+  }
+});
+
+test("requirements validator rejects non-array shapes instead of silently disabling project checks", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]).status, 0);
+  const policyPath = join(dir, "governance/policy.json");
+  const policy = JSON.parse(readFileSync(policyPath, "utf8"));
+  policy.requirements.validator = "true";
+  writeFileSync(policyPath, JSON.stringify(policy, null, 2) + "\n");
+  for (const lintScript of [join(dir, "scripts/governance-lint.mjs"), "scripts/governance-lint.mjs"]) {
+    const lint = run(process.execPath, [lintScript, "--root", dir], kit);
+    assert.notEqual(lint.status, 0, lintScript);
+    assert.match(lint.stderr, /requirements\.validator 形态非法/);
+  }
+});
+
+test("ordinary init refuses to half-migrate an installed local project to external", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]).status, 0);
+  const result = run(process.execPath, [
+    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
+    "--requirements-mode", "external", "--requirements-source", "https://issues.example.com/requirements", "--write",
+  ]);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /不能由 init 直接切换到 external/);
+  assert.match(result.stderr, /--force 只覆盖文件，不是安全迁移手段/);
+  const policy = JSON.parse(readFileSync(join(dir, "governance/policy.json"), "utf8"));
+  assert.equal(policy.requirements.mode, "local");
+});
+
+test("ordinary init refuses to half-migrate an installed external project to local", () => {
+  const dir = project();
+  const source = "https://issues.example.com/requirements";
+  assert.equal(run(process.execPath, [
+    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
+    "--requirements-mode", "external", "--requirements-source", source, "--write",
+  ]).status, 0);
+  const policyPath = join(dir, "governance/policy.json");
+  const lockPath = join(dir, "governance.lock.json");
+  const instructionPath = join(dir, "AGENTS.md");
+  const docsIndexPath = join(dir, "docs/index.md");
+  const requirementsDir = join(dir, "docs/requirements");
+  const beforePolicy = readFileSync(policyPath, "utf8");
+  const beforeLock = readFileSync(lockPath, "utf8");
+  const beforeInstruction = readFileSync(instructionPath, "utf8");
+  const beforeDocsIndex = readFileSync(docsIndexPath, "utf8");
+  assert.ok(!existsSync(requirementsDir));
+
+  const result = run(process.execPath, [
+    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
+    "--requirements-mode", "local", "--write",
+  ]);
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /不能由 init 直接切换到 local/);
+  assert.match(result.stderr, /--force 只覆盖文件，不是安全迁移手段/);
+  assert.equal(readFileSync(policyPath, "utf8"), beforePolicy);
+  assert.equal(readFileSync(lockPath, "utf8"), beforeLock);
+  assert.equal(readFileSync(instructionPath, "utf8"), beforeInstruction);
+  assert.equal(readFileSync(docsIndexPath, "utf8"), beforeDocsIndex);
+  assert.ok(!existsSync(requirementsDir));
 });
 
 test("top-level allowlist catches repository clutter", () => {

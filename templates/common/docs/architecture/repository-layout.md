@@ -6,6 +6,7 @@
 |---|---|---|---|---|
 | `{{SOURCE_DIR}}/` | {{SOURCE_OWNER}} | {{SOURCE_ALLOWED}} | {{SOURCE_FORBIDDEN}} | {{SOURCE_CHECK}} |
 | `docs/` | 项目知识投影 | 架构、决策、需求、运行说明 | 生成缓存、业务运行数据 | 链接lint |
+| `docs/requirements/` | 需求投影入口 | backlog、specs、映射说明 | 业务源码、重复需求正文 | governance-lint |
 | `scripts/` | 可重复执行的项目工具 | 验证、迁移、生成脚本 | 一次性临时输出 | 语法/测试 |
 | `governance/` | 治理状态与策略 | policy、事故、问题、规则 | 产品业务正文 | governance lint |
 

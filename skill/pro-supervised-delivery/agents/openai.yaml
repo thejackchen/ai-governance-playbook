@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pro Supervised Delivery"
+  short_description: "让 Pro 深度规划、Codex 总控、低成本代理实现并独立验收"
+  default_prompt: "Use $pro-supervised-delivery to coordinate Pro-led design, delegated implementation, and evidence-based acceptance for this repository."
