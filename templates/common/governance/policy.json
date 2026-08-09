@@ -7,8 +7,8 @@
     "(^|\\s)rm\\s+-rf\\s+/(?:\\s|$)",
     "(^|\\s)rm\\s+-rf\\s+\\.git(?:\\s|$)"
   ],
-  "fastChecks": [],
-  "ciChecks": [],
+  "fastChecks": ["node scripts/governance-status.mjs --check"],
+  "ciChecks": ["node scripts/governance-status.mjs --check"],
   "requirements": {
     "mode": "local",
     "source": "docs/requirements/backlog.md",

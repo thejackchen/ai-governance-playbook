@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { basename, join, relative, resolve } from "node:path";
 import { KIT_ROOT, VERSION, copyRendered, detectRuntime, parseArgs } from "./lib.mjs";
@@ -219,6 +220,22 @@ if (!existsSync(lockPath) || args.force) {
 }
 for (const p of installedFiles) {
   if (/^(scripts\/.*\.mjs|\.githooks\/pre-commit)$/.test(p) && existsSync(join(target, p))) chmodSync(join(target, p), 0o755);
+}
+// 激活 .githooks 为 git 钩子目录：否则 pre-commit 只是躺着的文件、不在提交路径上（宣称>实现）。
+// lite 无钩子不设。已设成别的 hooksPath 时不覆盖（尊重项目自有约定，doctor 会提示）。
+if (profile !== "lite" && installedFiles.includes(".githooks/pre-commit")) {
+  let existing = "";
+  try { existing = execFileSync("git", ["-C", target, "config", "--get", "core.hooksPath"], { encoding: "utf8" }).trim(); } catch {}
+  if (existing && existing !== ".githooks") {
+    console.log(`⚠ core.hooksPath 已是「${existing}」，未覆盖；如需启用治理 pre-commit 请手动改为 .githooks`);
+  } else {
+    try {
+      execFileSync("git", ["-C", target, "config", "core.hooksPath", ".githooks"]);
+      console.log("已激活 core.hooksPath=.githooks（pre-commit 门在本地提交路径上生效）。");
+    } catch {
+      console.log("⚠ 未能自动激活 core.hooksPath，请手动执行：git config core.hooksPath .githooks");
+    }
+  }
 }
 console.log("治理骨架已写入。下一步填写TODO(owner)/TODO并运行 node scripts/doctor.mjs --target <project>（从playbook仓库执行doctor）。");
 

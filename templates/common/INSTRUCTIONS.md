@@ -2,6 +2,14 @@
 
 > 运行时：{{RUNTIME}}；治理Profile：{{PROFILE}}。治理安装记录见`governance.lock.json`。
 
+## 三句核心
+
+> 一切治理零件回指其一；方法论权威见 playbook `CORE.md`。
+
+- **真相在文本**：全部真相住在人机共读的文本正本里，不在对话／脑子／代码；每类真相一份正本，想法唯一入口＝收件箱，对话不算数、入箱才算。
+- **行动跟文本**：顺序是「人改文本 → 文本指挥 AI → AI 改代码」；大活先落三行规格（解决什么／怎么验收／这次不碰什么）经负责人文本层点头再施工；查文入箱之前禁止动手实现。
+- **底线在机器**：「绝不许做」必须装进机器载体（hook／pre-commit／CI／权限），规则生效靠载体不靠自觉，新规则无载体不出生。
+
 ## 意图
 
 {{INTENT}}
@@ -10,7 +18,7 @@
 
 ## 权威与边界
 
-- 当前状态唯一权威：`ROADMAP.md`。
+- 当前状态唯一可写正本＝游标：单线时在 `ROADMAP.md`「当前游标」；战线 **≥3 且单表压不住叙事**时才分裂，分裂后在各 `docs/execution/branches/<slug>.md` 各自的「当前游标」（`--write` 会自动删除 `ROADMAP.md` 顶部单游标段，`--check` 会拦分裂态下残留的它，别留第二份状态正本）。`ROADMAP.md` 的战线表：战线 **< 3 时人手维护**；**分裂后是机器投影（生成物），勿手改**——由 `node scripts/governance-status.mjs --write` 从各分支游标重算覆盖。`--check` 是漂移门：`init` 已激活 `core.hooksPath` 使其成为**本地 pre-commit 门（commit 即拦）**；CI 也会跑，但须配 branch-protection/required-check 后才阻断合并。
 - 架构当前真相：[{{ARCHITECTURE_SOURCE}}]({{ARCHITECTURE_SOURCE}})。
 - 需求权威：[需求]({{REQUIREMENTS_SOURCE}})。
 - 仓库结构权威：`docs/architecture/repository-layout.md`；新增顶层目录或跨层依赖先写ADR。

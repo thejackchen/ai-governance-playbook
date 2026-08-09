@@ -2,6 +2,17 @@
 
 > 只追加有意义的仓库、架构、运行状态或治理变化。只读评审、讨论和无落盘任务不写。
 
+## 2026-08-10 · 执行状态建模入 CORE(状态即投影)
+- [feat] CORE.md 新增 §2.5「执行状态建模」:游标唯一可写 / ROADMAP 是机器投影(生成物) / 战线≥3 才分裂成分支文件 / 每分支从立项到当下完整叙事——AIOS 一年实践 + 三方会审收编的 generalizable 部分(AIOS 特有九段全检/锚点门不进核心)。
+- [feat] governance-status.mjs 升级为自适应生成器+漂移门:未分裂打印单游标;已分裂从各分支「当前游标」`--write` 投影 ROADMAP、`--check` 比对(pre-commit/CI 漂移门)。fixture 实测:漂移拦截 exit1、投影一致 exit0、`_TEMPLATE` 忽略。
+- [feat] 新增分支最小模板 `templates/common/docs/execution/branches/_TEMPLATE.md`(使命/阶段阶梯/当前游标/本阶段规格/已验事实/待裁决;最小六段,非 AIOS 九段)。
+- [feat] `INSTRUCTIONS.md` 模板补三句核心 + 状态权威改为「游标唯一可写、ROADMAP 是投影」。
+- [fix] `init.mjs` 安装末尾自动 `git config core.hooksPath .githooks`——否则 pre-commit 只是躺着的文件、不在提交路径上（漂移门宣称拦实测不拦，是零上下文考试揪出的宣称>实现）。
+- [fix] `--write` 分裂时自动删除 ROADMAP 顶部单游标段 + `--check`／pre-commit 拦「分裂态残留顶部『## 当前游标』」——给「不留第二份状态正本」上机器载体（否则只是文字要求，违第三句「无载体不出生」）。
+- [fix] 模板 `registry.md` R4 登记 `pre-commit`＋`governance.yml` 载体；day-1 装机不再自 lint 报「载体未登记」。CORE §2.5／INSTRUCTIONS／ROADMAP 对 CI「须配 branch-protection 才阻断合并」、pre-commit「查工作树、快反馈层」如实标注，不夸大。
+- [test] 新增 `tests/governance-status.test.mjs` 4 条回归（单线空过／投影+删顶部游标／漂移拦 exit1／第二正本拦 exit1）。
+- 验收：经 **4 轮零上下文接管考试**逐轮加固后 PASS——每轮由一个零历史 AI 亲装真项目、真 `git commit`，依次揪出「门未接进 policy.json」→「init 未激活 hooksPath」→「顶部单游标无机器载体」三个真缺口，全部修实并实测。
+
 ## 2026-08-08 · 三句核心入 CORE(方法论最高纲领)
 - [feat] CORE.md 新增 0 章「三句核心」:真相在文本 / 行动跟文本 / 底线在机器——外部对标(甲壳虫宪法模板)与 AIOS 实践收敛,负责人定纲;一切治理零件必须回指其一。
 - [governance] 新增判例两条:事故驱动体系的慢性失血盲区(演化式治理防不住无报警声的损耗)、参考外部体系先对齐整条链再动手(三段法:原样摆清→逐环对账→只动差集)。AIOS 母版同日已装载体(收件箱+三层机器网+宪法锚点 doctor 校验)。
