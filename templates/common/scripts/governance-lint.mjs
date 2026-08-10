@@ -233,7 +233,7 @@ for (const full of collectMarkdownFiles(root)) markdownFiles.add(relative(root, 
 // 历史/append-only/草稿/时点快照文档：链接是时点快照，允许随时间腐烂，不纳入死链硬门
 // （与 incidents.md append-only 豁免同理）。涵盖 handoff/audit/archive/draft 目录、
 // 日期前缀快照文件（YYYY-MM-DD-*）、CHANGELOG、incidents、含 draft 或「交接」的文档。
-const deadLinkExempt = /(^|\/)(handoffs?|audits?|_?archive|drafts?)(\/|$)|(^|\/)\d{4}-\d{2}-\d{2}[^/]*\.md$|(^|\/)CHANGELOG[^/]*\.md$|incidents\.md$|draft|交接/i;
+const deadLinkExempt = /(^|\/)(handoffs?|audits?|_?archive|_?rescued|drafts?)(\/|$)|(^|\/)\d{4}-\d{2}-\d{2}[^/]*\.md$|(^|\/)CHANGELOG[^/]*\.md$|incidents\.md$|draft|交接/i;
 for (const p of markdownFiles) {
   if (deadLinkExempt.test(p)) continue;
   const full = join(root, p);
