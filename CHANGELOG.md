@@ -2,6 +2,11 @@
 
 > 只追加有意义的仓库、架构、运行状态或治理变化。只读评审、讨论和无落盘任务不写。
 
+## 2026-08-10 · 死链门收敛 + 非 ASCII 路径修复(卫星仓迁移实战暴露)
+- [fix] `governance-lint` 死链门收敛(此前扫全仓 *.md、对历史文档与误报一刀切，逼迁移者去改文档凑绿——违「求真优先」）：①豁免历史/append-only/时点快照文档（handoff/audit/archive/draft 目录、`YYYY-MM-DD-*` 快照、CHANGELOG、incidents、含 draft／交接）；②跳过 `file://`／含正则元字符 `[]^*`／未平衡括号（Next.js 路由组 `(dashboard)`）／行号后缀 `:40` 的目标；③扫描前剥离 code block 与 inline code span（考题里演示死链的 `` `[x](y)` `` 不再误判）。实测新-产品中心 123 死链→0，零文档改动。
+- [fix] `governance-verify` 与 session/stop hooks 改用 `fileURLToPath` 取脚本路径（此前 `new URL().pathname` 在非 ASCII 仓库路径「新-产品中心」下返回 percent-encoded → `MODULE_NOT_FOUND`，pre-commit 根本跑不起来）。
+- 来源：微信客服 + 新-产品中心 全量迁 v3 实战；两仓均已迁完（v3 正本＋三句核心＋机器门，WIP 守死、零上下文接管考试 PASS）。
+
 ## 2026-08-10 · 执行状态建模入 CORE(状态即投影)
 - [feat] CORE.md 新增 §2.5「执行状态建模」:游标唯一可写 / ROADMAP 是机器投影(生成物) / 战线≥3 才分裂成分支文件 / 每分支从立项到当下完整叙事——AIOS 一年实践 + 三方会审收编的 generalizable 部分(AIOS 特有九段全检/锚点门不进核心)。
 - [feat] governance-status.mjs 升级为自适应生成器+漂移门:未分裂打印单游标;已分裂从各分支「当前游标」`--write` 投影 ROADMAP、`--check` 比对(pre-commit/CI 漂移门)。fixture 实测:漂移拦截 exit1、投影一致 exit0、`_TEMPLATE` 忽略。

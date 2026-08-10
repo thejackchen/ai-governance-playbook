@@ -15,7 +15,7 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
   }
 }
 
-const result = spawnSync(process.execPath, [new URL("../governance-status.mjs", import.meta.url).pathname], {
+const result = spawnSync(process.execPath, [fileURLToPath(new URL("../governance-status.mjs", import.meta.url))], {
   cwd: root,
   encoding: "utf8"
 });

@@ -238,13 +238,26 @@ for (const p of lock.installedFiles || []) {
 // 出现在链接目标里是设计如此，不是死链——与validate-kit.mjs对占位符残留的排除口径一致。
 const markdownFiles = new Set((lock.installedFiles || []).filter((p) => p.endsWith(".md")));
 for (const full of collectMarkdownFiles(root)) markdownFiles.add(relative(root, full));
+// 历史/append-only/草稿/时点快照文档：链接是时点快照，允许随时间腐烂，不纳入死链硬门
+// （与 incidents.md append-only 豁免同理）。涵盖 handoff/audit/archive/draft 目录、
+// 日期前缀快照文件（YYYY-MM-DD-*）、CHANGELOG、incidents、含 draft 或「交接」的文档。
+const deadLinkExempt = /(^|\/)(handoffs?|audits?|_?archive|drafts?)(\/|$)|(^|\/)\d{4}-\d{2}-\d{2}[^/]*\.md$|(^|\/)CHANGELOG[^/]*\.md$|incidents\.md$|draft|交接/i;
 for (const p of markdownFiles) {
+  if (deadLinkExempt.test(p)) continue;
   const full = join(root, p);
   if (!existsSync(full)) continue;
   const body = readFileSync(full, "utf8");
-  for (const m of body.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
-    const target = m[1].trim().replace(/^<|>$/g, "").split("#")[0];
-    if (!target || /^(https?:|mailto:|#)/.test(target)) continue;
+  // 先剥掉 fenced code block 与 inline code span：其中的 [x](y) 是代码/示例（如考题里演示死链），不是真实链接。
+  const scannable = body.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, "");
+  for (const m of scannable.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
+    let target = m[1].trim().replace(/^<|>$/g, "").split("#")[0];
+    if (!target || /^(https?:|mailto:|file:|#)/i.test(target)) continue;
+    // 目标含正则/glob 元字符（[ ] ^ *）：是文档里的正则/路径模式示例，不是真实链接。
+    if (/[[\]^*]/.test(target)) continue;
+    // 路径含未平衡括号（如 Next.js 路由组 app/(dashboard)/…）：正则 [^)]+ 会截断误判，无法可靠解析，跳过。
+    if ((target.match(/\(/g) || []).length !== (target.match(/\)/g) || []).length) continue;
+    // 剥掉行号后缀（如 src/app.js:40 指的是文件 src/app.js，:40 是行号不是文件名的一部分）。
+    target = target.replace(/:\d+(-\d+)?$/, "");
     const resolved = isAbsolute(target) ? target : resolve(dirname(full), target);
     if (!existsSync(resolved)) errors.push(`${p} 死链: ${m[1]}`);
   }

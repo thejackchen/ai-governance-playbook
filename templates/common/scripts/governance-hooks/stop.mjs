@@ -8,7 +8,7 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
 let input = {};
 try { input = JSON.parse(readFileSync(0, "utf8") || "{}"); } catch {}
 
-const result = spawnSync(process.execPath, [new URL("../governance-verify.mjs", import.meta.url).pathname], {
+const result = spawnSync(process.execPath, [fileURLToPath(new URL("../governance-verify.mjs", import.meta.url))], {
   cwd: root,
   encoding: "utf8"
 });
