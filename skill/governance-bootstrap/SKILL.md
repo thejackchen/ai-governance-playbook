@@ -7,8 +7,8 @@ description: 为新项目安装或为存量项目迁移AI治理。用于建立�
 
 以本仓库为唯一流程权威，不在skill内复制安装细节。
 
-1. 读取仓库当前`setup.md`、`CORE.md`和`CORE.md 附(运行时适配)`。
-2. 探测runtime、存量/新项目、风险、协作和前端扩展；选择最小Profile。
+1. 新项目先读取`BOOTSTRAP.md`；存量或需要解释时再读取仓库当前`setup.md`、`CORE.md`和`CORE.md 附(运行时适配)`。
+2. 按`BOOTSTRAP.md`调用`detectRuntime()`并默认使用Standard；只有明确是极简原型时才按setup选择其它Profile。
 3. 存量项目先按`setup.md 附A(存量迁移)`逐条审计旧内容。
 4. 先运行`node scripts/init.mjs ...` dry-run，确认后加`--write`。
 5. 填写项目事实，启用并测试运行时Hooks/Rules/CI。

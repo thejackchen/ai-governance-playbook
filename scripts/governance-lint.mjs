@@ -202,6 +202,35 @@ const extractLinkForLabel = (body, label) => {
   return null;
 };
 
+function escapeRegex(text) {
+  return String(text).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function isShortBridge(content, targetFile) {
+  const body = String(content || "").trim();
+  if (!body || body.split(/\r?\n/).length > 24 || Buffer.byteLength(body, "utf8") > 4096) return false;
+  const target = escapeRegex(targetFile);
+  return new RegExp(`\\[[^\\]]*${target}[^\\]]*\\]\\([^)]*${target}[^)]*\\)`, "i").test(body);
+}
+
+// 新安装使用字节一致的双正本；历史安装允许一份完整正本加一份手写桥接。
+// 桥接只按短文件+明确 markdown 链接启发式识别，不绑定某一版模板措辞。
+function validateConstitutionFiles() {
+  const claudePath = join(root, "CLAUDE.md");
+  const agentsPath = join(root, "AGENTS.md");
+  if (!existsSync(claudePath) || !existsSync(agentsPath)) return;
+  const claude = readFileSync(claudePath, "utf8");
+  const agents = readFileSync(agentsPath, "utf8");
+  if (claude === agents) return;
+  const bridgeCount = [
+    isShortBridge(claude, "AGENTS.md"),
+    isShortBridge(agents, "CLAUDE.md"),
+  ].filter(Boolean).length;
+  if (bridgeCount !== 1) {
+    errors.push("[双宪法] CLAUDE.md 与 AGENTS.md 必须字节一致，或保留一份完整正本加一份短 markdown 桥接");
+  }
+}
+
 required("governance.lock.json");
 if (errors.length) finish();
 
@@ -230,6 +259,7 @@ for (const p of lock.installedFiles || []) {
   const placeholders = [...body.matchAll(/\{\{[A-Z0-9_]+\}\}/g)].map((m) => m[0]);
   if (placeholders.length) errors.push(`${p} 残留占位符: ${[...new Set(placeholders)].join(", ")}`);
 }
+validateConstitutionFiles();
 
 // 死链扫描范围 = installedFiles ∪ 目标根目录全部 *.md。
 // 只扫installedFiles会漏掉CORE.md/README.md这类自托管文档——它们是真实交付内容，
@@ -268,6 +298,17 @@ try {
   if (policy.schemaVersion !== 1) errors.push("governance/policy.json schemaVersion 必须为 1");
   for (const key of ["denyCommandPatterns", "fastChecks", "ciChecks", "protectedPaths", "allowedTopLevelEntries"]) {
     if (!Array.isArray(policy[key])) errors.push(`governance/policy.json ${key} 必须是数组`);
+  }
+  if (policy.claimGate !== undefined) {
+    if (typeof policy.claimGate !== "object" || policy.claimGate === null || Array.isArray(policy.claimGate)) {
+      errors.push("governance/policy.json claimGate 需为对象");
+    } else {
+      for (const key of ["codeRoots", "exemptPatterns", "bashClaimPatterns"]) {
+        if (policy.claimGate[key] !== undefined && !Array.isArray(policy.claimGate[key])) {
+          errors.push(`governance/policy.json claimGate.${key} 必须是数组`);
+        }
+      }
+    }
   }
   for (const pattern of policy.denyCommandPatterns || []) {
     try { new RegExp(pattern, "i"); } catch (e) { errors.push(`非法 denyCommandPatterns 正则: ${pattern}`); }
@@ -346,6 +387,51 @@ if (existsSync(join(root, "governance/registry.md"))) {
       }
     }
   } catch { /* 非 git 环境 */ }
+}
+
+// ── playbook 自身版本漂移：消费项目没有 VERSION/CORE 时跳过 ──
+{
+  if (existsSync(join(root, "VERSION")) && existsSync(join(root, "CORE.md"))) {
+    const versionFiles = ["VERSION", "package.json", "governance.lock.json", "README.md", "CHANGELOG.md"];
+    const missing = versionFiles.filter((path) => !existsSync(join(root, path)));
+    if (missing.length) {
+      errors.push(`[版本漂移] playbook 仓库缺少版本对账文件: ${missing.join(", ")}`);
+    } else {
+      const version = read("VERSION").trim();
+      let packageVersion = "";
+      let lockVersion = "";
+      let readmeVersion = "";
+      let changelogVersion = "";
+      try {
+        packageVersion = JSON.parse(read("package.json")).version || "";
+      } catch (cause) {
+        errors.push(`[版本漂移] package.json 无法解析: ${cause.message}`);
+      }
+      try {
+        lockVersion = JSON.parse(read("governance.lock.json")).playbookVersion || "";
+      } catch (cause) {
+        errors.push(`[版本漂移] governance.lock.json 无法解析: ${cause.message}`);
+      }
+      const readmeMatch = read("README.md").match(/版本\s+v(\d+\.\d+\.\d+)/);
+      if (readmeMatch) readmeVersion = readmeMatch[1];
+      else errors.push("[版本漂移] README.md 缺少 `版本 vX.Y.Z` 标记");
+      const changelogTitle = read("CHANGELOG.md").match(/^## [^\n]+/m)?.[0] || "";
+      const changelogHead = changelogTitle.match(/\bv(\d+\.\d+\.\d+)/);
+      if (changelogHead) changelogVersion = changelogHead[1];
+      else errors.push("[版本漂移] CHANGELOG.md 头部缺少带 `vX.Y.Z` 的最新版本节");
+      const versions = [
+        ["VERSION", version],
+        ["package.json.version", packageVersion],
+        ["governance.lock.json.playbookVersion", lockVersion],
+        ["README.md", readmeVersion],
+        ["CHANGELOG.md 头部", changelogVersion],
+      ];
+      const distinct = new Set(versions.map(([, value]) => value));
+      if (distinct.size !== 1 || versions.some(([, value]) => !value)) {
+        errors.push(`[版本漂移] ${versions.map(([name, value]) => `${name}=${value || "缺失"}`).join("；")}`);
+      }
+    }
+  }
 }
 
 // 交付真实性:禁止在本地宣称“已推送”却非真实远端。不能简单用 `git push` 输出替代。

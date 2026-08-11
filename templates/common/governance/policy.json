@@ -14,6 +14,18 @@
     "source": "docs/requirements/backlog.md",
     "validator": []
   },
+  "claimGate": {
+    "codeRoots": ["src/", "scripts/"],
+    "exemptPatterns": [
+      "\\.md$",
+      "^docs/",
+      "(^|/)package-lock\\.json$",
+      "(^|/)pnpm-lock\\.yaml$",
+      "\\.gen\\.",
+      "(^|/)node_modules/"
+    ],
+    "bashClaimPatterns": ["\\bcodex\\s+exec\\b"]
+  },
   "protectedPaths": [],
   "allowedTopLevelEntries": []
 }

@@ -41,11 +41,13 @@ const required = (p) => {
 for (const p of lock.installedFiles || []) required(p);
 const instructionFile = lock.runtime === "claude-code" ? "CLAUDE.md" : "AGENTS.md";
 const bridgeFile = lock.runtime === "claude-code" ? "AGENTS.md" : "CLAUDE.md";
-if (existsSync(join(target, instructionFile)) && !read(instructionFile).includes("governance.lock.json")) {
+const instructionBody = existsSync(join(target, instructionFile)) ? read(instructionFile) : "";
+const bridgeBody = existsSync(join(target, bridgeFile)) ? read(bridgeFile) : "";
+if (instructionBody && !instructionBody.includes("governance.lock.json")) {
   errors.push(`${instructionFile}仍未对齐v3执行宪法`);
 }
-if (existsSync(join(target, bridgeFile)) && !read(bridgeFile).includes(instructionFile)) {
-  errors.push(`${bridgeFile}不是指向${instructionFile}的桥接入口`);
+if (bridgeBody && bridgeBody !== instructionBody && !bridgeBody.includes(instructionFile)) {
+  errors.push(`${bridgeFile}既不是与${instructionFile}字节一致的双正本，也不是指向它的桥接入口`);
 }
 
 if (lock.runtime === "codex") {

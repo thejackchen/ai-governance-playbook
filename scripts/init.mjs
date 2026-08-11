@@ -123,6 +123,8 @@ const map = [
   ["scripts/governance-hooks/stop.mjs", "scripts/governance-hooks/stop.mjs"]
 ];
 if (profile !== "lite") {
+  map.push(["scripts/claim.mjs", "scripts/claim.mjs"]);
+  map.push(["governance/claim-gate.md", "governance/claim-gate.md"]);
   map.push(["governance/registry.md", "governance/registry.md"]);
   map.push(["governance/cases/README.md", "governance/cases/README.md"]);
 }
@@ -161,9 +163,6 @@ for (const ext of extensions) {
 
 const finalWrites = [...new Map(writes.map((item) => [relative(target, item.dest), item])).values()];
 
-const bridgeText = runtime === "claude-code"
-  ? "# AGENTS.md\n\n项目执行宪法见 [CLAUDE.md](CLAUDE.md)。\n"
-  : "# CLAUDE.md\n\n项目执行宪法见 [AGENTS.md](AGENTS.md)。\n";
 const bridgePath = join(target, adapter.bridgeFile);
   // 非 codex runtime:CODEOWNERS 中的 .codex 条目无宿主,过滤避免夹带
   if (runtime !== "codex") {
@@ -192,7 +191,11 @@ if (!existsSync(join(target, "docs/index.md"))) {
 }
 if (!existsSync(bridgePath) || args.force) {
   mkdirSync(join(target), { recursive: true });
-  writeFileSync(bridgePath, bridgeText);
+  const instructionPath = join(target, adapter.instructionFile);
+  if (!existsSync(instructionPath)) fail(`运行时正本安装失败: ${adapter.instructionFile}`);
+  // 新安装的两个运行时入口是同一份完整正文；旧安装的手写桥接由 lint 兼容保留，
+  // 普通 init 不会覆盖它们，避免把存量项目事实改掉。
+  writeFileSync(bridgePath, readFileSync(instructionPath, "utf8"));
 }
 if (!existsSync(policyPath)) fail("governance/policy.json 安装失败");
 if (!policyExistedBeforeInit || args.force) {

@@ -33,7 +33,7 @@ test("auto runtime detection prefers target markers over the caller environment"
   assert.match(result.stdout, /runtime=claude-code/);
 });
 
-test("Codex Lite installs one instruction source, hooks and frontend extension", () => {
+test("Codex Lite installs shared instruction files, hooks and frontend extension", () => {
   const dir = project();
   const init = run(process.execPath, [
     "scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite",
@@ -41,7 +41,8 @@ test("Codex Lite installs one instruction source, hooks and frontend extension",
   ]);
   assert.equal(init.status, 0, init.stderr);
   assert.match(readFileSync(join(dir, "AGENTS.md"), "utf8"), /governance\.lock\.json/);
-  assert.match(readFileSync(join(dir, "CLAUDE.md"), "utf8"), /AGENTS\.md/);
+  assert.equal(readFileSync(join(dir, "CLAUDE.md"), "utf8"), readFileSync(join(dir, "AGENTS.md"), "utf8"));
+  assert.equal(existsSync(join(dir, "scripts/claim.mjs")), false);
   assert.ok(readFileSync(join(dir, ".codex/hooks.json"), "utf8").includes("PreToolUse"));
   assert.ok(readFileSync(join(dir, "design/tokens.json"), "utf8").includes("schemaVersion"));
   const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
@@ -146,7 +147,9 @@ test("Claude Code Standard installs shared gates and passes doctor", () => {
   const init = run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "claude-code", "--profile", "standard", "--write"]);
   assert.equal(init.status, 0, init.stderr);
   assert.match(readFileSync(join(dir, "CLAUDE.md"), "utf8"), /governance\.lock\.json/);
-  assert.match(readFileSync(join(dir, "AGENTS.md"), "utf8"), /CLAUDE\.md/);
+  assert.equal(readFileSync(join(dir, "AGENTS.md"), "utf8"), readFileSync(join(dir, "CLAUDE.md"), "utf8"));
+  assert.ok(existsSync(join(dir, "scripts/claim.mjs")));
+  assert.ok(existsSync(join(dir, "governance/claim-gate.md")));
   assert.ok(readFileSync(join(dir, ".claude/settings.json"), "utf8").includes("SessionStart"));
   assert.ok(readFileSync(join(dir, ".github/workflows/governance.yml"), "utf8").includes("deterministic"));
   assert.ok(readFileSync(join(dir, "governance/registry.md"), "utf8").includes("判定条件"));
@@ -165,7 +168,14 @@ test("Standard profile carries no Codex/OpenAI stowaway outside Codex runtime", 
   // scripts/governance-lint.mjs 对每个runtime都相同地包含 `lock.runtime === "codex"` 分支——
   // 这是共享的跨runtime校验逻辑（本身在Lite也会安装，与Standard的CI夹带问题无关），不算作item 3要清除的
   // Codex专属CI工具引用（.github/codex/**、openai/codex-action、OPENAI_API_KEY）。其余任何文件都不应提及。
-  const exempt = new Set(["scripts/governance-lint.mjs"]);
+  // 认领门是公共载体；其 `codex exec` 触发模式和 CLI 示例不是 runtime 偷渡，
+  // 而是跨 runtime 的共享合同，单独排除这些共享文件再检查真正的 Codex/OpenAI 夹带。
+  const exempt = new Set([
+    "scripts/governance-lint.mjs",
+    "governance/claim-gate.md",
+    "governance/policy.json",
+    "scripts/claim.mjs",
+  ]);
   const findLeaks = (dir) => {
     const hits = [];
     const walk = (d) => {

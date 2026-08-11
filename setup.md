@@ -4,6 +4,8 @@
 >
 > ⛔ **禁止手工抄治理文件**(从别的项目复制 CLAUDE.md/hook 脚本拼一套):`.claude/` 不随 git 走,手工抄必漏 hook 载体,且无 lock 登记=脱离模板管辖无法升级(判例 2026-07-28)。唯一正道 = 跑 `init.mjs`;目标仓已有零散治理文件但无 `governance.lock.json` 的,视为「手工抄残骸」,按附A 收编。
 
+全新项目或零上下文 AI 先读 [`BOOTSTRAP.md`](BOOTSTRAP.md)；它固定默认 `standard`，负责定位/克隆 playbook、调用真实 runtime 探测、运行 init、doctor 和 lint。本文件保留完整解释、Profile 例外、存量迁移和安装报告合同。
+
 ## -1. 通读判例库（先于一切）
 
 通读本仓库 [governance/cases/](governance/cases/README.md) 的全部判例——前人踩过的坑不再踩。它们是历次真实纠正的沉淀（负责人当场纠正当场落档）；安装与后续执行中遇到同族场景，直接类比引用，别重新交学费。
@@ -99,7 +101,7 @@ node scripts/init.mjs \
 - Standard/High Assurance逐条审计`registry`，删除不适用的示例规则；
 - 前端extension填写设计意图、token、组件和多端映射。
 
-不要复制同一正文到`AGENTS.md`和`CLAUDE.md`。安装器只生成一个正本和一个桥接指针。
+新安装由 `init.mjs --write` 生成一份完整正文，并把它字节级复制到 `AGENTS.md` 与 `CLAUDE.md`，两者必须一致。已有项目的一份正本加一份手写短桥接仍是合法存量形态；lint 只用“短文件 + 指向另一文件的 Markdown 链接”启发式兼容它，不覆盖项目事实。
 
 ## 3. 启用运行时载体
 
@@ -132,6 +134,8 @@ GitHub Actions只有在远端启用branch protection和`deterministic` required 
 仓库暂无远端时的完整降级路径：pre-commit承载同等确定性检查并真实跑过一次；registry（或安装报告）如实登记「CI就绪未激活」；接入远端后用一次空提交验证workflow真实运行，再按上款登记共享门禁。
 
 心跳定时器：GitHub项目由workflow schedule承载；非GitHub环境用等效定时器（CI schedule / 本地cron）并如实登记载体。本地cron/日历提醒属仓库外动作——安装AI备好脚本与运行说明、把「负责人自设提醒」写入安装报告即算完成本步，不虚报「已配置」。
+
+Standard及以上还自动安装认领门：`scripts/claim.mjs`、`governance/claim-gate.md` 和共享 PreToolUse/SessionStart/Stop 接线。Lite 不安装认领账本脚本；共享 hook 对缺失模块动态降级，不能因此破坏原有危险命令拦截。认领门默认保护 `src/`、`scripts/`，项目范围通过 `governance/policy.json` 的 `claimGate` 覆盖。
 
 ## 4. 编译项目规则
 
@@ -216,10 +220,10 @@ node scripts/governance-verify.mjs --ci
 
 禁止迁移第一步就`--force`覆盖既有`AGENTS.md`、`CLAUDE.md`、ROADMAP或ADR。
 
-## 4. 建立唯一运行时正本
+## 4. 建立运行时宪法形态
 
-- Codex：`AGENTS.md`为正本，`CLAUDE.md`只指向它；
-- Claude Code：`CLAUDE.md`为正本，`AGENTS.md`只指向它；
+- 新安装：`AGENTS.md` 与 `CLAUDE.md` 是字节一致的完整双正本，运行时只决定哪一份被优先自动加载；
+- 存量迁移：保留既有一份正本 + 一份短桥接，先让 lint/doctor 绿，再由负责人决定是否切换为双正本；
 - 旧治理正文头部加降级指针，或在确认内容已吸收后删除现行副本；Git历史负责保留。
 
 产品纲领可以保留为单独的`CONSTITUTION.md`，但运行时指令只引用它，不复制全文。
@@ -264,7 +268,7 @@ Hooks、lint和CI先以warn或非required方式运行一轮，确认误报率和
 ## 运行时与单一真相
 
 - [ ] runtime和Profile选择有风险依据，不是默认全装；
-- [ ] Codex只有`AGENTS.md`正文，Claude Code只有`CLAUDE.md`正文，另一文件是桥接；
+- [ ] 新安装的`CLAUDE.md`与`AGENTS.md`字节一致；存量桥接项目已由 lint 证明为短文件+Markdown指针，且没有第二份正文；
 - [ ] 项目意图已由负责人确认；
 - [ ] ROADMAP、架构、需求、目录结构各有唯一权威；
 - [ ] 决策权威唯一：存量项目已有ADR目录则指令与`docs/index.md`指向它；否则`docs/decisions/`已建且ADR-000记录治理采纳；

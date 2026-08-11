@@ -4,7 +4,7 @@
 
 ## 当前游标
 
-v3核心、运行时适配器、Profile、脚手架和三组无上下文前向测试机制已就绪。最小可执行需求入口、local/external init+doctor闭环与`pro-supervised-delivery` skill 已完成本地全量验证；当前仍是`local-only`候选，未获本轮commit/push授权，不构成 v3.3.1 发布。
+v3核心、运行时适配器、Profile、脚手架和三组无上下文前向测试机制已就绪。最小可执行需求入口、local/external init+doctor闭环、AIOS治理母版回流与`pro-supervised-delivery` skill 已完成本地全量验证；当前为 v3.4.0 未打 tag 的交付候选，本轮已获提交/推送授权，但不宣称正式 release。
 
 ## 硬约束
 
@@ -23,4 +23,4 @@ v3核心、运行时适配器、Profile、脚手架和三组无上下文前向�
 | 运行时与Profile | 完成 | Codex/Claude Code/Generic适配器和三档Profile | 验证安装契约 | - | `CORE.md 附(运行时适配)`、`profiles/README.md` |
 | 脚手架与门禁 | 完成 | init/doctor/verify、Hooks、Rules、定时CI和契约测试可运行 | 随运行时变化持续复测 | - | `setup.md`、`setup.md 附B(验收自检)` |
 | 无上下文前向测试 | 完成 | 新项目、存量迁移和红线压力通过 | 后续版本复用同类夹具 | - | `docs/evals/v3-forward-tests.md` |
-| v3发布 | 推进 | v3.3.1 本地候选验证完成 | 获授权后按任务分支提交、推送并创建PR | 本轮无Git发布授权 | `CHANGELOG.md` |
+| v3发布 | 推进 | v3.4.0 本地候选验证完成 | 提交、推送并回读远端；不创建正式tag | - | `CHANGELOG.md` |

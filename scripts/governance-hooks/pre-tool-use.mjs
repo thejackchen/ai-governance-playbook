@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { join } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 
@@ -88,6 +88,9 @@ if (/Bash/i.test(toolName)) {
   }
 }
 
+const claimGateReason = await evaluateClaimGate({ input, toolName, toolInput, candidates });
+if (claimGateReason) block(claimGateReason);
+
 process.exit(0);
 
 function block(reason) {
@@ -130,4 +133,145 @@ function stripQuotesAndEscapes(token) {
   }
   t = t.replace(/^\\+/, "");
   return t;
+}
+
+async function loadClaimModule() {
+  try {
+    return await import("../claim.mjs");
+  } catch (cause) {
+    // Lite 没有安装 claim.mjs；只跳过认领判定，不能影响本文件已有的危险命令/保护路径逻辑。
+    if (cause?.code === "ERR_MODULE_NOT_FOUND" && /claim\.mjs/i.test(String(cause.message || ""))) return null;
+    throw cause;
+  }
+}
+
+async function evaluateClaimGate({ input: hookInput, toolName: currentToolName, toolInput: currentToolInput, candidates: commandCandidates }) {
+  const claimModule = await loadClaimModule().catch((cause) => ({ loadError: cause }));
+  if (!claimModule) return null;
+  if (claimModule.loadError) return `认领门模块加载失败，拒绝继续：${claimModule.loadError.message || claimModule.loadError}`;
+
+  let policy;
+  try {
+    policy = JSON.parse(readFileSync(join(root, "governance/policy.json"), "utf8"));
+  } catch (cause) {
+    return `治理策略无法读取，认领门拒绝继续：${cause.message}`;
+  }
+
+  const effectiveClaimGate = { ...claimModule.DEFAULT_CLAIM_GATE, ...(policy.claimGate || {}) };
+  const isWriteTool = /^(?:apply_patch|Edit|Write)$/i.test(currentToolName);
+  const targetPath = String(currentToolInput.file_path || currentToolInput.notebook_path || currentToolInput.path || "");
+  const isClaimCommand = /Bash/i.test(currentToolName) && (effectiveClaimGate.bashClaimPatterns || []).some((pattern) => {
+    const re = new RegExp(pattern, "i");
+    return commandCandidates.some((candidate) => re.test(candidate));
+  });
+  if (!isWriteTool && !isClaimCommand) return null;
+
+  const operationCwd = hookInput.cwd || process.cwd();
+  let relativeTarget = null;
+  if (isWriteTool) {
+    // 文档写入是明确豁免面；先短路，保持 docs/*.md 写入不增加 Git/账本读取。
+    const rawTarget = targetPath.replaceAll("\\", "/");
+    if (/\.md$/i.test(rawTarget) || /(^|\/)docs\//i.test(rawTarget)) return null;
+    if (targetPath) {
+      try {
+        const context = claimModule.resolveGitContext({ cwd: operationCwd });
+        const target = realpathWithMissing(isAbsolute(targetPath) ? targetPath : resolve(operationCwd, targetPath));
+        relativeTarget = normalizeRelative(relative(context.worktree, target));
+      } catch (cause) {
+        return claimLedgerFailureReason(cause, "受影响的路径前缀");
+      }
+      if (!relativeTarget || relativeTarget === "." || relativeTarget.startsWith("../") || relativeTarget === "..") {
+        relativeTarget = null;
+      }
+      if (!claimModule.matchesClaimGateCodePath(relativeTarget, effectiveClaimGate)) return null;
+    }
+  }
+
+  try {
+    const claim = claimModule.resolveCurrentClaim({ cwd: operationCwd, session: hookInput.session_id });
+    if (claim) return null;
+  } catch (cause) {
+    return claimLedgerFailureReason(cause, relativeTarget || "受影响的路径前缀");
+  }
+
+  let activeClaims;
+  try {
+    activeClaims = claimModule.loadClaims({ cwd: operationCwd, strict: true }).records.filter((claim) => claim.status === "active");
+  } catch (cause) {
+    return claimLedgerFailureReason(cause, relativeTarget || "受影响的路径前缀");
+  }
+  const scope = suggestedScope(relativeTarget, effectiveClaimGate);
+  const activeSummary = activeClaims.length
+    ? activeClaims
+        .map(
+          (claim) =>
+            `- line=${claim.line || "emergency/no-line"} · task=${claim.task || ""} · worktree=${claim.worktree || "未知"} · claimId=${claim.claimId || "?"}`,
+        )
+        .join("\n")
+    : "当前没有其它活跃认领。";
+  let lineHint = "<line>";
+  try {
+    const slugs = readdirSync(join(dirname(fileURLToPath(import.meta.url)), "../../docs/execution/branches"))
+      .filter((name) => name.endsWith(".md") && !name.startsWith("_"))
+      .map((name) => name.replace(/\.md$/, ""));
+    if (slugs.length) lineHint = `<${slugs.join("|")}|cross>`;
+  } catch {}
+  return [
+    "认领门拦截：当前行为代码写入或派单命令没有匹配的有效认领。",
+    `可复制命令模板: node scripts/claim.mjs open --line ${lineHint} --task "一句话做什么" --accept "一句话怎么验收" --non-goals "这次不碰什么" --scope "${scope}"`,
+    `当前（全部 worktree）各 line 下的 active 认领:\n${activeSummary}`,
+    "纯文档改动、或救火场景请参见 governance/claim-gate.md。",
+  ].join("\n");
+}
+
+function normalizeRelative(path) {
+  return String(path || "").replaceAll("\\", "/").replace(/^\.\//, "");
+}
+
+function realpathWithMissing(path) {
+  const absolute = resolve(path);
+  const missing = [];
+  let cursor = absolute;
+  while (!existsSync(cursor)) {
+    const parent = dirname(cursor);
+    if (parent === cursor) return absolute;
+    missing.push(cursor.slice(parent.length + 1));
+    cursor = parent;
+  }
+  return join(realpathSync(cursor), ...missing.reverse());
+}
+
+function suggestedScope(relativeTarget, claimGate) {
+  if (relativeTarget) {
+    const directory = dirname(relativeTarget).replaceAll("\\", "/");
+    if (directory && directory !== ".") return `${directory}/`;
+  }
+  return normalizeRelative((claimGate.codeRoots || ["src/"])[0] || "src/");
+}
+
+function claimLedgerFailureReason(cause, scope) {
+  const recovery = {
+    claimId: "手动起一个8位hex",
+    line: "cross",
+    docRef: "docs/index.md",
+    docBaseline: "运行 git hash-object docs/index.md 得到",
+    task: "手写说明:门为什么坏、你在做什么",
+    acceptance: "手写说明:怎么验收",
+    nonGoals: "",
+    scope: [scope],
+    worktree: "运行 git rev-parse --show-toplevel 拿到后再 realpath 的结果",
+    session: null,
+    agent: "unknown",
+    status: "active",
+    mode: "emergency",
+    incidentRef: "认领门数据损坏,手动恢复",
+    createdAt: "当前 ISO 时间戳",
+    updatedAt: "同 createdAt",
+  };
+  return [
+    `认领账本读取失败：${cause instanceof Error ? cause.message : String(cause)}`,
+    "这是 fail-closed 设计，无法把账本损坏默认为没有认领。请手动恢复最小记录：",
+    JSON.stringify(recovery, null, 2),
+    "将其保存为 chmod 0600 的 JSON 文件，放到 $(git rev-parse --git-common-dir)/governance-claims/<claimId>.json（文件名必须与 claimId 字段一致），再重试。",
+  ].join("\n");
 }

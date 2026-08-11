@@ -40,6 +40,10 @@
 
 说不清解决哪个问题的规则，默认不进入核心；若只是当前模型或工具的缺陷，标记为 `[cap]` 并设置清理条件。
 
+### 2.1 认领门：把代码动作与文本意图绑定
+
+认领门解决 S2/S4 的一个并发缺口：AI 在改行为代码或派发自动执行前，先把任务、验收、不碰范围和路径 scope 登记到跨 worktree 可见的结构化账本；没有当前 worktree 的有效认领就由 PreToolUse 阻断，纯文档与救火通道保留明确豁免。机器载体是 `scripts/claim.mjs`、`governance/claim-gate.md` 和共享 `scripts/governance-hooks/pre-tool-use.mjs`，账本按 Git common dir 原子写入并 fail-closed 读取；`standard` 与 `high-assurance` 默认安装，`lite` 不安装。默认范围为 `src/`、`scripts/`，项目事实可在 `governance/policy.json` 的 `claimGate` 中覆盖。完整合同见消费项目的 [`governance/claim-gate.md`](templates/common/governance/claim-gate.md)。
+
 ## 2.5 执行状态建模：状态是投影，不是手写台账
 
 > 「真相在文本」落在「当前进展」这类高频变动真相上的具体建模。多数项目状态漂移的根因，是把"当前状态"当成手写台账在多处维护——本节是第七节生成物契约在执行状态上的强制落地。来源：AIOS 一年实践 + 2026-08 三方会审收编（generalizable 部分；AIOS 特有的九段全检/锚点门等不进核心）。

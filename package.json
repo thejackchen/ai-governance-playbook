@@ -1,8 +1,10 @@
 {
   "name": "ai-governance-playbook",
   "version": "3.4.0",
-  "private": true,
   "type": "module",
+  "bin": {
+    "gov-bootstrap": "scripts/bootstrap.mjs"
+  },
   "scripts": {
     "test": "node --test",
     "check": "node scripts/validate-kit.mjs"
