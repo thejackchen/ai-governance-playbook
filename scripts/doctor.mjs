@@ -38,7 +38,8 @@ const read = (p) => readFileSync(join(target, p), "utf8");
 const required = (p) => {
   if (!existsSync(join(target, p))) errors.push(`缺少文件: ${p}`);
 };
-for (const p of lock.installedFiles || []) required(p);
+const installedFiles = new Set(lock.installedFiles || []);
+for (const p of installedFiles) required(p);
 const instructionFile = lock.runtime === "claude-code" ? "CLAUDE.md" : "AGENTS.md";
 const bridgeFile = lock.runtime === "claude-code" ? "AGENTS.md" : "CLAUDE.md";
 const instructionBody = existsSync(join(target, instructionFile)) ? read(instructionFile) : "";
@@ -50,30 +51,59 @@ if (bridgeBody && bridgeBody !== instructionBody && !bridgeBody.includes(instruc
   errors.push(`${bridgeFile}既不是与${instructionFile}字节一致的双正本，也不是指向它的桥接入口`);
 }
 
+const codexPaths = [".codex/hooks.json", ".codex/config.toml", ".codex/rules/default.rules"];
+const claudePath = ".claude/settings.json";
+const codexListedComplete = codexPaths.every((p) => installedFiles.has(p));
+const codexPresentComplete = codexPaths.every((p) => existsSync(join(target, p)));
+const claudeExpected = installedFiles.has(claudePath);
+const claudePresent = existsSync(join(target, claudePath));
+const codexActive = lock.runtime === "codex" || codexListedComplete || codexPresentComplete;
+
+// 新安装默认双接线；存量单runtime lock 仍按其已有文件集合兼容。
+// 缺失的已登记文件由 required() 报错，存在的两套载体都必须通过各自的结构检查。
+if (codexActive) {
+  for (const p of codexPaths) if (!existsSync(join(target, p)) && !installedFiles.has(p)) errors.push(`缺少文件: ${p}`);
+  if (existsSync(join(target, ".codex/hooks.json"))) {
+    try {
+      const hooks = JSON.parse(read(".codex/hooks.json"));
+      for (const event of ["SessionStart", "PreToolUse", "Stop"]) {
+        if (!hooks.hooks?.[event]?.length) errors.push(`Codex缺少${event} Hook`);
+      }
+    } catch (e) { errors.push(`.codex/hooks.json无法解析: ${e.message}`); }
+  }
+  if (existsSync(join(target, ".codex/config.toml")) && !read(".codex/config.toml").includes("hooks = true")) {
+    errors.push("Codex hooks功能未启用");
+  }
+  if (existsSync(join(target, ".codex/rules/default.rules")) && !read(".codex/rules/default.rules").includes("match =")) {
+    errors.push("Codex rules缺少内联匹配测试");
+  }
+}
+
+if (claudeExpected || claudePresent) {
+  if (claudePresent) {
+    try {
+      const settings = JSON.parse(read(claudePath));
+      for (const event of ["SessionStart", "PreToolUse", "Stop"]) {
+        if (!settings.hooks?.[event]?.length) errors.push(`Claude Code缺少${event} Hook`);
+      }
+    } catch (e) { errors.push(`${claudePath}无法解析: ${e.message}`); }
+  }
+}
+
 if (lock.runtime === "codex") {
-  try {
-    const hooks = JSON.parse(read(".codex/hooks.json"));
-    for (const event of ["SessionStart", "PreToolUse", "Stop"]) {
-      if (!hooks.hooks?.[event]?.length) errors.push(`Codex缺少${event} Hook`);
-    }
-  } catch (e) { errors.push(`.codex/hooks.json无法解析: ${e.message}`); }
-  if (!read(".codex/config.toml").includes("hooks = true")) errors.push("Codex hooks功能未启用");
-  if (!read(".codex/rules/default.rules").includes("match =")) errors.push("Codex rules缺少内联匹配测试");
   warnings.push("Codex项目Hook写入后必须在新会话用 /hooks 审核并信任当前哈希");
-} else if (lock.runtime === "claude-code") {
-  try {
-    const settings = JSON.parse(read(".claude/settings.json"));
-    for (const event of ["SessionStart", "PreToolUse", "Stop"]) {
-      if (!settings.hooks?.[event]?.length) errors.push(`Claude Code缺少${event} Hook`);
-    }
-  } catch (e) { errors.push(`.claude/settings.json无法解析: ${e.message}`); }
-} else if (lock.runtime === "generic") {
-  warnings.push("generic运行时没有自动hook载体；SessionStart/PreToolUse/Stop不会被运行时自动触发，治理脚本需要人工或pre-commit/CI等效机制主动触发，需如实登记该降级");
+} else if (!codexActive && !claudeExpected && !claudePresent) {
+  warnings.push("未检测到 Claude Code 或 Codex 的 hook 配置；如果实际使用的工具不是这两者，SessionStart/PreToolUse/Stop 不会自动触发");
 }
 
 const todoFiles = [];
-for (const p of lock.installedFiles || []) {
+const todoExemptFiles = new Set([
+  "docs/requirements/README.md",
+  "docs/requirements/specs/_TEMPLATE.md",
+]);
+for (const p of installedFiles) {
   if (!existsSync(join(target, p)) || !/\.(md|json|toml)$/.test(p)) continue;
+  if (todoExemptFiles.has(p)) continue;
   if (/TODO(?:\(|:|\b)|待负责人确认|待确认/.test(read(p))) todoFiles.push(p);
 }
 if (todoFiles.length) warnings.push(`仍有待项目化内容: ${todoFiles.join(", ")}`);

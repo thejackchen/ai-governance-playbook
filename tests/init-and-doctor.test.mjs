@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
@@ -48,6 +48,69 @@ test("Codex Lite installs shared instruction files, hooks and frontend extension
   const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
   assert.equal(doctor.status, 0, doctor.stderr);
   assert.match(doctor.stdout + doctor.stderr, /0 error/);
+});
+
+test("every new runtime/profile install carries both hook schemas", () => {
+  const events = ["SessionStart", "PreToolUse", "Stop"];
+  for (const runtime of ["codex", "claude-code", "generic"]) {
+    for (const profile of ["lite", "standard", "high-assurance"]) {
+      const dir = project();
+      const init = run(process.execPath, [
+        "scripts/init.mjs", "--target", dir, "--runtime", runtime, "--profile", profile, "--write"
+      ]);
+      assert.equal(init.status, 0, `${runtime}+${profile}: ${init.stderr}`);
+
+      const claude = JSON.parse(readFileSync(join(dir, ".claude/settings.json"), "utf8"));
+      const codex = JSON.parse(readFileSync(join(dir, ".codex/hooks.json"), "utf8"));
+      for (const event of events) {
+        assert.ok(claude.hooks?.[event]?.length, `${runtime}+${profile} Claude ${event}`);
+        assert.ok(codex.hooks?.[event]?.length, `${runtime}+${profile} Codex ${event}`);
+      }
+      assert.match(readFileSync(join(dir, ".codex/config.toml"), "utf8"), /hooks\s*=\s*true/);
+      assert.match(readFileSync(join(dir, ".codex/rules/default.rules"), "utf8"), /match\s*=/);
+    }
+  }
+});
+
+test("doctor keeps legacy single-runtime installs compatible", () => {
+  const codexDir = project();
+  assert.equal(run(process.execPath, [
+    "scripts/init.mjs", "--target", codexDir, "--runtime", "codex", "--profile", "lite", "--write"
+  ]).status, 0);
+  const codexLockPath = join(codexDir, "governance.lock.json");
+  const codexLock = JSON.parse(readFileSync(codexLockPath, "utf8"));
+  unlinkSync(join(codexDir, ".claude/settings.json"));
+  codexLock.installedFiles = codexLock.installedFiles.filter((p) => p !== ".claude/settings.json");
+  writeFileSync(codexLockPath, JSON.stringify(codexLock, null, 2) + "\n");
+  const codexDoctor = run(process.execPath, ["scripts/doctor.mjs", "--target", codexDir]);
+  assert.equal(codexDoctor.status, 0, codexDoctor.stderr);
+  assert.doesNotMatch(codexDoctor.stderr, /Claude Code缺少|缺少文件: \.claude/);
+
+  const claudeDir = project();
+  assert.equal(run(process.execPath, [
+    "scripts/init.mjs", "--target", claudeDir, "--runtime", "claude-code", "--profile", "standard", "--write"
+  ]).status, 0);
+  const claudeLockPath = join(claudeDir, "governance.lock.json");
+  const claudeLock = JSON.parse(readFileSync(claudeLockPath, "utf8"));
+  for (const p of [".codex/hooks.json", ".codex/config.toml", ".codex/rules/default.rules"]) unlinkSync(join(claudeDir, p));
+  claudeLock.installedFiles = claudeLock.installedFiles.filter((p) => !p.startsWith(".codex/"));
+  writeFileSync(claudeLockPath, JSON.stringify(claudeLock, null, 2) + "\n");
+  const claudeDoctor = run(process.execPath, ["scripts/doctor.mjs", "--target", claudeDir]);
+  assert.equal(claudeDoctor.status, 0, claudeDoctor.stderr);
+  assert.doesNotMatch(claudeDoctor.stderr, /Codex缺少|Codex hooks|Codex rules|缺少文件: \.codex/);
+});
+
+test("doctor validates both installed carriers regardless of lock runtime", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, [
+    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"
+  ]).status, 0);
+  writeFileSync(join(dir, ".claude/settings.json"), "{}\n");
+  writeFileSync(join(dir, ".codex/config.toml"), "[features]\nhooks = false\n");
+  const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  assert.notEqual(doctor.status, 0);
+  assert.match(doctor.stderr, /Claude Code缺少SessionStart Hook/);
+  assert.match(doctor.stderr, /Codex hooks功能未启用/);
 });
 
 test("PreToolUse blocks destructive commands and allows safe commands", () => {
@@ -164,13 +227,18 @@ test("Claude Code Standard installs shared gates and passes doctor", () => {
   assert.equal(doctor.status, 0, doctor.stderr);
 });
 
-test("Standard profile carries no Codex/OpenAI stowaway outside Codex runtime", () => {
+test("Standard profile carries no Codex/OpenAI CI stowaway outside Codex runtime", () => {
   // scripts/governance-lint.mjs 对每个runtime都相同地包含 `lock.runtime === "codex"` 分支——
   // 这是共享的跨runtime校验逻辑（本身在Lite也会安装，与Standard的CI夹带问题无关），不算作item 3要清除的
-  // Codex专属CI工具引用（.github/codex/**、openai/codex-action、OPENAI_API_KEY）。其余任何文件都不应提及。
+  // Codex专属CI工具引用（.github/codex/**、openai/codex-action、OPENAI_API_KEY）。默认双接线的
+  // .codex 三个静态hook载体是有意安装的运行时配置，单独排除；其余任何文件都不应提及。
   // 认领门是公共载体；其 `codex exec` 触发模式和 CLI 示例不是 runtime 偷渡，
   // 而是跨 runtime 的共享合同，单独排除这些共享文件再检查真正的 Codex/OpenAI 夹带。
   const exempt = new Set([
+    ".codex/config.toml",
+    ".codex/hooks.json",
+    ".codex/rules/default.rules",
+    "governance.lock.json",
     "scripts/governance-lint.mjs",
     "governance/claim-gate.md",
     "governance/policy.json",
@@ -307,6 +375,28 @@ test("requirements-mode local/external 由init与doctor联动", () => {
   assert.equal(externalPolicy.requirements.mode, "external");
   assert.equal(externalPolicy.requirements.source, requirementsSource);
   assert.deepEqual(externalPolicy.requirements.validator, []);
+});
+
+test("doctor ignores installer-owned TODO examples but still reports a project TODO", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, [
+    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "standard", "--write"
+  ]).status, 0);
+
+  const cleanDoctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  assert.equal(cleanDoctor.status, 0, cleanDoctor.stderr);
+  assert.doesNotMatch(cleanDoctor.stderr, /docs\/requirements\/README\.md/);
+  assert.doesNotMatch(cleanDoctor.stderr, /docs\/requirements\/specs\/_TEMPLATE\.md/);
+
+  const projectTodo = "\nTODO(owner): 测试\n";
+  for (const file of ["AGENTS.md", "CLAUDE.md"]) {
+    writeFileSync(join(dir, file), readFileSync(join(dir, file), "utf8") + projectTodo);
+  }
+  const todoDoctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  assert.equal(todoDoctor.status, 0, todoDoctor.stderr);
+  assert.match(todoDoctor.stderr, /仍有待项目化内容/);
+  assert.match(todoDoctor.stderr, /AGENTS\.md/);
+  assert.doesNotMatch(todoDoctor.stderr, /docs\/requirements\/(?:README\.md|specs\/_TEMPLATE\.md)/);
 });
 
 test("local semantic requirements checker cannot be replaced with a successful custom validator", () => {

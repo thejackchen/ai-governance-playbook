@@ -48,6 +48,8 @@ $(git rev-parse --git-common-dir)/governance-claims/<claimId>.json
 
 普通认领是弱 session fencing：只有认领和当前 session 都非空且不相等时才不兼容，任一方为空都兼容。`emergency` 更严格，必须两边都有 session 且相等；这是特权救火通道，不是日常路径。
 
+单线/全新项目在尚未分裂出 `docs/execution/branches/<slug>.md` 之前，`open` 必须使用 `--line cross`，这是常态而不是特殊降级；认领会落到 `docs/index.md`。只有项目确实按 CORE.md §2.5 分裂出对应的分支文件后，才切换到具体 slug。
+
 ## CLI
 
 所有子命令都支持 `--json`，不带时输出适合人阅读的文本。

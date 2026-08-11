@@ -11,9 +11,6 @@ if (!args.target || !existsSync(target)) fail("必须提供已存在的 --target
 
 const runtime = args.runtime === "auto" || !args.runtime ? detectRuntime(target) : String(args.runtime);
 if (!new Set(["codex", "claude-code", "generic"]).has(runtime)) fail(`不支持runtime: ${runtime}`);
-if (runtime === "generic") {
-  console.log("[警告] generic运行时没有自动hook载体：SessionStart/PreToolUse/Stop不会被运行时自动触发，governance-verify/governance-lint等治理脚本需要人工或pre-commit/CI等效机制主动触发，否则治理不会真实生效。");
-}
 const profile = String(args.profile || "lite");
 if (!new Set(["lite", "standard", "high-assurance"]).has(profile)) fail(`不支持profile: ${profile}`);
 const profileInfo = JSON.parse(readFileSync(join(KIT_ROOT, "profiles", `${profile}.json`), "utf8"));
@@ -138,8 +135,11 @@ if (requirementsMode === "local") {
 for (const [source, dest] of map) writes.push({ source: join(common, source), dest: join(target, dest) });
 writes.push({ source: join(common, "INSTRUCTIONS.md"), dest: join(target, adapter.instructionFile) });
 
-if (adapter.filesRoot) {
-  const adapterRoot = join(KIT_ROOT, adapter.filesRoot);
+// Hook载体默认双接线：新项目同时安装Claude Code与Codex配置。
+// runtime仍只决定原生指令/桥接入口和Codex专属CI，不决定是否安装另一套静态hook配置。
+for (const hookRuntime of ["claude-code", "codex"]) {
+  const hookAdapter = JSON.parse(readFileSync(join(KIT_ROOT, "adapters", hookRuntime, "adapter.json"), "utf8"));
+  const adapterRoot = join(KIT_ROOT, hookAdapter.filesRoot);
   for (const source of files(adapterRoot)) writes.push({ source, dest: join(target, relative(adapterRoot, source)) });
 }
 if (profile !== "lite") {
@@ -164,14 +164,6 @@ for (const ext of extensions) {
 const finalWrites = [...new Map(writes.map((item) => [relative(target, item.dest), item])).values()];
 
 const bridgePath = join(target, adapter.bridgeFile);
-  // 非 codex runtime:CODEOWNERS 中的 .codex 条目无宿主,过滤避免夹带
-  if (runtime !== "codex") {
-    const co = join(target, ".github", "CODEOWNERS");
-    if (existsSync(co)) {
-      const lines = readFileSync(co, "utf8").split("\n").filter((l) => !l.includes(".codex"));
-      writeFileSync(co, lines.join("\n"));
-    }
-  }
 
 const installedFiles = [...new Set(finalWrites.map((x) => relative(target, x.dest)).concat([adapter.bridgeFile, "governance.lock.json"]))].sort();
 const kitFingerprint = fingerprintKit();

@@ -92,7 +92,7 @@ node scripts/init.mjs \
 
 安装器只建载体，不替负责人发明意图。完成以下项目化：
 
-- 运行时指令正本中的`TODO(owner)`由负责人确认；
+- 意图按运行时指令正本的[意图段规定动作](templates/common/INSTRUCTIONS.md#意图)处理：先从真实材料起草建议稿、在`governance/questions.md`挂确认问题，再由负责人确认；本节不另维护一套意图规则；
 - `ROADMAP.md`写真实游标、战线和硬约束；
 - `docs/architecture/repository-layout.md`分类现有顶层目录；
 - `docs/index.md`指向真实架构、需求、决策和运行文档；架构/需求指针是markdown链接、已进死链检测射程，指针必须指向真实存在的文件，不能留安装器默认占位路径（`docs/architecture.md`、`docs/requirements/backlog.md`）；

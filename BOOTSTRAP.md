@@ -84,11 +84,34 @@ node "$GOVERNANCE_PLAYBOOK_DIR/scripts/governance-lint.mjs" --root "$PROJECT_DIR
 
 Standard 及以上的新安装会包含 `scripts/claim.mjs` 与 `governance/claim-gate.md`；三个共享 hook 会在 `lite` 中动态跳过缺失的认领脚本，保留危险命令拦截。新安装的 `CLAUDE.md` 与 `AGENTS.md` 是同一份完整正文，不是桥接 stub。
 
+新安装无论 `runtime` 探测结果为何，都会同时落下 `.claude/settings.json` 与 `.codex/{hooks.json,config.toml,rules/default.rules}`；`runtime` 仍只决定原生指令/桥接入口和 Codex 专属 CI 变体。单线或尚未按 CORE.md §2.5 分裂出 `docs/execution/branches/<slug>.md` 的项目，开普通认领时使用 `--line cross`（落到 `docs/index.md`）；只有真的分裂出对应分支文件后才使用具体 slug。
+
 ## 5. 填项目事实
 
 按 [`setup.md` §2 填项目事实](setup.md#2-填项目事实) 完成 `TODO(owner)`、真实游标、架构/需求指针、策略和目录地图。不要用安装器默认文字冒充项目事实。
 
-## 6. 交安装报告
+完成项目化后重新跑第 4 步的 doctor 和治理 lint；两者都全绿后再进入下一步。
+
+## 6. 形成 Git 基线
+
+全绿后先审查本次安装实际改变了什么：
+
+```bash
+git -C "$PROJECT_DIR" status --short
+git -C "$PROJECT_DIR" diff --check
+```
+
+全新项目且确认工作树只有本次安装内容时，可以明确暂存并提交：
+
+```bash
+git -C "$PROJECT_DIR" add -A
+git -C "$PROJECT_DIR" diff --cached --stat
+git -C "$PROJECT_DIR" commit -m "chore: establish governance baseline"
+```
+
+存量项目只 `git add` 已审查的本次文件，不要用 `add -A` 带入无关改动。若负责人没有明确允许提交，先问负责人，拿到允许后再执行 `git commit`；不要把未提交的生成物冒充已定格基线。
+
+## 7. 交安装报告
 
 按 [`setup.md` §7 安装报告](setup.md#7-安装报告) 交付 runtime/profile、实际载体、未安装项、doctor/lint 与 Hook 证据、无上下文演练和仍可绕过的边界。报告必须区分“骨架已生成”“本地 fixture 通过”“Git 基线形成”和“远端 required check 生效”。
 
