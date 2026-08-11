@@ -100,11 +100,14 @@ const todoFiles = [];
 const todoExemptFiles = new Set([
   "docs/requirements/README.md",
   "docs/requirements/specs/_TEMPLATE.md",
+  "CHANGELOG.md",
 ]);
 for (const p of installedFiles) {
   if (!existsSync(join(target, p)) || !/\.(md|json|toml)$/.test(p)) continue;
   if (todoExemptFiles.has(p)) continue;
-  if (/TODO(?:\(|:|\b)|待负责人确认|待确认/.test(read(p))) todoFiles.push(p);
+  const body = read(p);
+  const scannable = body.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, "");
+  if (/TODO(?:\(|:|\b)|待负责人确认|待确认/.test(scannable)) todoFiles.push(p);
 }
 if (todoFiles.length) warnings.push(`仍有待项目化内容: ${todoFiles.join(", ")}`);
 

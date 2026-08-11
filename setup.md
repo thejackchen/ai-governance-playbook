@@ -92,10 +92,10 @@ node scripts/init.mjs \
 
 安装器只建载体，不替负责人发明意图。完成以下项目化：
 
-- 意图按运行时指令正本的[意图段规定动作](templates/common/INSTRUCTIONS.md#意图)处理：先从真实材料起草建议稿、在`governance/questions.md`挂确认问题，再由负责人确认；本节不另维护一套意图规则；
+- 意图按运行时指令正本的[意图段规定动作](templates/common/INSTRUCTIONS.md#意图)处理：先从真实材料起草建议稿、在`governance/questions.md`挂确认问题，再由负责人确认；本节不另维护一套意图规则。标题/`PROJECT_NAME`使用basename（机械、稳定、不需要 AI 判断）；意图正文使用项目的真实/自称名；两者不一致时沿用上述意图段规定动作（先起草建议稿、再在`governance/questions.md`挂确认问题），不要静默二选一；
 - `ROADMAP.md`写真实游标、战线和硬约束；
 - `docs/architecture/repository-layout.md`分类现有顶层目录；
-- `docs/index.md`指向真实架构、需求、决策和运行文档；架构/需求指针是markdown链接、已进死链检测射程，指针必须指向真实存在的文件，不能留安装器默认占位路径（`docs/architecture.md`、`docs/requirements/backlog.md`）；
+- `docs/index.md`指向真实架构、需求、决策和运行文档；架构/需求指针是markdown链接、已进死链检测射程，指针必须指向真实存在的文件，不能留安装器默认占位路径（`docs/architecture.md`、`docs/requirements/backlog.md`）。全新项目的正确动作是把安装器已经建好的这两个权威文件内容填成真实架构/需求正文；只有当项目确实希望架构或需求文档存放在别的路径时，才需要同时改指针和搬文件，不要在双方都不需要改路径的情况下产生“是不是要挪地方”的误判；
 - `governance/policy.json`登记真实验证命令和项目特定危险操作；
 - `.gitignore`至少含`.env.local`/`node_modules`（安装器提供最小样例，已有的合并而不是覆盖）——「真实凭据不进git」红线的day-1结构前提；
 - Standard/High Assurance逐条审计`registry`，删除不适用的示例规则；

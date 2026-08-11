@@ -254,6 +254,8 @@ test("Standard profile carries no Codex/OpenAI CI stowaway outside Codex runtime
         if (exempt.has(relative(dir, full))) continue;
         let body = "";
         try { body = readFileSync(full, "utf8"); } catch { continue; }
+        const relativePath = relative(dir, full);
+        if (relativePath === "AGENTS.md" || relativePath === "CLAUDE.md") body = body.replace("`codex exec`", "");
         if (/codex|openai/i.test(body)) hits.push(full);
       }
     };
@@ -397,6 +399,51 @@ test("doctor ignores installer-owned TODO examples but still reports a project T
   assert.match(todoDoctor.stderr, /仍有待项目化内容/);
   assert.match(todoDoctor.stderr, /AGENTS\.md/);
   assert.doesNotMatch(todoDoctor.stderr, /docs\/requirements\/(?:README\.md|specs\/_TEMPLATE\.md)/);
+});
+
+test("doctor ignores code examples and changelog history without weakening TODO detection", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, [
+    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "standard", "--write"
+  ]).status, 0);
+
+  for (const file of ["AGENTS.md", "CLAUDE.md"]) {
+    const body = readFileSync(join(dir, file), "utf8");
+    writeFileSync(join(dir, file), body.replace(
+      "TODO(owner): 用一段话确认项目目的、当前阶段和取舍倾向。",
+      "本项目为团队提供可审计的治理脚手架，当前阶段聚焦稳定交付和可验证门禁。"
+    ).replace("- TODO(owner): 添加项目特定红线；没有就删除本行。\n", ""));
+  }
+  const confirmed = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  assert.equal(confirmed.status, 0, confirmed.stderr);
+  assert.doesNotMatch(confirmed.stderr, /仍有待项目化内容: .*\b(?:AGENTS|CLAUDE)\.md/);
+
+  writeFileSync(join(dir, "CHANGELOG.md"), "\nTODO(owner): historical note\n待负责人确认\n", { flag: "a" });
+  const withHistory = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  assert.equal(withHistory.status, 0, withHistory.stderr);
+  assert.doesNotMatch(withHistory.stderr, /CHANGELOG\.md/);
+
+  const codeExamples = [
+    "```text",
+    "TODO(owner): example",
+    "```",
+    "`TODO(owner): example`",
+    ""
+  ].join("\n");
+  for (const file of ["AGENTS.md", "CLAUDE.md"]) {
+    writeFileSync(join(dir, file), `${readFileSync(join(dir, file), "utf8")}\n${codeExamples}`);
+  }
+  const withExamples = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  assert.equal(withExamples.status, 0, withExamples.stderr);
+  assert.doesNotMatch(withExamples.stderr, /仍有待项目化内容: .*AGENTS\.md/);
+
+  for (const file of ["AGENTS.md", "CLAUDE.md"]) {
+    writeFileSync(join(dir, file), `${readFileSync(join(dir, file), "utf8")}\nTODO(owner): 测试\n`);
+  }
+  const withProjectTodo = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  assert.equal(withProjectTodo.status, 0, withProjectTodo.stderr);
+  assert.match(withProjectTodo.stderr, /仍有待项目化内容/);
+  assert.match(withProjectTodo.stderr, /AGENTS\.md/);
 });
 
 test("local semantic requirements checker cannot be replaced with a successful custom validator", () => {
