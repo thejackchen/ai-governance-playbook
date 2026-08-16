@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
 const argv = process.argv.slice(2);
 const allowed = new Set(["--ci", "--fast"]);
@@ -13,6 +14,10 @@ const root = process.cwd();
 // fileURLToPath 而非 .pathname：非 ASCII 仓库路径下 .pathname 返回 percent-encoded 串 → MODULE_NOT_FOUND。
 run(process.execPath, [fileURLToPath(new URL("./governance-lint.mjs", import.meta.url)), "--root", root], "治理lint");
 const policy = JSON.parse(readFileSync(`${root}/governance/policy.json`, "utf8"));
+const frontendVerifier = join(root, "scripts/frontend-governance-verify.mjs");
+if (existsSync(frontendVerifier)) {
+  run(process.execPath, [frontendVerifier, mode === "ciChecks" ? "--ci" : "--fast"], "前端设计系统治理");
+}
 for (const command of policy[mode] || []) run(command, [], command, true);
 console.log(`[governance] verify ${mode} 通过`);
 

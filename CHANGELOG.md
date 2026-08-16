@@ -2,6 +2,12 @@
 
 > 只追加有意义的仓库、架构、运行状态或治理变化。只读评审、讨论和无落盘任务不写。
 
+## 2026-08-16 · v3.4.0 本地增量（未发布）
+- [feat] 完善可选 `frontend-design-system` 扩展：以 `governance/frontend-policy.json` 统一 lifecycle、四条权威路径、生成物、配置检查和视觉回归；补齐 reference pack、primitive → semantic → component tokens、独立验证器和扩展安装契约。
+- [design] 明确 `reference-pending` 可容纳未验证候选，不等于“尚未选风格”；品牌手册、官网和 Logo 来源色必须经过项目 semantic 映射、对比度与代表页面验证，不能直接绑定组件或业务身份。
+- [feat] 公共 `governance-verify` 按 `--fast`/`--ci` 自动调用扩展验证器，SessionStart 在检测到 policy 时确定性播报 lifecycle 与 authority；`reference-pending`/`shadow` 的非结构检查只报告，`enforced` 的配置硬门禁才阻断。
+- [test] 补扩展安装文件、SessionStart 触达、结构错误、enforced 空门禁和 shadow 非零检查不阻断测试。
+
 ## 2026-08-11 · v3.4.0 · AIOS 治理母版与单一入口
 - [feat] 新增 `BOOTSTRAP.md`、`gov-bootstrap` 和通用认领门；新安装默认 Standard，认领门随 Standard/High Assurance 安装，Lite 动态降级。
 - [fix] 新安装的 `CLAUDE.md`/`AGENTS.md` 改为字节一致双正本；lint 同时兼容真实存量的手写短桥接，并补版本漂移门。

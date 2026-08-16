@@ -65,6 +65,9 @@ const values = {
   REQUIREMENTS_LINK: requirementsMode === "external"
     ? requirementsSource
     : "../docs/requirements/backlog.md",
+  FRONTEND_DESIGN_SYSTEM_ROUTE: extensions.includes("frontend-design-system")
+    ? "- 若安装了 `frontend-design-system` 扩展：前端视觉与交互正文属于产品架构，请按 `docs/index.md` 路由读取 `docs/design/design-system.md`、`docs/design/reference-pack.md`、`design/tokens.json`、`docs/architecture/frontend-surfaces.md`、`governance/frontend-policy.json` 与 `scripts/frontend-governance-verify.mjs`；治理只负责唯一正本、变更门、启动触达和机器验证，不在此处复制设计正文。"
+    : "",
   PROJECT_RED_LINES: "- TODO(owner): 添加项目特定红线；没有就删除本行。",
   VERIFY_COMMAND: "node scripts/governance-verify.mjs --fast",
   CURRENT_CURSOR: "TODO: 写明当前主攻战线、做到哪一步、下一步是什么。",

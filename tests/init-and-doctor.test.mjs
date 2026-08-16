@@ -44,10 +44,143 @@ test("Codex Lite installs shared instruction files, hooks and frontend extension
   assert.equal(readFileSync(join(dir, "CLAUDE.md"), "utf8"), readFileSync(join(dir, "AGENTS.md"), "utf8"));
   assert.equal(existsSync(join(dir, "scripts/claim.mjs")), false);
   assert.ok(readFileSync(join(dir, ".codex/hooks.json"), "utf8").includes("PreToolUse"));
-  assert.ok(readFileSync(join(dir, "design/tokens.json"), "utf8").includes("schemaVersion"));
+  for (const file of [
+    "docs/design/design-system.md",
+    "docs/design/reference-pack.md",
+    "design/tokens.json",
+    "docs/architecture/frontend-surfaces.md",
+    "governance/frontend-policy.json",
+    "scripts/frontend-governance-verify.mjs"
+  ]) assert.ok(existsSync(join(dir, file)), `missing frontend extension file: ${file}`);
+  const tokens = JSON.parse(readFileSync(join(dir, "design/tokens.json"), "utf8"));
+  for (const layer of ["primitive", "semantic", "component"]) assert.ok(tokens[layer], `missing token layer: ${layer}`);
+  const frontendPolicy = JSON.parse(readFileSync(join(dir, "governance/frontend-policy.json"), "utf8"));
+  assert.equal(frontendPolicy.lifecycle, "reference-pending");
+  assert.deepEqual(Object.keys(frontendPolicy.authority).sort(), ["designSystem", "referencePack", "surfaces", "tokens"]);
+  assert.deepEqual(frontendPolicy.checks, [], "reference-pending 安装默认不得执行未配置的项目命令");
+  assert.equal(frontendPolicy.visualRegression.enabled, false);
+  assert.equal(frontendPolicy.visualRegression.checkId, "visual-regression");
+  assert.equal(frontendPolicy.visualRegression.baselinePath, "tests/visual/baselines");
+  assert.ok(readFileSync(join(dir, "AGENTS.md"), "utf8").includes("frontend-design-system"));
+  assert.ok(readFileSync(join(dir, "docs/index.md"), "utf8").includes("frontend-governance-verify.mjs"));
+  const referencePack = readFileSync(join(dir, "docs/design/reference-pack.md"), "utf8");
+  for (const layer of ["baseSystem", "industryPatterns", "brandLayer"]) assert.match(referencePack, new RegExp(`^### ${layer}$`, "m"));
+  assert.match(referencePack, /参考来源不是复制资产/);
+  assert.match(referencePack, /不能只作为换色皮肤/);
+  assert.match(referencePack, /项目语义层/);
+  assert.match(referencePack, /行业\/电商页面模式/);
+  assert.match(referencePack, /项目色彩、资产和信息角色/);
   const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
   assert.equal(doctor.status, 0, doctor.stderr);
   assert.match(doctor.stdout + doctor.stderr, /0 error/);
+});
+
+test("SessionStart reaches frontend lifecycle and authority paths when the extension is installed", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, [
+    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
+    "--with", "frontend-design-system", "--write"
+  ]).status, 0);
+  const session = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start.mjs")], join(dir, "docs"));
+  assert.equal(session.status, 0, session.stderr);
+  assert.match(session.stdout, /视觉治理: lifecycle=reference-pending/);
+  for (const path of [
+    "designSystem:docs/design/design-system.md",
+    "tokens:design/tokens.json",
+    "referencePack:docs/design/reference-pack.md",
+    "surfaces:docs/architecture/frontend-surfaces.md"
+  ]) assert.match(session.stdout, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+});
+
+test("shared governance verify invokes the installed frontend verifier with the selected mode", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, [
+    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
+    "--with", "frontend-design-system", "--write"
+  ]).status, 0);
+  const verify = run(process.execPath, [join(kit, "scripts/governance-verify.mjs"), "--fast"], dir);
+  assert.equal(verify.status, 0, verify.stderr);
+  assert.match(verify.stdout + verify.stderr, /\[frontend-governance\]/);
+  assert.match(verify.stdout + verify.stderr, /lifecycle=reference-pending mode=fast checks=0/);
+  assert.doesNotMatch(verify.stdout + verify.stderr, /npm (?:error|run)|REPORT/);
+});
+
+test("frontend governance verifier separates structural errors from lifecycle enforcement", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, [
+    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
+    "--with", "frontend-design-system", "--write"
+  ]).status, 0);
+  const script = join(dir, "scripts/frontend-governance-verify.mjs");
+  const policyPath = join(dir, "governance/frontend-policy.json");
+  const referencePackPath = join(dir, "docs/design/reference-pack.md");
+  const originalReferencePack = readFileSync(referencePackPath, "utf8");
+  const readPolicy = () => JSON.parse(readFileSync(policyPath, "utf8"));
+  const writePolicy = (policy) => writeFileSync(policyPath, JSON.stringify(policy, null, 2) + "\n");
+
+  const structural = readPolicy();
+  structural.lifecycle = "not-a-lifecycle";
+  writePolicy(structural);
+  const structuralResult = run(process.execPath, [script, "--fast"], dir);
+  assert.notEqual(structuralResult.status, 0);
+  assert.match(structuralResult.stderr, /STRUCTURE ERROR/);
+  assert.match(structuralResult.stderr, /lifecycle/);
+
+  const noGate = readPolicy();
+  noGate.lifecycle = "enforced";
+  noGate.checks = [];
+  writePolicy(noGate);
+  const noGateResult = run(process.execPath, [script, "--fast"], dir);
+  assert.notEqual(noGateResult.status, 0);
+  assert.match(noGateResult.stderr, /enforced lifecycle 不能使用空 checks/);
+
+  const missingReferenceLayer = readPolicy();
+  writeFileSync(referencePackPath, originalReferencePack.replace("### brandLayer", "### projectBrand"));
+  writePolicy(missingReferenceLayer);
+  const missingReferenceResult = run(process.execPath, [script, "--fast"], dir);
+  assert.notEqual(missingReferenceResult.status, 0);
+  assert.match(missingReferenceResult.stderr, /referencePack 缺少 brandLayer/);
+  writeFileSync(referencePackPath, originalReferencePack);
+
+  const visualDirectory = join(dir, "tests/visual/baselines");
+  mkdirSync(visualDirectory, { recursive: true });
+  const enabledVisual = readPolicy();
+  enabledVisual.lifecycle = "reference-pending";
+  enabledVisual.visualRegression.enabled = true;
+  enabledVisual.checks = [{
+    id: "visual-regression",
+    name: "Visual regression",
+    modes: ["fast"],
+    command: "node -e \"process.exit(0)\"",
+    enforcement: "report"
+  }];
+  writePolicy(enabledVisual);
+  const enabledVisualResult = run(process.execPath, [script, "--fast"], dir);
+  assert.equal(enabledVisualResult.status, 0, enabledVisualResult.stderr);
+
+  const shadow = readPolicy();
+  shadow.lifecycle = "shadow";
+  shadow.visualRegression.enabled = false;
+  shadow.checks = [{
+    id: "failing-shadow-check",
+    name: "Failing shadow check",
+    modes: ["fast"],
+    command: "node -e \"process.exit(7)\"",
+    enforcement: "block"
+  }];
+  writePolicy(shadow);
+  const shadowResult = run(process.execPath, [script, "--fast"], dir);
+  assert.equal(shadowResult.status, 0, shadowResult.stderr);
+  assert.match(shadowResult.stdout + shadowResult.stderr, /REPORT failing-shadow-check/);
+  assert.doesNotMatch(shadowResult.stdout + shadowResult.stderr, /BLOCK failing-shadow-check/);
+
+  const enforced = readPolicy();
+  enforced.lifecycle = "enforced";
+  enforced.checks[0].enforcement = "block";
+  writePolicy(enforced);
+  const enforcedResult = run(process.execPath, [script, "--fast"], dir);
+  assert.notEqual(enforcedResult.status, 0);
+  assert.match(enforcedResult.stdout + enforcedResult.stderr, /BLOCK failing-shadow-check/);
 });
 
 test("every new runtime/profile install carries both hook schemas", () => {

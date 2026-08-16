@@ -42,6 +42,7 @@
 | setup.md | AI | 安装流程(+附A 存量迁移/附B 验收自检) |
 | governance/cases/ | AI | **判例库(12 条)——历次真实教训,新项目安装第一步通读** |
 | profiles/ · adapters/ · templates/ | AI | 三档规格 · 运行时适配 · 安装模板 |
+| extensions/frontend-design-system/ | AI | 可选前端设计系统扩展；按需安装，不把产品设计规则强加给无前端项目 |
 | scripts/ | 机器 | init 安装器 · doctor 体检 · verify 校验 |
 | governance/ 其余 · ROADMAP · CHANGELOG | 机器+AI | 本仓库自己的治理(自食其力) |
 

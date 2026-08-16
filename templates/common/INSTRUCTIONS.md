@@ -24,6 +24,7 @@
 - 仓库结构权威：`docs/architecture/repository-layout.md`；新增顶层目录或跨层依赖先写ADR。
 - 同一事实只有一个正文权威；其它位置用链接或可验证生成物。
 - 文档与现实冲突时，以现实为准，修正文档；影响过真实执行时记`governance/incidents.md`。
+{{FRONTEND_DESIGN_SYSTEM_ROUTE}}
 
 ## 红线
 

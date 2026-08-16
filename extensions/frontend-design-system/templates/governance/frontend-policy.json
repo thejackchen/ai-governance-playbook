@@ -1,6 +1,17 @@
 {
   "schemaVersion": 1,
-  "tokenSource": "design/tokens.json",
+  "lifecycle": "reference-pending",
+  "authority": {
+    "designSystem": "docs/design/design-system.md",
+    "tokens": "design/tokens.json",
+    "referencePack": "docs/design/reference-pack.md",
+    "surfaces": "docs/architecture/frontend-surfaces.md"
+  },
   "generatedOutputs": [],
-  "checks": []
+  "checks": [],
+  "visualRegression": {
+    "enabled": false,
+    "checkId": "visual-regression",
+    "baselinePath": "tests/visual/baselines"
+  }
 }

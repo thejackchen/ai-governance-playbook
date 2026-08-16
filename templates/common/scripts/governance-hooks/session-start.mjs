@@ -24,6 +24,17 @@ const result = spawnSync(process.execPath, [fileURLToPath(new URL("../governance
 if (result.status === 0) process.stdout.write(result.stdout);
 else process.stdout.write("治理状态读取失败；开始工作前检查ROADMAP.md和governance.lock.json。\n");
 
+const frontendPolicyPath = join(root, "governance/frontend-policy.json");
+if (existsSync(frontendPolicyPath)) {
+  try {
+    const frontendPolicy = JSON.parse(readFileSync(frontendPolicyPath, "utf8"));
+    const authority = frontendPolicy.authority || {};
+    console.log(`🎨 视觉治理: lifecycle=${frontendPolicy.lifecycle || "unknown"}; authority=designSystem:${authority.designSystem || "?"}, tokens:${authority.tokens || "?"}, referencePack:${authority.referencePack || "?"}, surfaces:${authority.surfaces || "?"}`);
+  } catch (cause) {
+    console.log(`🎨 视觉治理: policy读取失败（${cause instanceof Error ? cause.message : String(cause)}）`);
+  }
+}
+
 // 认领门：铭牌和跨 worktree 活跃认领公告板。Lite 没有 claim.mjs 时只跳过公告板，
 // 不影响已有的状态播报和危险命令保护。
 let claimModule = null;

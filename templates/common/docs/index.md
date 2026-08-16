@@ -13,3 +13,4 @@
 | 规则 | `governance/registry.md` | Profile启用时使用 |
 | 判例库 | `governance/cases/` | Profile启用时使用；同族场景先类比判例再动手 |
 | 认领门 | `governance/claim-gate.md` | Profile启用时使用 |
+{{FRONTEND_DESIGN_SYSTEM_ROUTE}}
