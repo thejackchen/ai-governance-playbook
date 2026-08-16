@@ -8,6 +8,7 @@
 | 运行时能力与映射 | `CORE.md 附(运行时适配)` | 只描述载体差异，不复制核心 |
 | 安装与迁移 | `setup.md`、`setup.md 附A(存量迁移)` | 新项目与存量项目分别进入 |
 | Profile选择 | `profiles/README.md` | 选择最小够用强度 |
+| 发布治理 | `docs/release-governance.md` | 跨项目最小合同；目标、路径和平台命令留在项目本地 release runbook |
 | 仓库目录与所有权 | `docs/architecture/repository-layout.md` | 新顶层目录先ADR |
 | 需求 | [需求](requirements/backlog.md) | 本体需求以 requirements backlog 闭环 |
 | 前端设计系统扩展 | `extensions/frontend-design-system/README.md` | 仅有前端项目按需安装；设计正文留在项目扩展文件，治理只提供边界与机器验证 |

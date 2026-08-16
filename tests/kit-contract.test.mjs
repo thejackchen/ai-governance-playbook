@@ -52,3 +52,17 @@ test("Codex-only CI stowaway lives outside the shared Standard template", () => 
   assert.match(codexWorkflow, /ai-review:/);
   assert.match(codexWorkflow, /openai\/codex-action/);
 });
+
+test("Release governance is discoverable and covers the minimal contract", () => {
+  const index = readFileSync(`${root}/docs/index.md`, "utf8");
+  const release = readFileSync(`${root}/docs/release-governance.md`, "utf8");
+  const template = readFileSync(`${root}/templates/common/docs/index.md`, "utf8");
+
+  assert.match(index, /docs\/release-governance\.md/);
+  for (const field of ["target", "artifact", "entrypoint", "stage", "evidence", "rollback", "receipt"]) {
+    assert.match(release, new RegExp(`\\b${field}\\b`, "i"), `release contract missing ${field}`);
+  }
+  assert.match(release, /runtime\s+readback/i, "release contract missing runtime readback");
+  assert.match(template, /本地\s+release runbook/i);
+  assert.match(template, /发布面[\s\S]{0,40}建立|建立[\s\S]{0,40}发布面/);
+});

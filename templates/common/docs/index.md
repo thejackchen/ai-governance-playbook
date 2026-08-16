@@ -7,6 +7,7 @@
 | 架构当前真相 | [{{ARCHITECTURE_SOURCE}}](../{{ARCHITECTURE_SOURCE}}) | 当前投影 |
 | 仓库目录与所有权 | `docs/architecture/repository-layout.md` | 新顶层目录先ADR |
 | 需求 | [需求]({{REQUIREMENTS_LINK}}) | 单一入口：本地活文档/外部指针之一 |
+| 发布治理 | 项目本地 release runbook（存在发布面时建立） | 按[上游发布治理合同](https://github.com/thejackchen/ai-governance-playbook/blob/main/docs/release-governance.md)实例化目标、制品、入口、阶段、证据与回滚；无发布面不建空模板 |
 | 决策 | `docs/decisions/` | ADR append-only |
 | 事故 | `governance/incidents.md` | 事故发生时追加 |
 | 待裁决问题 | `governance/questions.md` | 裁决后链接ADR/判例/commit |

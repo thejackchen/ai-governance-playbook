@@ -4,7 +4,7 @@
 
 ## 当前游标
 
-v3核心、运行时适配器、Profile、脚手架和三组无上下文前向测试机制已就绪。最小可执行需求入口、local/external init+doctor闭环、AIOS治理母版回流、通用前端设计系统扩展与 Codex SessionStart JSON 可视适配、`pro-supervised-delivery` skill 已完成本地全量验证；当前为 v3.4.1 未打 tag 的交付候选，本轮已获提交/推送授权，但不宣称正式 release。
+v3核心、运行时适配器、Profile、脚手架和三组无上下文前向测试机制已就绪。最小可执行需求入口、local/external init+doctor闭环、AIOS治理母版回流、通用前端设计系统扩展、跨项目发布治理入口与 Codex SessionStart JSON 可视适配、`pro-supervised-delivery` skill 已完成本地验证；当前为 v3.4.1 未打 tag 的交付候选，本轮已获提交/推送授权，但不宣称正式 release。
 
 ## 硬约束
 

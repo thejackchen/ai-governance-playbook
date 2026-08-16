@@ -3,6 +3,7 @@
 > 只追加有意义的仓库、架构、运行状态或治理变化。只读评审、讨论和无落盘任务不写。
 
 ## 2026-08-16 · v3.4.1 · Codex Hook 可视等价与收口提示
+- [governance] 新增跨项目“发布治理”入口：以目标身份、不可变制品、唯一入口、阶段授权、正负成功证据、运行回读、回滚和结构化回执组成最小合同；项目事实留在本地 release runbook，不创建 Skill，也不把 upload/preview/exit 0 误作正式发布。
 - [fix] 新增 `scripts/governance-hooks/session-start-codex.mjs` 作为最薄 Codex SessionStart JSON 适配器：直接复用现有 `session-start.mjs` 文本播报，同时写入 `systemMessage` 与 `hookSpecificOutput.additionalContext`，不给 Codex/Claude Code 维护两套状态生成逻辑。
 - [fix] `.codex/hooks.json` 改接 JSON 适配器；`init`、模板和 kit 自校验同步纳入 `session-start-codex.mjs`，缺载体时 doctor 会报缺失文件。
 - [fix] Stop Hook 现在每次都显式输出收工治理铭牌：成功至少包含从 `governance.lock.json` 读取的版本铭牌与 `✅ 治理验证: 通过`，失败/重复失败也带同一版本；额外只追加 active claim 与 dirty worktree 这类确定性提示，不猜“本轮进展”。
