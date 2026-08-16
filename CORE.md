@@ -208,18 +208,19 @@ AI 审计默认只读，输出固定结构并附证据。除非另有独立确�
 ### 权威载体
 
 - `AGENTS.md`：短、准确、每次自动加载；放项目意图摘要、权威路由、红线、验证命令和完成标准。
-- `.codex/hooks.json`：配置 `SessionStart`、`PreToolUse`、`Stop`。
+- `.codex/hooks.json`：配置 `SessionStart`、`PreToolUse`、`Stop`。其中 `SessionStart` 需经最薄 JSON 适配器包装共享的 `session-start.mjs` 文本人类播报，把同一份状态同时送入 `systemMessage` 与 `hookSpecificOutput.additionalContext`，不要复制第二套状态生成逻辑。
 - `.codex/rules/default.rules`：对明确危险命令做第二层约束；Rules 仍属实验能力，不能单独承担红线。
 - GitHub Actions：运行确定性验证；`openai/codex-action`只做只读语义审计。
 
 ### 信任要求
 
-项目本身必须被 Codex 标记为 trusted；新增或修改项目 Hook 后，负责人需要在 `/hooks` 中审核并信任当前哈希。未完成信任时，registry 必须如实登记 Hook 尚未生效。
+项目本身必须被 Codex 标记为 trusted；新增或修改项目 Hook 后，负责人需要在 `/hooks` 中审核并信任当前哈希。`.codex/hooks.json` 写进仓库不等于 Hook 已生效；未完成 trusted + `/hooks` 审核时，registry/安装报告必须如实登记 Hook 尚未生效。
 
 ### 已知边界
 
 - PreToolUse 不是完整安全边界。字符串防线已覆盖:目录前缀(`/usr/bin/git`)、引号/转义包裹、括号包裹、一至三层 `bash -c`/`sh -c`/`eval` 包裹;**仍可绕过**:命令替换 `$()`、管道拼装、解释器执行(`python -c`)、base64 编解码、多层混合嵌套。真正高风险约束仍应落到 sandbox、IAM、只读凭据和 CI;codex runtime 另有 execpolicy 深度解析(验证须带 `--resolve-host-executables`)。
 - Stop Hook 提供本地修复回路，但不能替代远端 required check。
+- Stop Hook 的显性收工状态同样是治理载体：每轮结束至少要可见从 `governance.lock.json` 读取的治理版本铭牌与验证通过/失败结果；附加提示只能来自 claims、工作树等确定性信号，不能猜测“本轮进展”。
 - `.rules` 需要用 `codex execpolicy check` 测试 match/not_match。
 
 ## Claude Code

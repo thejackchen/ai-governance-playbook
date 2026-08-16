@@ -1,6 +1,6 @@
 # 治理安装单一入口
 
-这是给零上下文 AI 的确定性 runbook。目标是：在当前项目落下 AIOS 现行治理架构的通用部分——三句核心、字节一致的 `CLAUDE.md`/`AGENTS.md`、SessionStart 铭牌、认领门、Stop 收口提示、治理 lint 和 `governance.lock.json`。不要手工复制治理文件；所有落盘都由 `scripts/init.mjs` 完成。
+这是给零上下文 AI 的确定性 runbook。目标是：在当前项目落下 AIOS 现行治理架构的通用部分——三句核心、字节一致的 `CLAUDE.md`/`AGENTS.md`、SessionStart 铭牌、认领门、Stop 收口提示、治理 lint 和 `governance.lock.json`。不要手工复制治理文件；所有落盘都由 `scripts/init.mjs` 完成。Codex 的 SessionStart 由 JSON 适配器包装同一份人类文本播报，写入 `.codex/hooks.json` 本身不等于生效，仍需 trusted + `/hooks` 审核当前哈希。
 
 ## 1. 确定当前项目
 

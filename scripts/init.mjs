@@ -119,6 +119,7 @@ const map = [
   ["scripts/governance-status.mjs", "scripts/governance-status.mjs"],
   ["scripts/governance-verify.mjs", "scripts/governance-verify.mjs"],
   ["scripts/governance-hooks/session-start.mjs", "scripts/governance-hooks/session-start.mjs"],
+  ["scripts/governance-hooks/session-start-codex.mjs", "scripts/governance-hooks/session-start-codex.mjs"],
   ["scripts/governance-hooks/pre-tool-use.mjs", "scripts/governance-hooks/pre-tool-use.mjs"],
   ["scripts/governance-hooks/stop.mjs", "scripts/governance-hooks/stop.mjs"]
 ];

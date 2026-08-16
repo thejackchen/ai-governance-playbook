@@ -12,6 +12,13 @@ const project = () => {
   assert.equal(run("git", ["init", "-q"], dir).status, 0);
   return dir;
 };
+const commitAll = (dir, message = "baseline") => {
+  assert.equal(run("git", ["add", "."], dir).status, 0);
+  assert.equal(
+    run("git", ["-c", "user.name=Test User", "-c", "user.email=test@example.com", "commit", "-qm", message], dir).status,
+    0,
+  );
+};
 
 test("dry-run does not write files", () => {
   const dir = project();
@@ -199,6 +206,16 @@ test("every new runtime/profile install carries both hook schemas", () => {
         assert.ok(claude.hooks?.[event]?.length, `${runtime}+${profile} Claude ${event}`);
         assert.ok(codex.hooks?.[event]?.length, `${runtime}+${profile} Codex ${event}`);
       }
+      assert.match(
+        codex.hooks.SessionStart[0].hooks[0].command,
+        /session-start-codex\.mjs/,
+        `${runtime}+${profile} Codex SessionStart 应指向 JSON 适配器`,
+      );
+      assert.match(
+        claude.hooks.SessionStart[0].hooks[0].command,
+        /session-start\.mjs/,
+        `${runtime}+${profile} Claude SessionStart 应保留人类文本脚本`,
+      );
       assert.match(readFileSync(join(dir, ".codex/config.toml"), "utf8"), /hooks\s*=\s*true/);
       assert.match(readFileSync(join(dir, ".codex/rules/default.rules"), "utf8"), /match\s*=/);
     }
@@ -326,16 +343,142 @@ test("PreToolUse matches deny patterns per command segment, not across connector
   }
 });
 
-test("Codex hooks resolve governance state from a nested working directory", () => {
+test("SessionStart keeps Claude human text and gives Codex a same-source JSON adapter", () => {
   const dir = project();
   assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
   const nested = join(dir, "docs");
-  const session = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start.mjs")], nested);
+  const human = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start.mjs")], nested);
+  assert.equal(human.status, 0, human.stderr);
+  assert.match(human.stdout, /治理启动状态/);
+  assert.throws(() => JSON.parse(human.stdout));
+  const codex = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start-codex.mjs")], nested);
+  assert.equal(codex.status, 0, codex.stderr);
+  const payload = JSON.parse(codex.stdout);
+  const shared = human.stdout.trim();
+  assert.equal(payload.systemMessage, shared);
+  assert.equal(payload.hookSpecificOutput.additionalContext, shared);
+  assert.equal(payload.hookSpecificOutput.hookEventName, "SessionStart");
+  assert.match(payload.systemMessage, /三句核心 v3\.4\.1/);
+  assert.match(payload.systemMessage, /当前游标|治理启动状态/);
+});
+
+test("Codex hooks resolve governance state from a nested working directory", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
+  commitAll(dir);
+  const nested = join(dir, "docs");
+  const session = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start-codex.mjs")], nested);
   assert.equal(session.status, 0, session.stderr);
-  assert.match(session.stdout, /治理启动状态/);
+  const payload = JSON.parse(session.stdout);
+  assert.match(payload.systemMessage, /治理启动状态/);
   const stop = run(process.execPath, [join(dir, "scripts/governance-hooks/stop.mjs")], nested, "{}");
   assert.equal(stop.status, 0, stop.stderr);
-  assert.equal(JSON.parse(stop.stdout).continue, true);
+  const stopPayload = JSON.parse(stop.stdout);
+  assert.equal(stopPayload.continue, true);
+  assert.match(stopPayload.systemMessage, /🏛 治理: 三句核心 v3\.4\.1/);
+  assert.match(stopPayload.systemMessage, /✅ 治理验证: 通过/);
+});
+
+test("Stop success always emits governance badge for clean and dirty worktrees", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, [
+    "scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
+  ]).status, 0);
+  commitAll(dir);
+  const hook = join(dir, "scripts/governance-hooks/stop.mjs");
+
+  const clean = run(process.execPath, [hook], dir, "{}");
+  assert.equal(clean.status, 0, clean.stderr);
+  const cleanPayload = JSON.parse(clean.stdout);
+  assert.equal(cleanPayload.continue, true);
+  assert.match(cleanPayload.systemMessage, /🏛 治理: 三句核心 v3\.4\.1/);
+  assert.match(cleanPayload.systemMessage, /✅ 治理验证: 通过/);
+  assert.doesNotMatch(cleanPayload.systemMessage, /🧾 未收口/);
+
+  writeFileSync(join(dir, "scratch.txt"), "dirty\n");
+  const dirty = run(process.execPath, [hook], dir, "{}");
+  assert.equal(dirty.status, 0, dirty.stderr);
+  const dirtyPayload = JSON.parse(dirty.stdout);
+  assert.equal(dirtyPayload.continue, true);
+  assert.match(dirtyPayload.systemMessage, /🏛 治理: 三句核心 v3\.4\.1/);
+  assert.match(dirtyPayload.systemMessage, /✅ 治理验证: 通过/);
+  assert.match(dirtyPayload.systemMessage, /🧾 未收口: 工作树仍有 \d+ 条未提交改动。/);
+});
+
+test("doctor fails when the Codex SessionStart adapter carrier is missing", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, [
+    "scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
+  ]).status, 0);
+  unlinkSync(join(dir, "scripts/governance-hooks/session-start-codex.mjs"));
+  const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  assert.notEqual(doctor.status, 0);
+  assert.match(doctor.stderr, /缺少文件: scripts\/governance-hooks\/session-start-codex\.mjs/);
+});
+
+test("doctor rejects Codex hooks top-level fields outside description/hooks", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, [
+    "scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
+  ]).status, 0);
+  const hooksPath = join(dir, ".codex/hooks.json");
+  const hooks = JSON.parse(readFileSync(hooksPath, "utf8"));
+  hooks.$comment = "legacy field";
+  writeFileSync(hooksPath, JSON.stringify(hooks, null, 2) + "\n");
+  const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  assert.notEqual(doctor.status, 0);
+  assert.match(doctor.stderr, /\.codex\/hooks\.json 顶层字段非法: \$comment/);
+});
+
+test("Stop falls back to a visible report hint instead of looping forever on repeated failure", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, [
+    "scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
+  ]).status, 0);
+  writeFileSync(join(dir, "governance/policy.json"), "{\n", "utf8");
+  const hook = join(dir, "scripts/governance-hooks/stop.mjs");
+
+  const first = run(process.execPath, [hook], dir, "{}");
+  assert.equal(first.status, 0, first.stderr);
+  const firstPayload = JSON.parse(first.stdout);
+  assert.equal(firstPayload.decision, "block");
+  assert.match(firstPayload.reason, /🏛 治理: 三句核心 v3\.4\.1/);
+  assert.match(firstPayload.reason, /❌ 治理验证: 失败/);
+  assert.match(firstPayload.reason, /治理验证失败，请修复后再结束/);
+
+  const second = run(process.execPath, [hook], dir, JSON.stringify({ stop_hook_active: true }));
+  assert.equal(second.status, 0, second.stderr);
+  const secondPayload = JSON.parse(second.stdout);
+  assert.equal(secondPayload.continue, true);
+  assert.match(secondPayload.systemMessage, /🏛 治理: 三句核心 v3\.4\.1/);
+  assert.match(secondPayload.systemMessage, /❌ 治理验证: 仍未通过/);
+  assert.match(secondPayload.systemMessage, /治理验证仍未通过，必须在最终报告中如实说明/);
+});
+
+test("doctor warns about Codex trust for claude-code runtime because v3.4 installs Codex hooks too", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, [
+    "scripts/init.mjs", "--target", dir, "--runtime", "claude-code", "--profile", "lite", "--write"
+  ]).status, 0);
+  const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  assert.equal(doctor.status, 0, doctor.stderr);
+  assert.match(doctor.stderr, /Codex项目Hook写入后必须在新会话用 \/hooks 审核并信任当前哈希/);
+});
+
+test("doctor/lint do not leak ambiguous origin branch noise when a remote exists without fetched refs", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, [
+    "scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
+  ]).status, 0);
+  assert.equal(run("git", ["remote", "add", "origin", "https://example.invalid/demo.git"], dir).status, 0);
+
+  const lint = run(process.execPath, [join(dir, "scripts/governance-lint.mjs"), "--root", dir], dir);
+  assert.equal(lint.status, 0, lint.stderr);
+  assert.doesNotMatch(lint.stdout + lint.stderr, /ambiguous argument|unknown revision/);
+
+  const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  assert.equal(doctor.status, 0, doctor.stderr);
+  assert.doesNotMatch(doctor.stdout + doctor.stderr, /ambiguous argument|unknown revision/);
 });
 
 test("Claude Code Standard installs shared gates and passes doctor", () => {

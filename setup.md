@@ -108,7 +108,7 @@ node scripts/init.mjs \
 ### Codex
 
 1. 确认项目已trusted；
-2. 新开会话，用`/hooks`审核并信任`.codex/hooks.json`当前哈希；
+2. 新开会话，用`/hooks`审核并信任`.codex/hooks.json`当前哈希；非托管 Codex Hook 的信任边界以此为准，**写入 `.codex/hooks.json` 不代表已生效**；
 3. 测试Rules：
 
 ```bash
@@ -118,6 +118,8 @@ codex execpolicy check --pretty --resolve-host-executables --rules .codex/rules/
 不带`--resolve-host-executables`测不出绝对路径写法（例如`/usr/bin/git reset --hard`会判定`matchedRules`为空，即规则形同虚设）。
 
 4. 手工向PreToolUse Hook输入一个危险命令fixture，确认返回`decision:block`。
+5. 手工触发 SessionStart fixture，确认 Codex 侧返回可解析 JSON，且 `systemMessage` 与 `hookSpecificOutput.additionalContext` 同源、都包含治理版本与当前状态。
+6. 手工触发一次成功 Stop fixture，确认每轮结束都显式显示从 `governance.lock.json` 读取的治理版本铭牌和 `✅ 治理验证: 通过`；若存在 active claim 或 dirty worktree，只能追加这些确定性提示。
 
 ### Claude Code
 
@@ -280,8 +282,10 @@ Hooks、lint和CI先以warn或非required方式运行一轮，确认误报率和
 - [ ] 每条核心规则写清trigger、predicate、effect、carrier和绕过；
 - [ ] 需要物理禁止的规则优先落IAM、只读凭据、schema或API边界；
 - [ ] Codex项目已trusted，并用`/hooks`审核当前Hook哈希；
+- [ ] Codex SessionStart fixture 返回可解析 JSON，且 `systemMessage` 与 `hookSpecificOutput.additionalContext` 同源；写文件未过 trusted + `/hooks` 前不得宣称 Hook 已生效；
+- [ ] Stop success fixture 每次都显式显示治理铭牌与 `✅ 治理验证: 通过`；有 active claim/dirty worktree 时只追加确定性提示；
 - [ ] PreToolUse危险命令fixture真实被阻断；
-- [ ] Stop验证失败时会要求修复，第二次仍失败会如实报告而不是无限循环；
+- [ ] Stop验证失败与第二次失败的输出都带治理版本；第二次仍失败会如实报告而不是无限循环；
 - [ ] `.rules`用`codex execpolicy check`验证match/not_match（Codex）；
 - [ ] pre-commit已启用或明确不安装（Standard及以上）；
 - [ ] CI deterministic job真实运行；required check状态如实登记；

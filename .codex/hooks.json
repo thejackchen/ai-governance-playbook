@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/session-start.mjs\"",
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/session-start-codex.mjs\"",
             "timeout": 30,
             "statusMessage": "读取治理状态"
           }

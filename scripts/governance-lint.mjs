@@ -436,14 +436,25 @@ if (existsSync(join(root, "governance/registry.md"))) {
 
 // 交付真实性:禁止在本地宣称“已推送”却非真实远端。不能简单用 `git push` 输出替代。
 {
-  const sh = (args) => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
+  const sh = (args) => execFileSync("git", args, {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  }).trim();
   try {
-    const branch = sh(["rev-parse", "--abbrev-ref", "HEAD"]);
+    const branch = sh(["symbolic-ref", "--quiet", "--short", "HEAD"]);
     const remotes = sh(["remote"]).split("\n").filter(Boolean);
     if (remotes.length === 0) {
       warnings.push("本仓没有配置任何远端 — 所有提交只存在本机一份,磁盘故障即全部丢失");
     }
     for (const remote of remotes) {
+      let remoteRefExists = false;
+      try {
+        remoteRefExists = sh(["show-ref", "--verify", "--quiet", `refs/remotes/${remote}/${branch}`]) === "";
+      } catch {
+        remoteRefExists = false;
+      }
+      if (!remoteRefExists) continue;
       let ahead;
       try { ahead = Number(sh(["rev-list", "--count", `${remote}/${branch}..${branch}`])); } catch { continue; }
       if (ahead > 0) warnings.push(`本地 ${branch} 领先 ${remote} ${ahead} 个提交 — 未推送到真远端(别拿 push 的成功输出当证据)`);

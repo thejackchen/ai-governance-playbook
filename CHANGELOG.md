@@ -2,7 +2,15 @@
 
 > 只追加有意义的仓库、架构、运行状态或治理变化。只读评审、讨论和无落盘任务不写。
 
-## 2026-08-16 · v3.4.0 本地增量（未发布）
+## 2026-08-16 · v3.4.1 · Codex Hook 可视等价与收口提示
+- [fix] 新增 `scripts/governance-hooks/session-start-codex.mjs` 作为最薄 Codex SessionStart JSON 适配器：直接复用现有 `session-start.mjs` 文本播报，同时写入 `systemMessage` 与 `hookSpecificOutput.additionalContext`，不给 Codex/Claude Code 维护两套状态生成逻辑。
+- [fix] `.codex/hooks.json` 改接 JSON 适配器；`init`、模板和 kit 自校验同步纳入 `session-start-codex.mjs`，缺载体时 doctor 会报缺失文件。
+- [fix] Stop Hook 现在每次都显式输出收工治理铭牌：成功至少包含从 `governance.lock.json` 读取的版本铭牌与 `✅ 治理验证: 通过`，失败/重复失败也带同一版本；额外只追加 active claim 与 dirty worktree 这类确定性提示，不猜“本轮进展”。
+- [fix] `doctor` 对所有 `codexActive` 安装都提示 `/hooks` 信任边界，不再因 `runtime=claude-code` 漏报；`governance-lint` 远端领先检查先确认 `refs/remotes/<remote>/<branch>` 存在，消除不存在远端分支时的 `ambiguous argument` 噪音。
+- [fix] `doctor` 追加 Codex hooks 顶层 schema 白名单校验：当前只接受 `description` / `hooks`，像 `$comment` 这类 JSON 语法虽合法但会被 Codex 拒载的字段现在能被迁移回归测试拦住。
+- [governance] 发布候选升到 `v3.4.1`，结束 `v3.4.0` 同版本内容继续变化导致的 lock 版本/指纹混淆。
+
+## 2026-08-16 · v3.4.0 候选增量（已并入 v3.4.1）
 - [feat] 完善可选 `frontend-design-system` 扩展：以 `governance/frontend-policy.json` 统一 lifecycle、四条权威路径、生成物、配置检查和视觉回归；补齐 reference pack、primitive → semantic → component tokens、独立验证器和扩展安装契约。
 - [design] 明确 `reference-pending` 可容纳未验证候选，不等于“尚未选风格”；品牌手册、官网和 Logo 来源色必须经过项目 semantic 映射、对比度与代表页面验证，不能直接绑定组件或业务身份。
 - [feat] 公共 `governance-verify` 按 `--fast`/`--ci` 自动调用扩展验证器，SessionStart 在检测到 policy 时确定性播报 lifecycle 与 authority；`reference-pending`/`shadow` 的非结构检查只报告，`enforced` 的配置硬门禁才阻断。

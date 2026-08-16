@@ -2,11 +2,30 @@
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 
 let input = {};
 try { input = JSON.parse(readFileSync(0, "utf8") || "{}"); } catch {}
+
+function governanceVersion() {
+  try {
+    return JSON.parse(readFileSync(join(root, "governance.lock.json"), "utf8")).playbookVersion || "?";
+  } catch {
+    return "?";
+  }
+}
+
+function getWorktreeHint() {
+  const status = spawnSync("git", ["status", "--short"], {
+    cwd: process.cwd(),
+    encoding: "utf8"
+  });
+  if (status.status !== 0) return "";
+  const count = (status.stdout || "").split(/\r?\n/).filter(Boolean).length;
+  return count > 0 ? `🧾 未收口: 工作树仍有 ${count} 条未提交改动。` : "";
+}
 
 // 认领门收口提示：只提示，不 block、不删认领。Lite 没有 claim.mjs 时静默跳过。
 async function getClaimGateHint() {
@@ -27,15 +46,29 @@ async function getClaimGateHint() {
   }
 }
 
+function governanceBadge(lines = []) {
+  return [
+    `🏛 治理: 三句核心 v${governanceVersion()}`,
+    ...lines,
+  ].filter(Boolean).join("\n");
+}
+
 const result = spawnSync(process.execPath, [fileURLToPath(new URL("../governance-verify.mjs", import.meta.url))], {
   cwd: root,
   encoding: "utf8"
 });
 const claimGateHint = await getClaimGateHint();
+const worktreeHint = getWorktreeHint();
 
 if (result.status === 0) {
-  const payload = { continue: true };
-  if (claimGateHint) payload.systemMessage = claimGateHint;
+  const payload = {
+    continue: true,
+    systemMessage: governanceBadge([
+      "✅ 治理验证: 通过",
+      claimGateHint,
+      worktreeHint,
+    ]),
+  };
   process.stdout.write(JSON.stringify(payload));
   process.exit(0);
 }
@@ -44,17 +77,21 @@ const detail = `${result.stdout || ""}\n${result.stderr || ""}`.trim().slice(-40
 if (input.stop_hook_active) {
   process.stdout.write(JSON.stringify({
     continue: true,
-    systemMessage: [
+    systemMessage: governanceBadge([
+      "❌ 治理验证: 仍未通过",
       `治理验证仍未通过，必须在最终报告中如实说明：\n${detail}`,
       claimGateHint,
-    ].filter(Boolean).join("\n")
+      worktreeHint,
+    ]),
   }));
 } else {
   process.stdout.write(JSON.stringify({
     decision: "block",
-    reason: [
+    reason: governanceBadge([
+      "❌ 治理验证: 失败",
       `治理验证失败，请修复后再结束：\n${detail}`,
       claimGateHint,
-    ].filter(Boolean).join("\n")
+      worktreeHint,
+    ]),
   }));
 }

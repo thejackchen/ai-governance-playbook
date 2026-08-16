@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "playbookVersion": "3.4.0",
-  "kitFingerprint": "sha256:2cf9e3ff425d9abb123801d2a9be2d5cab2f9d6243bde7f1f42c307267c629a2",
+  "playbookVersion": "3.4.1",
+  "kitFingerprint": "sha256:3a9c05cd197be52200dae571b0015595c3499008aac4e2e5430f10064c5346c8",
   "runtime": "codex",
   "profile": "standard",
   "ruleBudget": 24,
@@ -28,6 +28,7 @@
     "governance/questions.md",
     "governance/registry.md",
     "scripts/governance-hooks/pre-tool-use.mjs",
+    "scripts/governance-hooks/session-start-codex.mjs",
     "scripts/governance-hooks/session-start.mjs",
     "scripts/governance-hooks/stop.mjs",
     "scripts/governance-lint.mjs",

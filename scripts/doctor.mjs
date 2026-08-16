@@ -66,6 +66,11 @@ if (codexActive) {
   if (existsSync(join(target, ".codex/hooks.json"))) {
     try {
       const hooks = JSON.parse(read(".codex/hooks.json"));
+      const topLevelKeys = Object.keys(hooks || {});
+      const invalidTopLevelKeys = topLevelKeys.filter((key) => !["description", "hooks"].includes(key));
+      if (invalidTopLevelKeys.length) {
+        errors.push(`.codex/hooks.json 顶层字段非法: ${invalidTopLevelKeys.join(", ")}；当前 Codex schema 仅接受 description/hooks`);
+      }
       for (const event of ["SessionStart", "PreToolUse", "Stop"]) {
         if (!hooks.hooks?.[event]?.length) errors.push(`Codex缺少${event} Hook`);
       }
@@ -90,7 +95,7 @@ if (claudeExpected || claudePresent) {
   }
 }
 
-if (lock.runtime === "codex") {
+if (codexActive) {
   warnings.push("Codex项目Hook写入后必须在新会话用 /hooks 审核并信任当前哈希");
 } else if (!codexActive && !claudeExpected && !claudePresent) {
   warnings.push("未检测到 Claude Code 或 Codex 的 hook 配置；如果实际使用的工具不是这两者，SessionStart/PreToolUse/Stop 不会自动触发");
