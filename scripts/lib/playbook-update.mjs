@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
@@ -44,12 +45,24 @@ export function readUpdatePolicy(projectRoot) {
   }
 }
 
-export async function fetchLatestVersion(channel = DEFAULT_CHANNEL, { fetchImpl = fetch, timeoutMs = 3000 } = {}) {
+export async function fetchLatestVersion(channel = DEFAULT_CHANNEL, { fetchImpl = fetch, timeoutMs = 3000, kitRoot = KIT_ROOT } = {}) {
   const url = `${String(channel).replace(/\/$/, "")}/VERSION`;
+  spawnSync("git", ["-C", kitRoot, "fetch", "-q", "origin"], { timeout: 8000, stdio: "ignore" });
+  const git = spawnSync("git", ["-C", kitRoot, "show", "origin/main:VERSION"], {
+    encoding: "utf8",
+    timeout: 5000,
+  });
+  const gitVersion = String(git.stdout || "").trim();
+  if (git.status === 0 && /^\d+\.\d+\.\d+/.test(gitVersion)) {
+    return { ok: true, version: gitVersion, url: "origin/main:VERSION" };
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetchImpl(url, { signal: controller.signal });
+    const response = await fetchImpl(`${url}?t=${Date.now()}`, {
+      signal: controller.signal,
+      headers: { "cache-control": "no-cache", pragma: "no-cache" },
+    });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const version = String(await response.text()).trim();
     if (!/^\d+\.\d+\.\d+/.test(version)) throw new Error("VERSION 不是 x.y.z");
@@ -158,7 +171,7 @@ export async function checkAndMaybeUpgrade(projectRoot, options = {}) {
     const cached = options.skipCache ? null : readCache(Date.now(), Number(policy.cacheSeconds) || DEFAULT_CACHE_SECONDS);
     if (cached?.version) remote = { ok: true, version: cached.version, url: cached.url, cached: true };
     else {
-      remote = await fetchLatestVersion(policy.channel, options.fetch || {});
+      remote = await fetchLatestVersion(policy.channel, { kitRoot, ...(options.fetch || {}) });
       if (remote.ok) writeCache(remote);
     }
   }
