@@ -94,7 +94,8 @@ if (claimGateReason) block(claimGateReason);
 process.exit(0);
 
 function block(reason) {
-  process.stdout.write(JSON.stringify({ decision: "block", reason }));
+  const decision = process.env.GROK_HOOK_EVENT ? "deny" : "block";
+  process.stdout.write(JSON.stringify({ decision, reason }));
   process.exit(0);
 }
 

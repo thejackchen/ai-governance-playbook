@@ -6,6 +6,8 @@ import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 
 const kit = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
+const playbookVersion = readFileSync(join(kit, "VERSION"), "utf8").trim();
+const badgeRe = new RegExp(`三句核心 v${playbookVersion.replaceAll(".", "\\.")}`);
 const run = (command, args, cwd = kit, input) => spawnSync(command, args, { cwd, input, encoding: "utf8" });
 const project = () => {
   const dir = mkdtempSync(join(tmpdir(), "governance-kit-"));
@@ -64,11 +66,18 @@ test("Codex Lite installs shared instruction files, hooks and frontend extension
   const frontendPolicy = JSON.parse(readFileSync(join(dir, "governance/frontend-policy.json"), "utf8"));
   assert.equal(frontendPolicy.lifecycle, "reference-pending");
   assert.deepEqual(Object.keys(frontendPolicy.authority).sort(), ["designSystem", "referencePack", "surfaces", "tokens"]);
+  assert.deepEqual(frontendPolicy.representativeJourneys, []);
   assert.deepEqual(frontendPolicy.checks, [], "reference-pending 安装默认不得执行未配置的项目命令");
   assert.equal(frontendPolicy.visualRegression.enabled, false);
   assert.equal(frontendPolicy.visualRegression.checkId, "visual-regression");
   assert.equal(frontendPolicy.visualRegression.baselinePath, "tests/visual/baselines");
   assert.ok(readFileSync(join(dir, "AGENTS.md"), "utf8").includes("frontend-design-system"));
+  assert.ok(existsSync(join(dir, "docs/ops/extra-repo-facts.json")), "missing extra-repo facts index");
+  assert.ok(existsSync(join(dir, "scripts/lib/extra-repo-facts.mjs")), "missing extra-repo facts library");
+  assert.ok(existsSync(join(dir, ".grok/hooks/governance.json")), "missing Grok governance hooks");
+  const extraRepoSession = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start.mjs")], join(dir, "docs"));
+  assert.equal(extraRepoSession.status, 0, extraRepoSession.stderr);
+  assert.match(extraRepoSession.stdout, /仓外正本/);
   assert.ok(readFileSync(join(dir, "docs/index.md"), "utf8").includes("frontend-governance-verify.mjs"));
   const referencePack = readFileSync(join(dir, "docs/design/reference-pack.md"), "utf8");
   for (const layer of ["baseSystem", "industryPatterns", "brandLayer"]) assert.match(referencePack, new RegExp(`^### ${layer}$`, "m"));
@@ -91,12 +100,33 @@ test("SessionStart reaches frontend lifecycle and authority paths when the exten
   const session = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start.mjs")], join(dir, "docs"));
   assert.equal(session.status, 0, session.stderr);
   assert.match(session.stdout, /视觉治理: lifecycle=reference-pending/);
+  assert.match(session.stdout, /journeys=0/);
   for (const path of [
     "designSystem:docs/design/design-system.md",
     "tokens:design/tokens.json",
     "referencePack:docs/design/reference-pack.md",
     "surfaces:docs/architecture/frontend-surfaces.md"
   ]) assert.match(session.stdout, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+});
+
+test("SessionStart names representative journeys when policy records them", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, [
+    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
+    "--with", "frontend-design-system", "--write"
+  ]).status, 0);
+  const policyPath = join(dir, "governance/frontend-policy.json");
+  const policy = JSON.parse(readFileSync(policyPath, "utf8"));
+  policy.representativeJourneys = [{
+    id: "primary-flow",
+    surfaces: ["entry"],
+    states: ["loading", "ready"],
+    evidence: ["docs/design/design-system.md"],
+  }];
+  writeFileSync(policyPath, JSON.stringify(policy, null, 2) + "\n");
+  const session = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start.mjs")], join(dir, "docs"));
+  assert.equal(session.status, 0, session.stderr);
+  assert.match(session.stdout, /journeys=1; ids=primary-flow/);
 });
 
 test("shared governance verify invokes the installed frontend verifier with the selected mode", () => {
@@ -168,6 +198,12 @@ test("frontend governance verifier separates structural errors from lifecycle en
   const shadow = readPolicy();
   shadow.lifecycle = "shadow";
   shadow.visualRegression.enabled = false;
+  shadow.representativeJourneys = [{
+    id: "primary-flow",
+    surfaces: ["entry"],
+    states: ["loading", "ready"],
+    evidence: ["docs/design/design-system.md"],
+  }];
   shadow.checks = [{
     id: "failing-shadow-check",
     name: "Failing shadow check",
@@ -188,6 +224,86 @@ test("frontend governance verifier separates structural errors from lifecycle en
   const enforcedResult = run(process.execPath, [script, "--fast"], dir);
   assert.notEqual(enforcedResult.status, 0);
   assert.match(enforcedResult.stdout + enforcedResult.stderr, /BLOCK failing-shadow-check/);
+});
+
+test("frontend governance verifier validates design language headings and representative journey lifecycle", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, [
+    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
+    "--with", "frontend-design-system", "--write"
+  ]).status, 0);
+  const script = join(dir, "scripts/frontend-governance-verify.mjs");
+  const policyPath = join(dir, "governance/frontend-policy.json");
+  const designSystemPath = join(dir, "docs/design/design-system.md");
+  const originalPolicy = JSON.parse(readFileSync(policyPath, "utf8"));
+  const originalDesignSystem = readFileSync(designSystemPath, "utf8");
+  const writePolicy = (policy) => writeFileSync(policyPath, JSON.stringify(policy, null, 2) + "\n");
+  const validJourney = {
+    id: "primary-flow",
+    surfaces: ["entry"],
+    states: ["loading", "ready"],
+    evidence: ["docs/design/design-system.md"],
+  };
+  const assertBlocked = (policy, pattern) => {
+    writePolicy(policy);
+    const result = run(process.execPath, [script, "--fast"], dir);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, pattern);
+  };
+
+  writeFileSync(designSystemPath, originalDesignSystem.replace("## 设计语言", "## 缺失章节"));
+  assertBlocked(originalPolicy, /designSystem 缺少 ## 设计语言/);
+  writeFileSync(designSystemPath, originalDesignSystem);
+
+  assertBlocked({ ...originalPolicy, representativeJourneys: "invalid" }, /representativeJourneys 必须是数组/);
+  assertBlocked({
+    ...originalPolicy,
+    representativeJourneys: [validJourney, { ...validJourney }],
+  }, /representativeJourneys\.id 重复/);
+  assertBlocked({
+    ...originalPolicy,
+    representativeJourneys: [{ ...validJourney, evidence: ["missing/evidence"] }],
+  }, /representativeJourneys\[0\]\.evidence\[0\] 不存在/);
+  assertBlocked({
+    ...originalPolicy,
+    representativeJourneys: [{ ...validJourney, states: [] }],
+  }, /representativeJourneys\[0\]\.states 必须是非空字符串数组/);
+  assertBlocked({ ...originalPolicy, lifecycle: "shadow", representativeJourneys: [] }, /shadow lifecycle 至少需要一个 representative journey/);
+  assertBlocked({
+    ...originalPolicy,
+    lifecycle: "shadow",
+    representativeJourneys: [{ ...validJourney, evidence: [] }],
+  }, /evidence 在 shadow lifecycle 必须至少有一条证据路径/);
+
+  const shadow = {
+    ...originalPolicy,
+    lifecycle: "shadow",
+    representativeJourneys: [validJourney],
+    checks: [{
+      id: "failing-shadow-journey-check",
+      name: "Failing shadow journey check",
+      modes: ["fast"],
+      command: "node -e \"process.exit(7)\"",
+      enforcement: "block",
+    }],
+  };
+  writePolicy(shadow);
+  const shadowResult = run(process.execPath, [script, "--fast"], dir);
+  assert.equal(shadowResult.status, 0, shadowResult.stderr);
+  assert.match(shadowResult.stdout + shadowResult.stderr, /REPORT failing-shadow-journey-check/);
+
+  assertBlocked({ ...originalPolicy, lifecycle: "enforced", representativeJourneys: [] }, /enforced lifecycle 至少需要一个 representative journey/);
+  const enforced = {
+    ...shadow,
+    lifecycle: "enforced",
+    checks: [{ ...shadow.checks[0], enforcement: "block" }],
+  };
+  writePolicy(enforced);
+  const enforcedResult = run(process.execPath, [script, "--fast"], dir);
+  assert.notEqual(enforcedResult.status, 0);
+  assert.match(enforcedResult.stdout + enforcedResult.stderr, /BLOCK failing-shadow-journey-check/);
+
+  writePolicy(originalPolicy);
 });
 
 test("every new runtime/profile install carries both hook schemas", () => {
@@ -358,7 +474,7 @@ test("SessionStart keeps Claude human text and gives Codex a same-source JSON ad
   assert.equal(payload.systemMessage, shared);
   assert.equal(payload.hookSpecificOutput.additionalContext, shared);
   assert.equal(payload.hookSpecificOutput.hookEventName, "SessionStart");
-  assert.match(payload.systemMessage, /三句核心 v3\.4\.1/);
+  assert.match(payload.systemMessage, badgeRe);
   assert.match(payload.systemMessage, /当前游标|治理启动状态/);
 });
 
@@ -375,7 +491,7 @@ test("Codex hooks resolve governance state from a nested working directory", () 
   assert.equal(stop.status, 0, stop.stderr);
   const stopPayload = JSON.parse(stop.stdout);
   assert.equal(stopPayload.continue, true);
-  assert.match(stopPayload.systemMessage, /🏛 治理: 三句核心 v3\.4\.1/);
+  assert.match(stopPayload.systemMessage, badgeRe);
   assert.match(stopPayload.systemMessage, /✅ 治理验证: 通过/);
 });
 
@@ -391,7 +507,7 @@ test("Stop success always emits governance badge for clean and dirty worktrees",
   assert.equal(clean.status, 0, clean.stderr);
   const cleanPayload = JSON.parse(clean.stdout);
   assert.equal(cleanPayload.continue, true);
-  assert.match(cleanPayload.systemMessage, /🏛 治理: 三句核心 v3\.4\.1/);
+  assert.match(cleanPayload.systemMessage, badgeRe);
   assert.match(cleanPayload.systemMessage, /✅ 治理验证: 通过/);
   assert.doesNotMatch(cleanPayload.systemMessage, /🧾 未收口/);
 
@@ -400,7 +516,7 @@ test("Stop success always emits governance badge for clean and dirty worktrees",
   assert.equal(dirty.status, 0, dirty.stderr);
   const dirtyPayload = JSON.parse(dirty.stdout);
   assert.equal(dirtyPayload.continue, true);
-  assert.match(dirtyPayload.systemMessage, /🏛 治理: 三句核心 v3\.4\.1/);
+  assert.match(dirtyPayload.systemMessage, badgeRe);
   assert.match(dirtyPayload.systemMessage, /✅ 治理验证: 通过/);
   assert.match(dirtyPayload.systemMessage, /🧾 未收口: 工作树仍有 \d+ 条未提交改动。/);
 });
@@ -442,7 +558,7 @@ test("Stop falls back to a visible report hint instead of looping forever on rep
   assert.equal(first.status, 0, first.stderr);
   const firstPayload = JSON.parse(first.stdout);
   assert.equal(firstPayload.decision, "block");
-  assert.match(firstPayload.reason, /🏛 治理: 三句核心 v3\.4\.1/);
+  assert.match(firstPayload.reason, badgeRe);
   assert.match(firstPayload.reason, /❌ 治理验证: 失败/);
   assert.match(firstPayload.reason, /治理验证失败，请修复后再结束/);
 
@@ -450,7 +566,7 @@ test("Stop falls back to a visible report hint instead of looping forever on rep
   assert.equal(second.status, 0, second.stderr);
   const secondPayload = JSON.parse(second.stdout);
   assert.equal(secondPayload.continue, true);
-  assert.match(secondPayload.systemMessage, /🏛 治理: 三句核心 v3\.4\.1/);
+  assert.match(secondPayload.systemMessage, badgeRe);
   assert.match(secondPayload.systemMessage, /❌ 治理验证: 仍未通过/);
   assert.match(secondPayload.systemMessage, /治理验证仍未通过，必须在最终报告中如实说明/);
 });

@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
+import { formatExtraRepoFactsReport, inspectExtraRepoFacts } from "../lib/extra-repo-facts.mjs";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 
@@ -11,9 +12,20 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
 {
   const os = await import("node:os");
   const fs = await import("node:fs");
+  const path = await import("node:path");
   const pb = process.env.GOVERNANCE_PLAYBOOK_DIR || `${os.homedir()}/working/ai-governance-playbook`;
   if (fs.existsSync(`${pb}/.git`)) {
     spawnSync("git", ["-C", pb, "pull", "--ff-only", "-q"], { timeout: 8000, stdio: "ignore" });
+  }
+  const upgrade = path.join(pb, "scripts/upgrade.mjs");
+  if (fs.existsSync(upgrade)) {
+    const out = spawnSync(process.execPath, [upgrade, "--target", root, "--write"], {
+      timeout: 20_000,
+      encoding: "utf8",
+      env: { ...process.env, GOVERNANCE_PLAYBOOK_DIR: pb },
+    });
+    const line = String(out.stdout || "").trim().split(/\r?\n/).find(Boolean);
+    if (line) console.log(line);
   }
 }
 
@@ -29,10 +41,18 @@ if (existsSync(frontendPolicyPath)) {
   try {
     const frontendPolicy = JSON.parse(readFileSync(frontendPolicyPath, "utf8"));
     const authority = frontendPolicy.authority || {};
-    console.log(`🎨 视觉治理: lifecycle=${frontendPolicy.lifecycle || "unknown"}; authority=designSystem:${authority.designSystem || "?"}, tokens:${authority.tokens || "?"}, referencePack:${authority.referencePack || "?"}, surfaces:${authority.surfaces || "?"}`);
+    const journeys = Array.isArray(frontendPolicy.representativeJourneys) ? frontendPolicy.representativeJourneys : [];
+    const journeyIds = journeys.map((journey) => journey?.id).filter((id) => typeof id === "string" && id.trim());
+    console.log(`🎨 视觉治理: lifecycle=${frontendPolicy.lifecycle || "unknown"}; authority=designSystem:${authority.designSystem || "?"}, tokens:${authority.tokens || "?"}, referencePack:${authority.referencePack || "?"}, surfaces:${authority.surfaces || "?"}; journeys=${journeys.length}${journeyIds.length ? `; ids=${journeyIds.join(",")}` : ""}`);
   } catch (cause) {
     console.log(`🎨 视觉治理: policy读取失败（${cause instanceof Error ? cause.message : String(cause)}）`);
   }
+}
+
+try {
+  console.log(formatExtraRepoFactsReport(inspectExtraRepoFacts(root)));
+} catch {
+  console.log("📂 仓外正本: 读取失败（不阻断开工）");
 }
 
 // 认领门：铭牌和跨 worktree 活跃认领公告板。Lite 没有 claim.mjs 时只跳过公告板，

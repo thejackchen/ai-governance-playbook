@@ -133,6 +133,36 @@ AI 审计默认只读，输出固定结构并附证据。除非另有独立确�
 - CI 能检测漂移；
 - 人不直接编辑生成物。
 
+### 7.1 仓外正本必须有仓内指针
+
+密钥、主机口令、真人身份对照不能进 git，但「真相在文本」并不等于「真相在 Git」。仓外正本仍然是正本。仓内知识核心是 `docs/index.md`；仓外知识核心是 `docs/ops/extra-repo-facts.md`（人读行为与维护）+ `docs/ops/extra-repo-facts.json`（机器表，只写路径）。
+
+机器载体：
+
+- `docs/ops/extra-repo-facts.json` 是索引正本（无秘密，`facts` 可为空数组）；
+- SessionStart 注入「在/缺」，永不打印仓外文件内容；
+- 仓内看起来像完整台账的替身文件必须声明不覆盖的事实类；
+- 问某事实类而正本未装载：报「正本未装载」，禁止用替身凑答案；
+- lint：索引缺字段或漏进秘密 → block；家目录文件缺失 → warn，CI 不因此变红。
+
+目录规划（人级共享不进工具目录）：
+
+- 跨工具、跨仓库都要用的凭据放 `~/.config/<域>/`（例如网关 `~/.config/llm-gateway/`）；
+- `~/.claude/`、`~/.grok/`、`~/.codex/` 只放那个 coding agent 自己的设置与会话；
+- 项目本机宏放仓内 gitignore；主机运行时放该机配置目录。
+
+保护的句子：真相在文本（仓外事实仍有人机共读指针）；底线在机器（开工注入 + 秘密扫描 + 替身声明）。来源：AIOS 2026-08-23，Demo 人名对照在家目录、另一执行者拿租户台账止搜。
+
+### 7.2 治理版本以 GitHub 为正本，开机对照并安全升级
+
+消费软件在启动时查一次更新，不在每次点击时打网。治理同样：**只在 SessionStart 对照线上版本**，不在每一轮对话、也不在每个 PreToolUse 查询。
+
+- 线上标记：GitHub 默认分支的 `VERSION`（`raw.githubusercontent.com/.../main/VERSION`）。
+- 本仓记录：`governance.lock.json` 的 `playbookVersion` 与 `kitFingerprint`。这就是 lock：记下「这个项目装的是哪一版 kit」，不是第二份方法论。
+- **lock 升级**：对照 GitHub 后，只**补缺失的治理载体**，**不覆盖**项目已有文件（宪法、游标、定制 hook 一律跳过），然后把 lock 改成线上版本与当前 kit 指纹。
+- 本机 kit 领先 GitHub = 未发布，不把未推送的版本写进消费仓 lock。
+- 升级失败不阻断开工。
+
 ## 8. 方法契约：提案≠权威 / 单一控制者 / 先有证据才宣称完成
 
 - **提案 ≠ 权威**
@@ -178,11 +208,13 @@ AI 审计默认只读，输出固定结构并附证据。除非另有独立确�
 - 新页面优先复用token和组件，新原语需要设计决策；
 - token从代码或结构化数据生成多端产物，禁止手工维护多个副本；
 - 外部设计系统、品牌手册和来源色必须经项目语义映射，不直接成为组件或业务身份规则；
+- 设计语言是跨页面、组件和端可复用的 composition、space、shape、type、color、media、icon、motion 语法，加上信息角色、状态和交互契约，不是 token 表或孤立页面；
+- 代表页面族和关键用户旅程由项目自己选择，采用范围与仓库证据登记在 `governance/frontend-policy.json` 的 `representativeJourneys`；它是治理可见的 policy 原语，不是第五份设计正文；
 - 可访问性、响应式、视觉回归和关键交互测试进入自动验证；
 - 项目没有前端时不安装该扩展。
 
 目录结构是公共底座；前端设计系统以可选extension安装，避免把领域规则强加给所有项目。
-扩展安装后，生命周期和四条权威路径只以`governance/frontend-policy.json`为准；`reference-pending`/`shadow`的非结构检查只报告，`enforced`才对配置的硬门禁阻断。治理层只保证唯一正本、变更门、SessionStart触达和机器验证，不替产品架构选择审美或维护设计正文。
+扩展安装后，生命周期、四条权威路径和代表旅程只以`governance/frontend-policy.json`为准；`reference-pending`允许旅程数组为空，且单条旅程的 `evidence` 字段只能为空数组但不得缺省，结构仍由机器校验；`shadow`/`enforced`至少要有一条旅程且每条有证据；非结构检查在`shadow`只报告，`enforced`才对配置的硬门禁阻断。治理层只保证唯一正本、变更门、SessionStart触达和机器验证，不替产品架构选择审美或维护设计正文。
 
 ---
 
@@ -191,17 +223,17 @@ AI 审计默认只读，输出固定结构并附证据。除非另有独立确�
 
 ## 能力矩阵
 
-| 机制 | Codex | Claude Code | Generic |
-|---|---|---|---|
-| 自动项目指令 | `AGENTS.md`，支持目录级覆盖 | `CLAUDE.md` | `AGENTS.md` 或任务模板 |
-| 项目配置 | `.codex/config.toml` | `.claude/settings.json` | 无统一接口 |
-| 会话 Hook | `SessionStart` | `SessionStart` | 启动脚本或无 |
-| 动作前 Hook | `PreToolUse`，可拒绝部分工具调用 | `PreToolUse` | shell wrapper / 权限 |
-| 收尾 Hook | `Stop`，可要求继续修复 | `Stop` | pre-commit / CI |
-| 命令策略 | `.codex/rules/*.rules`，实验能力 | PreToolUse / permissions | 容器、sudo、shell policy |
-| 非交互执行 | `codex exec` | Claude CLI | 自选 agent CLI |
-| GitHub AI | `openai/codex-action` | 未内置，自行接入 | 未内置，自行接入 |
-| 本地定时任务 | Codex/ChatGPT Scheduled Tasks | 外部 cron / CI | 外部 cron / CI |
+| 机制 | Codex | Claude Code | Grok | Generic |
+|---|---|---|---|---|
+| 自动项目指令 | `AGENTS.md`，支持目录级覆盖 | `CLAUDE.md` | `AGENTS.md`（也读 `CLAUDE.md`） | `AGENTS.md` 或任务模板 |
+| 项目配置 | `.codex/config.toml` | `.claude/settings.json` | `.grok/hooks/*.json` | 无统一接口 |
+| 会话 Hook | `SessionStart` | `SessionStart` | `SessionStart` | 启动脚本或无 |
+| 动作前 Hook | `PreToolUse`，可拒绝部分工具调用 | `PreToolUse` | `PreToolUse`（`deny`） | shell wrapper / 权限 |
+| 收尾 Hook | `Stop`，可要求继续修复 | `Stop` | `Stop` | pre-commit / CI |
+| 命令策略 | `.codex/rules/*.rules`，实验能力 | PreToolUse / permissions | PreToolUse | 容器、sudo、shell policy |
+| 非交互执行 | `codex exec` | Claude CLI | `grok -p` | 自选 agent CLI |
+| GitHub AI | `openai/codex-action` | 未内置，自行接入 | 未内置，自行接入 | 未内置，自行接入 |
+| 本地定时任务 | Codex/ChatGPT Scheduled Tasks | 外部 cron / CI | 外部 cron / CI | 外部 cron / CI |
 
 ## Codex
 
@@ -240,7 +272,24 @@ AI 审计默认只读，输出固定结构并附证据。除非另有独立确�
 { "decision": "block", "reason": "..." }
 ```
 
+Grok 的 PreToolUse 用 `deny`（Stop 仍用 `block`）。共享脚本在检测到 `GROK_SESSION_ID` 时输出 `deny`，否则输出 `block`。不要为此复制第二套治理逻辑。
+
 适配器测试必须分别验证两个配置文件引用的脚本存在；运行时协议变化时只改适配器，不改核心模型。
+
+## Grok
+
+### 权威载体
+
+- `AGENTS.md`：与其它运行时同一份项目指令；Grok 也读取 `CLAUDE.md` 作兼容。
+- `.grok/hooks/*.json`：项目级 SessionStart / PreToolUse / Stop，指向与 Claude/Codex **同一批** `scripts/governance-hooks/*.mjs`。不另写核心。
+- Grok 默认还会读 `.claude/settings.json`；第一等入口仍是 `.grok/hooks/`，以免关掉 Claude 兼容后开工钩子消失。
+- 项目 hook 须文件夹信任才会跑；未信任时静默跳过。兜底 = 手动运行 `node scripts/governance-hooks/session-start.mjs`。
+
+### 已知边界
+
+- PreToolUse 拦截 JSON：`decision: "deny"`。未识别的 `block` 在 PreToolUse 上会 fail-open。
+- 工具名是 `run_terminal_command` / `search_replace`；matcher 里 Claude 名（`Bash`/`Edit`/`Write`）有别名，脚本侧仍应同时认两套名字。
+- 无头 `grok -p` 与 `codex exec` 同类，派单前须有认领。
 
 ## Generic
 

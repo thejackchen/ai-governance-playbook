@@ -8,3 +8,5 @@
 | R2 | 不虚报完成 | S3 | session | 完成宣称缺少可复现证据 | warn/record | 自动指令+Stop | 最终报告 | 核心红线；项目终止时删除 |
 | R3 | 危险命令保护 | S4 | action | 命中policy deny模式 | block | PreToolUse+Rules | Hook日志 | day-1底座；被更强权限取代时降级 |
 | R4 | 治理结构可验证 | S1/S3 | commit/session/merge | doctor或lint失败 | block | pre-commit + Stop + CI(governance.yml) | 命令输出 | day-1底座；治理卸载时删除 |
+| R11 | 仓外正本必须有仓内路径指针 | S1/S3 | session/commit | 索引缺失、schema 非法、索引含秘密 | block/warn | `docs/ops/extra-repo-facts.json` + SessionStart + governance-lint | 家目录文件缺失只 warn | 2026-08-23 仓外正本无指针被替身止搜；无仓外正本时可空列表 |
+| R12 | 治理版本以 GitHub 为正本 | S1 | session | 本仓 lock 落后线上 VERSION | warn/record | SessionStart + playbook `scripts/upgrade.mjs` | 只补缺失载体 | 未发布 kit 不得写入消费仓 lock |

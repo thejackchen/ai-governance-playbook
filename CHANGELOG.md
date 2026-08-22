@@ -2,6 +2,17 @@
 
 > 只追加有意义的仓库、架构、运行状态或治理变化。只读评审、讨论和无落盘任务不写。
 
+## 2026-08-23 · v3.4.2 · 仓外正本必须有仓内路径指针
+- [feat] CORE §7.1：密钥、口令、真人身份对照不能进 git，但仍是正本；仓内核心是 `docs/index.md`，仓外核心是 `docs/ops/extra-repo-facts.md` + 机器表 JSON。
+- [feat] 人级共享秘密走 `~/.config/<域>/`，禁止放进 `~/.claude/` / `~/.grok/` / `~/.codex/`。
+- [feat] SessionStart 注入事实类、路径、已装载/正本未装载，永不打印仓外文件内容。
+- [feat] lint 拦索引缺失、schema 非法、索引漏进秘密；家目录文件缺失只 warn，CI 不因此变红。仓内替身文件可用 `decoys[].mustContain` 强制声明不覆盖的事实类。
+- [feat] 新安装默认带上空索引、说明页与 `.grok/hooks/governance.json`；无仓外正本的项目保持 `facts: []`。
+- [feat] Grok 薄适配：能力表加列；PreToolUse 在 `GROK_HOOK_EVENT` 下输出 `deny`；认领门认 `grok`；不另写核心。
+- [feat] 治理版本以 GitHub `VERSION` 为正本；SessionStart 开机对照并 `upgrade.mjs` 安全补缺失载体、改 lock；不覆盖项目事实；未发布 kit 不写入消费仓。
+- [case] 新增判例：仓外正本没有仓内指针就会被替身止搜（AIOS Demo 人名对照）。
+- [governance] 发布候选升到 `v3.4.2`。来源：AIOS 2026-08-23，另一执行者把 `tenants.json` 当成人名正本。
+
 ## 2026-08-16 · v3.4.1 · Codex Hook 可视等价与收口提示
 - [governance] 新增跨项目“发布治理”入口：以目标身份、不可变制品、唯一入口、阶段授权、正负成功证据、运行回读、回滚和结构化回执组成最小合同；项目事实留在本地 release runbook，不创建 Skill，也不把 upload/preview/exit 0 误作正式发布。
 - [fix] 新增 `scripts/governance-hooks/session-start-codex.mjs` 作为最薄 Codex SessionStart JSON 适配器：直接复用现有 `session-start.mjs` 文本播报，同时写入 `systemMessage` 与 `hookSpecificOutput.additionalContext`，不给 Codex/Claude Code 维护两套状态生成逻辑。
@@ -10,6 +21,11 @@
 - [fix] `doctor` 对所有 `codexActive` 安装都提示 `/hooks` 信任边界，不再因 `runtime=claude-code` 漏报；`governance-lint` 远端领先检查先确认 `refs/remotes/<remote>/<branch>` 存在，消除不存在远端分支时的 `ambiguous argument` 噪音。
 - [fix] `doctor` 追加 Codex hooks 顶层 schema 白名单校验：当前只接受 `description` / `hooks`，像 `$comment` 这类 JSON 语法虽合法但会被 Codex 拒载的字段现在能被迁移回归测试拦住。
 - [governance] 发布候选升到 `v3.4.1`，结束 `v3.4.0` 同版本内容继续变化导致的 lock 版本/指纹混淆。
+
+## 2026-08-16 · 前端设计语言代表旅程通用化（local-only，未发布）
+- [feat] 将设计语言定义为跨页面/组件的可复用语法、信息角色、状态和交互契约；通用模板补齐设计意图、设计语言、信息层级、页面族与代表链路、组件状态边界、验证与晋级章节。
+- [feat] `frontend-policy.json` 增加 `representativeJourneys` 原语：`reference-pending` 可空，`shadow/enforced` 至少一条旅程且每条有仓库内 evidence；verifier 增加 heading、schema、重复 id、路径和生命周期门。
+- [feat] SessionStart 播报 `journeys=<count>` 和非空 journey ids；根脚本与 `templates/common` 保持同源。当前仅本地验证，未提交、未推送、未发布。
 
 ## 2026-08-16 · v3.4.0 候选增量（已并入 v3.4.1）
 - [feat] 完善可选 `frontend-design-system` 扩展：以 `governance/frontend-policy.json` 统一 lifecycle、四条权威路径、生成物、配置检查和视觉回归；补齐 reference pack、primitive → semantic → component tokens、独立验证器和扩展安装契约。

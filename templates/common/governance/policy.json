@@ -24,7 +24,13 @@
       "\\.gen\\.",
       "(^|/)node_modules/"
     ],
-    "bashClaimPatterns": ["\\bcodex\\s+exec\\b"]
+    "bashClaimPatterns": ["\\bcodex\\s+exec\\b", "\\bgrok\\s+(-p|--single)\\b"]
+  },
+  "playbookUpdate": {
+    "channel": "https://raw.githubusercontent.com/thejackchen/ai-governance-playbook/main",
+    "check": "session-start",
+    "apply": "safe",
+    "cacheSeconds": 21600
   },
   "protectedPaths": [],
   "allowedTopLevelEntries": []

@@ -50,6 +50,16 @@ for (const hook of ["session-start.mjs", "session-start-codex.mjs", "pre-tool-us
     errors.push(`root 与 templates/common 的 governance-hooks/${hook} 已漂移(必须字节一致)`);
   }
 }
+for (const extra of [
+  "scripts/lib/extra-repo-facts.mjs",
+  "scripts/governance-lint.mjs",
+]) {
+  const a = join(KIT_ROOT, extra);
+  const b = join(KIT_ROOT, "templates/common", extra);
+  if (existsSync(a) && existsSync(b) && readFileSync(a, "utf8") !== readFileSync(b, "utf8")) {
+    errors.push(`root 与 templates/common 的 ${extra} 已漂移(必须字节一致)`);
+  }
+}
 
 for (const error of errors) console.error(`[kit] ERROR ${error}`);
 console.log(`[kit] ${errors.length} error`);

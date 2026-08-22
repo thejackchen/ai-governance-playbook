@@ -19,12 +19,19 @@
     "source": "docs/requirements/backlog.md",
     "validator": []
   },
+  "playbookUpdate": {
+    "channel": "https://raw.githubusercontent.com/thejackchen/ai-governance-playbook/main",
+    "check": "session-start",
+    "apply": "safe",
+    "cacheSeconds": 21600
+  },
   "protectedPaths": [],
   "allowedTopLevelEntries": [
     ".codex",
     ".githooks",
     ".github",
     ".gitignore",
+    ".grok",
     "AGENTS.md",
     "BOOTSTRAP.md",
     "CHANGELOG.md",

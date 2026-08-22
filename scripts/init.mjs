@@ -106,6 +106,9 @@ const map = [
   ["ROADMAP.md", "ROADMAP.md"],
   ["CHANGELOG.md", "CHANGELOG.md"],
   ["docs/index.md", "docs/index.md"],
+  [".grok/hooks/governance.json", ".grok/hooks/governance.json"],
+  ["docs/ops/extra-repo-facts.json", "docs/ops/extra-repo-facts.json"],
+  ["docs/ops/extra-repo-facts.md", "docs/ops/extra-repo-facts.md"],
   ["docs/architecture/repository-layout.md", "docs/architecture/repository-layout.md"],
   ["docs/decisions/ADR-000.md", "docs/decisions/ADR-000.md"],
   // 架构/需求指针在INSTRUCTIONS.md与docs/index.md中是markdown链接（进死链检测射程），
@@ -114,6 +117,7 @@ const map = [
   ["governance/policy.json", "governance/policy.json"],
   ["governance/incidents.md", "governance/incidents.md"],
   ["governance/questions.md", "governance/questions.md"],
+  ["scripts/lib/extra-repo-facts.mjs", "scripts/lib/extra-repo-facts.mjs"],
   ["scripts/governance-lint.mjs", "scripts/governance-lint.mjs"],
   ["scripts/requirements-check.mjs", "scripts/requirements-check.mjs"],
   ["scripts/governance-status.mjs", "scripts/governance-status.mjs"],

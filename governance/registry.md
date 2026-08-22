@@ -14,3 +14,5 @@
 | R8 | 发布需要自动与无上下文验证 | S1/S3 | manual/merge | 新版本缺少脚本测试或前向测试证据 | approval/block | 发布review+CI | 测试日志/`docs/evals/` | v3发布要求；评估机制变化时复审 |
 | R9 | 凭据忽略规则覆盖派生形态 | S4 | commit/lint | `.env.local.bak/.old/.save/~` 等派生名未被 `git check-ignore` 挡住 | block | governance-lint | check-ignore 退出码 | 2026-07-25 六仓实测四漏(含本仓)；凭据不再以文件形式存在时删除 |
 | R10 | 提交要真到远端 | S3 | commit/lint | `rev-list <remote>/HEAD..HEAD` 非零,或本仓无任何远端 | warn | governance-lint | rev-list 计数 | 2026-07-25 执行者把 CI 临时仓 push 输出当真推送(6 提交未出去)；全流程强制推送后删除 |
+| R11 | 仓外正本必须有仓内路径指针 | S1/S3 | session/commit | 索引缺失、schema 非法、索引含秘密，或 SessionStart 未播报仓外正本 | block/warn | `docs/ops/extra-repo-facts.json` + SessionStart + governance-lint | 命令输出；家目录文件缺失只 warn | 2026-08-23 AIOS Demo 人名对照在家目录，其它 AI 拿 tenants.json 止搜；无仓外正本的项目可空列表；索引被密钥文件替代时删除 |
+| R12 | 治理版本以 GitHub 为正本 | S1 | session | 本仓 lock 落后线上 VERSION | warn/record | SessionStart + `scripts/upgrade.mjs` | 只补缺失载体，不覆盖项目事实；失败不阻断开工 | 2026-08-23 要把最佳实践放到 GitHub；消费软件式开机检查；未发布 kit 不得写入消费仓 lock |

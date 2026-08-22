@@ -1,4 +1,5 @@
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 
 export const KIT_ROOT = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
@@ -53,4 +54,40 @@ export function detectRuntime(target) {
   if (existsSync(join(target, ".claude")) || existsSync(join(target, "CLAUDE.md"))) return "claude-code";
   if (process.env.CODEX_HOME) return "codex";
   return "generic";
+}
+
+export function fingerprintKit(root = KIT_ROOT) {
+  const hash = createHash("sha256");
+  const excluded = new Set([".git", "node_modules", "governance.lock.json"]);
+  const stack = [root];
+  const contents = [];
+  while (stack.length) {
+    const dir = stack.pop();
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (excluded.has(entry.name)) continue;
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) stack.push(full);
+      else contents.push(full);
+    }
+  }
+  for (const file of contents.sort()) {
+    hash.update(relative(root, file));
+    hash.update("\0");
+    hash.update(readFileSync(file));
+    hash.update("\0");
+  }
+  return `sha256:${hash.digest("hex")}`;
+}
+
+export function compareVersions(left, right) {
+  const parse = (value) => String(value || "0").split(".").map((part) => Number.parseInt(part, 10) || 0);
+  const a = parse(left);
+  const b = parse(right);
+  const len = Math.max(a.length, b.length);
+  for (let index = 0; index < len; index += 1) {
+    const delta = (a[index] || 0) - (b[index] || 0);
+    if (delta > 0) return 1;
+    if (delta < 0) return -1;
+  }
+  return 0;
 }

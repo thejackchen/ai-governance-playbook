@@ -53,6 +53,23 @@ test("Codex-only CI stowaway lives outside the shared Standard template", () => 
   assert.match(codexWorkflow, /openai\/codex-action/);
 });
 
+test("extra-repo fact index is part of the kit", () => {
+  const core = readFileSync(`${root}/CORE.md`, "utf8");
+  const instructions = readFileSync(`${root}/templates/common/INSTRUCTIONS.md`, "utf8");
+  const registry = readFileSync(`${root}/governance/registry.md`, "utf8");
+  assert.ok(existsSync(`${root}/templates/common/docs/ops/extra-repo-facts.json`));
+  assert.ok(existsSync(`${root}/templates/common/scripts/lib/extra-repo-facts.mjs`));
+  assert.match(core, /仓外正本必须有仓内指针/);
+  assert.match(core, /正本未装载/);
+  assert.match(core, /~\/\.config\//);
+  assert.match(core, /## Grok/);
+  assert.match(core, /治理版本以 GitHub 为正本/);
+  assert.ok(existsSync(`${root}/scripts/upgrade.mjs`));
+  assert.match(instructions, /extra-repo-facts\.md/);
+  assert.match(registry, /R11/);
+  assert.ok(existsSync(`${root}/templates/common/.grok/hooks/governance.json`));
+});
+
 test("Release governance is discoverable and covers the minimal contract", () => {
   const index = readFileSync(`${root}/docs/index.md`, "utf8");
   const release = readFileSync(`${root}/docs/release-governance.md`, "utf8");

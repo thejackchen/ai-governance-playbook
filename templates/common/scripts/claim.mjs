@@ -31,7 +31,7 @@ export const DEFAULT_CLAIM_GATE = {
     "\\.gen\\.",
     "(^|/)node_modules/",
   ],
-  bashClaimPatterns: ["\\bcodex\\s+exec\\b"],
+  bashClaimPatterns: ["\\bcodex\\s+exec\\b", "\\bgrok\\s+(-p|--single)\\b"],
 };
 
 export class ClaimDataError extends Error {
@@ -99,8 +99,8 @@ export function resolveSession({ session, env = process.env } = {}) {
 export function resolveAgent({ agent, env = process.env } = {}) {
   if (agent !== undefined) {
     const explicit = String(agent).trim();
-    if (!["claude", "codex", "unknown"].includes(explicit)) {
-      throw new Error(`--agent 必须是 claude、codex 或 unknown，收到: ${agent}`);
+    if (!["claude", "codex", "grok", "unknown"].includes(explicit)) {
+      throw new Error(`--agent 必须是 claude、codex、grok 或 unknown，收到: ${agent}`);
     }
     return explicit;
   }
@@ -115,6 +115,9 @@ export function resolveAgent({ agent, env = process.env } = {}) {
   if (hasEnvironmentKey(env, "CODEX_SESSION_ID") || keys.some((key) => key.startsWith("CODEX_"))) {
     return "codex";
   }
+  if (hasEnvironmentKey(env, "GROK_SESSION_ID") || hasEnvironmentKey(env, "GROK_HOOK_EVENT")) {
+    return "grok";
+  }
   return "unknown";
 }
 
@@ -125,6 +128,8 @@ export function isAiEnvironment(env = process.env) {
     hasEnvironmentKey(env, "CODEX_SESSION_ID") ||
     hasEnvironmentKey(env, "CLAUDE_SESSION_ID") ||
     hasEnvironmentKey(env, "GOVERNANCE_SESSION_ID") ||
+    hasEnvironmentKey(env, "GROK_SESSION_ID") ||
+    hasEnvironmentKey(env, "GROK_HOOK_EVENT") ||
     keys.some((key) => key.startsWith("CODEX_")) ||
     keys.some((key) => key.startsWith("CLAUDE_CODE_"))
   );
