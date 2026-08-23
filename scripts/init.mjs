@@ -125,7 +125,9 @@ const map = [
   ["scripts/governance-hooks/session-start.mjs", "scripts/governance-hooks/session-start.mjs"],
   ["scripts/governance-hooks/session-start-codex.mjs", "scripts/governance-hooks/session-start-codex.mjs"],
   ["scripts/governance-hooks/pre-tool-use.mjs", "scripts/governance-hooks/pre-tool-use.mjs"],
-  ["scripts/governance-hooks/stop.mjs", "scripts/governance-hooks/stop.mjs"]
+  ["scripts/governance-hooks/stop.mjs", "scripts/governance-hooks/stop.mjs"],
+  ["scripts/governance-hooks/pre-compact.mjs", "scripts/governance-hooks/pre-compact.mjs"],
+  ["scripts/governance-hooks/pre-compact-codex.mjs", "scripts/governance-hooks/pre-compact-codex.mjs"]
 ];
 if (profile !== "lite") {
   map.push(["scripts/claim.mjs", "scripts/claim.mjs"]);

@@ -277,6 +277,7 @@ Hooks、lint和CI先以warn或非required方式运行一轮，确认误报率和
 - [ ] 需要物理禁止的规则优先落IAM、只读凭据、schema或API边界；
 - [ ] Codex项目已trusted，并用`/hooks`审核当前Hook哈希；
 - [ ] Codex SessionStart fixture 返回可解析 JSON，且 `systemMessage` 与 `hookSpecificOutput.additionalContext` 同源；写文件未过 trusted + `/hooks` 前不得宣称 Hook 已生效；
+- [ ] PreCompact fixture 注入目录/分支/HEAD，且不执行 `git commit`；Codex 侧返回 JSON，Claude/Grok 侧为文本；
 - [ ] Stop success fixture 每次都显式显示治理铭牌与 `✅ 治理验证: 通过`；有 active claim/dirty worktree 时只追加确定性提示；
 - [ ] PreToolUse危险命令fixture真实被阻断；
 - [ ] Stop验证失败与第二次失败的输出都带治理版本；第二次仍失败会如实报告而不是无限循环；

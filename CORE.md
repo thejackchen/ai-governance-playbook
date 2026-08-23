@@ -32,7 +32,7 @@
 
 | 编号 | 问题 | 典型载体 |
 |---|---|---|
-| S1 | 执行者会失忆 | 自动指令、状态投影、SessionStart |
+| S1 | 执行者会失忆 | 自动指令、状态投影、SessionStart、PreCompact |
 | S2 | 人的意图不能自动传递 | 宪法、ADR、问题队列、人工批准 |
 | S3 | 完成宣称不能自证 | 测试、证据、CI、状态探针 |
 | S4 | 有些动作不可逆 | 权限、审批、PreToolUse、备份 |
@@ -163,6 +163,21 @@ AI 审计默认只读，输出固定结构并附证据。除非另有独立确�
 - 本机 kit 领先 GitHub = 未发布，不把未推送的版本写进消费仓 lock。
 - 升级失败不阻断开工。
 
+### 7.3 压缩前必须留下可恢复坐标
+
+对话压缩和机器重启会丢掉聊天记忆；`/tmp` 会在重启时被清空。未进 git 的改动和只写在对话里的路径都不是正本。
+
+机器载体：
+
+- PreCompact 在压缩前检查：是否在 `/tmp`、工作区是否脏、当前目录/分支/HEAD；
+- 把四行坐标注入 additionalContext，压缩后的会话先读这四行，不要从聊天记忆猜路径；
+- 不自动 `git commit`，不回收 worktree，不阻断压缩（Codex `decision:block` 不可靠）；
+- 人说「收口」时走 skill：停新功能、离开 `/tmp`、提交要保留的改动、把四行写入仓内正本。
+
+`echo` 提醒不是载体。Claude/Grok 旧插座若仍是 echo，升级时只替换这一条命令；Codex 缺插座时只补 PreCompact，不改其它 hook。
+
+来源：AIOS 2026-08-23，Codex 压缩后把 durable worktree 当成 `/tmp` 已消失，回退到更早 commit；同日 macOS 重启清空 `/tmp`。
+
 ## 8. 方法契约：提案≠权威 / 单一控制者 / 先有证据才宣称完成
 
 - **提案 ≠ 权威**
@@ -228,6 +243,7 @@ AI 审计默认只读，输出固定结构并附证据。除非另有独立确�
 | 自动项目指令 | `AGENTS.md`，支持目录级覆盖 | `CLAUDE.md` | `AGENTS.md`（也读 `CLAUDE.md`） | `AGENTS.md` 或任务模板 |
 | 项目配置 | `.codex/config.toml` | `.claude/settings.json` | `.grok/hooks/*.json` | 无统一接口 |
 | 会话 Hook | `SessionStart` | `SessionStart` | `SessionStart` | 启动脚本或无 |
+| 压缩前 Hook | `PreCompact` | `PreCompact` | `PreCompact` | 无或手动收口 |
 | 动作前 Hook | `PreToolUse`，可拒绝部分工具调用 | `PreToolUse` | `PreToolUse`（`deny`） | shell wrapper / 权限 |
 | 收尾 Hook | `Stop`，可要求继续修复 | `Stop` | `Stop` | pre-commit / CI |
 | 命令策略 | `.codex/rules/*.rules`，实验能力 | PreToolUse / permissions | PreToolUse | 容器、sudo、shell policy |
@@ -240,7 +256,7 @@ AI 审计默认只读，输出固定结构并附证据。除非另有独立确�
 ### 权威载体
 
 - `AGENTS.md`：短、准确、每次自动加载；放项目意图摘要、权威路由、红线、验证命令和完成标准。
-- `.codex/hooks.json`：配置 `SessionStart`、`PreToolUse`、`Stop`。其中 `SessionStart` 需经最薄 JSON 适配器包装共享的 `session-start.mjs` 文本人类播报，把同一份状态同时送入 `systemMessage` 与 `hookSpecificOutput.additionalContext`，不要复制第二套状态生成逻辑。
+- `.codex/hooks.json`：配置 `SessionStart`、`PreToolUse`、`Stop`、`PreCompact`。其中 `SessionStart` 与 `PreCompact` 需经最薄 JSON 适配器包装共享文本播报，把同一份状态同时送入 `systemMessage` 与 `hookSpecificOutput.additionalContext`，不要复制第二套状态生成逻辑。
 - `.codex/rules/default.rules`：对明确危险命令做第二层约束；Rules 仍属实验能力，不能单独承担红线。
 - GitHub Actions：运行确定性验证；`openai/codex-action`只做只读语义审计。
 
@@ -254,6 +270,7 @@ AI 审计默认只读，输出固定结构并附证据。除非另有独立确�
 - Stop Hook 提供本地修复回路，但不能替代远端 required check。
 - Stop Hook 的显性收工状态同样是治理载体：每轮结束至少要可见从 `governance.lock.json` 读取的治理版本铭牌与验证通过/失败结果；附加提示只能来自 claims、工作树等确定性信号，不能猜测“本轮进展”。
 - `.rules` 需要用 `codex execpolicy check` 测试 match/not_match。
+- PreCompact 只检查并注入坐标，不阻断压缩，不自动提交。写入 `.codex/hooks.json` 不等于已生效；仍须 trusted + `/hooks` 审核。
 
 ## Claude Code
 
@@ -261,7 +278,7 @@ AI 审计默认只读，输出固定结构并附证据。除非另有独立确�
 
 - `CLAUDE.md`：自动指令正本；`AGENTS.md`只保留指向正本的桥接行。
 - `.claude/settings.json`：生命周期 Hooks 和权限配置。
-- PreToolUse：拒绝危险命令；Stop：运行快速验证并要求继续修复。
+- PreToolUse：拒绝危险命令；Stop：运行快速验证并要求继续修复；PreCompact：压缩前注入可恢复坐标，替换旧 echo。
 - CI：仍是共享仓库的最终闸门。
 
 ### 兼容策略
@@ -281,7 +298,7 @@ Grok 的 PreToolUse 用 `deny`（Stop 仍用 `block`）。共享脚本在检测�
 ### 权威载体
 
 - `AGENTS.md`：与其它运行时同一份项目指令；Grok 也读取 `CLAUDE.md` 作兼容。
-- `.grok/hooks/*.json`：项目级 SessionStart / PreToolUse / Stop，指向与 Claude/Codex **同一批** `scripts/governance-hooks/*.mjs`。不另写核心。
+- `.grok/hooks/*.json`：项目级 SessionStart / PreToolUse / Stop / PreCompact，指向与 Claude/Codex **同一批** `scripts/governance-hooks/*.mjs`。不另写核心。
 - Grok 默认还会读 `.claude/settings.json`；第一等入口仍是 `.grok/hooks/`，以免关掉 Claude 兼容后开工钩子消失。
 - 项目 hook 须文件夹信任才会跑；未信任时静默跳过。兜底 = 手动运行 `node scripts/governance-hooks/session-start.mjs`。
 

@@ -307,7 +307,7 @@ test("frontend governance verifier validates design language headings and repres
 });
 
 test("every new runtime/profile install carries both hook schemas", () => {
-  const events = ["SessionStart", "PreToolUse", "Stop"];
+  const events = ["SessionStart", "PreToolUse", "Stop", "PreCompact"];
   for (const runtime of ["codex", "claude-code", "generic"]) {
     for (const profile of ["lite", "standard", "high-assurance"]) {
       const dir = project();
@@ -331,6 +331,16 @@ test("every new runtime/profile install carries both hook schemas", () => {
         claude.hooks.SessionStart[0].hooks[0].command,
         /session-start\.mjs/,
         `${runtime}+${profile} Claude SessionStart 应保留人类文本脚本`,
+      );
+      assert.match(
+        codex.hooks.PreCompact[0].hooks[0].command,
+        /pre-compact-codex\.mjs/,
+        `${runtime}+${profile} Codex PreCompact 应指向 JSON 适配器`,
+      );
+      assert.match(
+        claude.hooks.PreCompact[0].hooks[0].command,
+        /pre-compact\.mjs/,
+        `${runtime}+${profile} Claude PreCompact 应指向检查脚本`,
       );
       assert.match(readFileSync(join(dir, ".codex/config.toml"), "utf8"), /hooks\s*=\s*true/);
       assert.match(readFileSync(join(dir, ".codex/rules/default.rules"), "utf8"), /match\s*=/);

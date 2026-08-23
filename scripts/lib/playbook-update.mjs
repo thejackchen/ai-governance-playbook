@@ -14,7 +14,58 @@ export const SAFE_ADDITIONS = [
   "scripts/lib/extra-repo-facts.mjs",
   ".grok/hooks/governance.json",
   "scripts/governance-hooks/session-start-codex.mjs",
+  "scripts/governance-hooks/pre-compact.mjs",
+  "scripts/governance-hooks/pre-compact-codex.mjs",
 ];
+
+const PRECOMPACT_TEXT_CMD = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-compact.mjs"';
+const PRECOMPACT_CODEX_CMD = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-compact-codex.mjs"';
+
+function needsPreCompactPatch(command = "") {
+  if (!command) return true;
+  if (/\becho\b/.test(command)) return true;
+  return !/pre-compact/.test(command);
+}
+
+export function patchPreCompactHooks(projectRoot) {
+  const patched = [];
+  const targets = [
+    {
+      rel: ".codex/hooks.json",
+      command: PRECOMPACT_CODEX_CMD,
+      extra: { timeout: 30, statusMessage: "压缩前检查坐标" },
+    },
+    {
+      rel: ".claude/settings.json",
+      command: PRECOMPACT_TEXT_CMD,
+      extra: { timeout: 30 },
+    },
+    {
+      rel: ".grok/hooks/governance.json",
+      command: PRECOMPACT_TEXT_CMD,
+      extra: { timeout: 30 },
+    },
+  ];
+  for (const target of targets) {
+    const path = join(projectRoot, target.rel);
+    if (!existsSync(path)) continue;
+    let json;
+    try {
+      json = JSON.parse(readFileSync(path, "utf8"));
+    } catch {
+      continue;
+    }
+    if (!json.hooks || typeof json.hooks !== "object") continue;
+    const current = json.hooks.PreCompact?.[0]?.hooks?.[0]?.command || "";
+    if (!needsPreCompactPatch(current)) continue;
+    json.hooks.PreCompact = [{
+      hooks: [{ type: "command", command: target.command, ...target.extra }],
+    }];
+    writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
+    patched.push(target.rel);
+  }
+  return patched;
+}
 
 export function kitSourcePath(relativePath, kitRoot = KIT_ROOT) {
   return join(kitRoot, "templates/common", relativePath);
@@ -145,7 +196,7 @@ export function writeUpgradedLock(projectRoot, kitRoot = KIT_ROOT) {
   return next;
 }
 
-export function formatUpdateReport({ localVersion, remoteVersion, kitVersion, status, added = [], error }) {
+export function formatUpdateReport({ localVersion, remoteVersion, kitVersion, status, added = [], patched = [], error }) {
   const remote = remoteVersion || "不可用";
   const head = `📦 治理版本: 本仓 ${localVersion || "?"} · GitHub ${remote} · kit ${kitVersion || "?"}`;
   if (status === "current") return `${head} · 已是线上版本`;
@@ -153,7 +204,8 @@ export function formatUpdateReport({ localVersion, remoteVersion, kitVersion, st
   if (status === "kit-stale") return `${head} · 本机 playbook 落后 GitHub，先 git pull`;
   if (status === "behind") {
     const extra = added.length ? `已补 ${added.join(", ")}` : "无缺失载体可补";
-    return `${head} · 已做 lock 升级（${extra}；未覆盖已有文件）`;
+    const sockets = patched?.length ? `；已补 PreCompact 插座 ${patched.join(", ")}` : "";
+    return `${head} · 已做 lock 升级（${extra}；未覆盖已有文件${sockets}）`;
   }
   if (status === "available") return `${head} · 可升级：node $GOVERNANCE_PLAYBOOK_DIR/scripts/upgrade.mjs --target . --write`;
   if (status === "offline") return `${head} · 线上版本查询失败，未改 lock（${error || "offline"}）`;
@@ -197,6 +249,7 @@ export async function checkAndMaybeUpgrade(projectRoot, options = {}) {
     return { status: "available", localVersion, remoteVersion, kitVersion, added: [] };
   }
   const { added } = applySafeAdditions(projectRoot, kitRoot);
+  const patched = patchPreCompactHooks(projectRoot);
   const nextLock = writeUpgradedLock(projectRoot, kitRoot);
   return {
     status: "behind",
@@ -204,6 +257,7 @@ export async function checkAndMaybeUpgrade(projectRoot, options = {}) {
     remoteVersion,
     kitVersion,
     added,
+    patched,
     lock: nextLock,
   };
 }

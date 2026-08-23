@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "playbookVersion": "3.4.2",
-  "kitFingerprint": "sha256:b512cdf78cb421e03f8d54fa2b53681be4dbfb32dfcf28bfee42ef2bf09967ac",
+  "playbookVersion": "3.4.3",
+  "kitFingerprint": "sha256:167bbd72f8a7bda4b386c66cb3815319183e73808de3f6095d0fc7f2a553e5fe",
   "runtime": "codex",
   "profile": "standard",
   "ruleBudget": 24,
@@ -29,16 +29,18 @@
     "governance/policy.json",
     "governance/questions.md",
     "governance/registry.md",
+    "scripts/governance-hooks/pre-compact-codex.mjs",
+    "scripts/governance-hooks/pre-compact.mjs",
     "scripts/governance-hooks/pre-tool-use.mjs",
     "scripts/governance-hooks/session-start-codex.mjs",
     "scripts/governance-hooks/session-start.mjs",
     "scripts/governance-hooks/stop.mjs",
-    "scripts/lib/extra-repo-facts.mjs",
-    "scripts/lib/playbook-update.mjs",
-    "scripts/upgrade.mjs",
     "scripts/governance-lint.mjs",
     "scripts/governance-status.mjs",
     "scripts/governance-verify.mjs",
+    "scripts/lib/extra-repo-facts.mjs",
+    "scripts/lib/playbook-update.mjs",
+    "scripts/upgrade.mjs",
     "scripts/weekly-governance-review.mjs"
   ]
 }

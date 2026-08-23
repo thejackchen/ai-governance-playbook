@@ -37,6 +37,18 @@
           }
         ]
       }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-compact-codex.mjs\"",
+            "timeout": 30,
+            "statusMessage": "压缩前检查坐标"
+          }
+        ]
+      }
     ]
   }
 }

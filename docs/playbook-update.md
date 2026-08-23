@@ -19,7 +19,7 @@ https://github.com/thejackchen/ai-governance-playbook
 1. 读 GitHub 上的 `VERSION`。
 2. 和本仓 lock 里的 `playbookVersion` 比较。
 3. 若落后：从本机已 `git pull` 的 playbook 目录，把本版**新增且项目里还没有**的载体文件补上。
-4. **不覆盖**已经存在的文件（`CLAUDE.md`、游标、改过的 hook 一律不动）。
+4. **不覆盖**已经存在的文件（`CLAUDE.md`、游标、改过的 hook 一律不动），**唯一例外**：已有 hook 文件里若缺少 PreCompact，或 PreCompact 仍是 `echo`，只补/替换这一条插座，不改其它事件。
 5. 把 lock 的版本号、kit 指纹、`installedFiles` 改成这次实际装上的状态。
 
 所以 lock 升级不是「用模板重装整个项目」，是「软件更新：补零件 + 改版本记录」。

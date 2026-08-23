@@ -2,6 +2,16 @@
 
 > 只追加有意义的仓库、架构、运行状态或治理变化。只读评审、讨论和无落盘任务不写。
 
+## 2026-08-23 · v3.4.3 · 压缩前必须留下可恢复坐标
+- [feat] CORE §7.3：压缩和重启会丢掉聊天记忆与 `/tmp`；未进 git 的路径不是正本。
+- [feat] 共享 `pre-compact.mjs` 检查临时目录/脏工作区，注入目录、分支、HEAD、下一步；不自动提交、不回收 worktree、不阻断压缩。
+- [feat] Codex 用最薄 JSON 适配器 `pre-compact-codex.mjs`；Claude/Grok 直接读文本。
+- [feat] 新安装三家 hook 都带 PreCompact；存量升级补缺失脚本，缺插座则补上，旧 `echo` 只替换这一条命令。
+- [feat] 人说「收口」走 skill `shoukou`：停新功能、离开 `/tmp`、提交要保留的改动、把四行写入仓内正本。
+- [test] doctor 校验 PreCompact；升级补丁不覆盖其它 hook 事件；脚本在 `/tmp` 与脏工作区给出警告且不调用 `git commit`。
+- [case] 新增判例：压缩后会把临时目录和聊天记忆当成正本（AIOS Codex 线程）。
+- [governance] 发布候选升到 `v3.4.3`。来源：AIOS 2026-08-23，负责人要求验证有效的经验点升母版。
+
 ## 2026-08-23 · v3.4.2 · 仓外正本必须有仓内路径指针
 - [feat] CORE §7.1：密钥、口令、真人身份对照不能进 git，但仍是正本；仓内核心是 `docs/index.md`，仓外核心是 `docs/ops/extra-repo-facts.md` + 机器表 JSON。
 - [feat] 人级共享秘密走 `~/.config/<域>/`，禁止放进 `~/.claude/` / `~/.grok/` / `~/.codex/`。

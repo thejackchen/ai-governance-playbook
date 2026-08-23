@@ -40,7 +40,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '🧭 压缩前强制沉淀(治续接失忆):把本段对话未落盘的 决策/设计/踩坑/当前坐标 先写进 docs(按主题投影)+ROADMAP 游标+CHANGELOG,再压缩——压缩后这些细节会丢。'"
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-compact.mjs\"",
+            "timeout": 30
           }
         ]
       }

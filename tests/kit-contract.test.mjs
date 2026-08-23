@@ -70,6 +70,24 @@ test("extra-repo fact index is part of the kit", () => {
   assert.ok(existsSync(`${root}/templates/common/.grok/hooks/governance.json`));
 });
 
+test("PreCompact inspect-and-inject is part of the kit", () => {
+  const core = readFileSync(`${root}/CORE.md`, "utf8");
+  const registry = readFileSync(`${root}/governance/registry.md`, "utf8");
+  const claude = readFileSync(`${root}/adapters/claude-code/files/.claude/settings.json`, "utf8");
+  const codex = readFileSync(`${root}/adapters/codex/files/.codex/hooks.json`, "utf8");
+  const grok = readFileSync(`${root}/templates/common/.grok/hooks/governance.json`, "utf8");
+  assert.ok(existsSync(`${root}/scripts/governance-hooks/pre-compact.mjs`));
+  assert.ok(existsSync(`${root}/scripts/governance-hooks/pre-compact-codex.mjs`));
+  assert.ok(existsSync(`${root}/governance/cases/2026-08-23-压缩后会把临时目录和聊天记忆当成正本.md`));
+  assert.ok(existsSync(`${root}/skill/shoukou/SKILL.md`));
+  assert.match(core, /压缩前必须留下可恢复坐标/);
+  assert.match(registry, /R13/);
+  assert.match(claude, /pre-compact\.mjs/);
+  assert.match(codex, /pre-compact-codex\.mjs/);
+  assert.match(grok, /pre-compact\.mjs/);
+  assert.doesNotMatch(grok, /\becho\b/);
+});
+
 test("Release governance is discoverable and covers the minimal contract", () => {
   const index = readFileSync(`${root}/docs/index.md`, "utf8");
   const release = readFileSync(`${root}/docs/release-governance.md`, "utf8");

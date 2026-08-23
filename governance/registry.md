@@ -16,3 +16,4 @@
 | R10 | 提交要真到远端 | S3 | commit/lint | `rev-list <remote>/HEAD..HEAD` 非零,或本仓无任何远端 | warn | governance-lint | rev-list 计数 | 2026-07-25 执行者把 CI 临时仓 push 输出当真推送(6 提交未出去)；全流程强制推送后删除 |
 | R11 | 仓外正本必须有仓内路径指针 | S1/S3 | session/commit | 索引缺失、schema 非法、索引含秘密，或 SessionStart 未播报仓外正本 | block/warn | `docs/ops/extra-repo-facts.json` + SessionStart + governance-lint | 命令输出；家目录文件缺失只 warn | 2026-08-23 AIOS Demo 人名对照在家目录，其它 AI 拿 tenants.json 止搜；无仓外正本的项目可空列表；索引被密钥文件替代时删除 |
 | R12 | 治理版本以 GitHub 为正本 | S1 | session | 本仓 lock 落后线上 VERSION | warn/record | SessionStart + `scripts/upgrade.mjs` | 只补缺失载体，不覆盖项目事实；失败不阻断开工 | 2026-08-23 要把最佳实践放到 GitHub；消费软件式开机检查；未发布 kit 不得写入消费仓 lock |
+| R13 | 压缩前必须注入可恢复坐标 | S1 | compact | PreCompact 缺失、仍是 echo、或未注入目录/分支/HEAD | warn/record | PreCompact + `pre-compact.mjs` | 不自动提交、不阻断压缩、不回收 worktree；Codex `decision:block` 不可靠 | 2026-08-23 AIOS Codex 压缩后把 /tmp 当消失、回退到旧 commit；macOS 重启清空 /tmp；Stop 自动删 worktree 已有反例 |

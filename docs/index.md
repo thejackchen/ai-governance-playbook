@@ -22,3 +22,4 @@
 | 判例库 | `governance/cases/` | Profile启用时使用；同族场景先类比判例再动手 |
 | 仓外正本路径索引 | `docs/ops/extra-repo-facts.json`、CORE §7.1 | 只写路径；SessionStart 注入在/缺；未装载禁止用替身凑答案 |
 | 治理版本与 lock 升级 | `docs/playbook-update.md`、CORE §7.2 | GitHub VERSION 为正本；开机查一次；只补缺失载体 |
+| 压缩前可恢复坐标 | CORE §7.3、R13 | PreCompact 检查+注入目录/分支/HEAD；不自动提交 |

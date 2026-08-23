@@ -8,6 +8,7 @@ import {
   applySafeAdditions,
   checkAndMaybeUpgrade,
   formatUpdateReport,
+  patchPreCompactHooks,
   planSafeAdditions,
 } from "../scripts/lib/playbook-update.mjs";
 
@@ -48,13 +49,14 @@ test("safe upgrade adds missing carriers and bumps lock to kit version", async (
   const dir = project("3.4.0");
   const result = await checkAndMaybeUpgrade(dir, {
     skipCache: true,
-    remote: { ok: true, version: "3.4.2" },
+    remote: { ok: true, version: "3.4.3" },
     apply: "safe",
   });
   assert.equal(result.status, "behind");
   assert.ok(result.added.includes("docs/ops/extra-repo-facts.json"));
+  assert.ok(result.added.includes("scripts/governance-hooks/pre-compact.mjs"));
   const lock = JSON.parse(readFileSync(join(dir, "governance.lock.json"), "utf8"));
-  assert.equal(lock.playbookVersion, "3.4.2");
+  assert.equal(lock.playbookVersion, "3.4.3");
   assert.match(lock.kitFingerprint, /^sha256:/);
   assert.ok(lock.installedFiles.includes("docs/ops/extra-repo-facts.json"));
   assert.ok(lock.installedFiles.includes("AGENTS.md"));
@@ -77,10 +79,45 @@ test("notify mode reports available and does not write", async () => {
   const dir = project("3.4.0");
   const result = await checkAndMaybeUpgrade(dir, {
     skipCache: true,
-    remote: { ok: true, version: "3.4.2" },
+    remote: { ok: true, version: "3.4.3" },
     apply: "notify",
   });
   assert.equal(result.status, "available");
   const lock = JSON.parse(readFileSync(join(dir, "governance.lock.json"), "utf8"));
   assert.equal(lock.playbookVersion, "3.4.0");
+});
+
+test("upgrade patches missing PreCompact and replaces echo without touching other events", async () => {
+  const dir = project("3.4.0");
+  mkdirSync(join(dir, ".codex"), { recursive: true });
+  mkdirSync(join(dir, ".claude"), { recursive: true });
+  writeFileSync(join(dir, ".codex/hooks.json"), `${JSON.stringify({
+    hooks: {
+      SessionStart: [{ hooks: [{ type: "command", command: "keep-session-start" }] }],
+      PreToolUse: [{ hooks: [{ type: "command", command: "keep-pre-tool" }] }],
+      Stop: [{ hooks: [{ type: "command", command: "keep-stop" }] }],
+    },
+  }, null, 2)}\n`);
+  writeFileSync(join(dir, ".claude/settings.json"), `${JSON.stringify({
+    hooks: {
+      SessionStart: [{ hooks: [{ type: "command", command: "keep-claude-start" }] }],
+      PreCompact: [{ hooks: [{ type: "command", command: "echo leftover" }] }],
+    },
+  }, null, 2)}\n`);
+  const result = await checkAndMaybeUpgrade(dir, {
+    skipCache: true,
+    remote: { ok: true, version: "3.4.3" },
+    apply: "safe",
+  });
+  const codex = JSON.parse(readFileSync(join(dir, ".codex/hooks.json"), "utf8"));
+  const claude = JSON.parse(readFileSync(join(dir, ".claude/settings.json"), "utf8"));
+  assert.equal(codex.hooks.SessionStart[0].hooks[0].command, "keep-session-start");
+  assert.equal(codex.hooks.Stop[0].hooks[0].command, "keep-stop");
+  assert.match(codex.hooks.PreCompact[0].hooks[0].command, /pre-compact-codex\.mjs/);
+  assert.match(claude.hooks.PreCompact[0].hooks[0].command, /pre-compact\.mjs/);
+  assert.equal(/echo/.test(claude.hooks.PreCompact[0].hooks[0].command), false);
+  assert.ok(result.patched.includes(".codex/hooks.json"));
+  assert.ok(result.patched.includes(".claude/settings.json"));
+  const again = patchPreCompactHooks(dir);
+  assert.deepEqual(again, []);
 });
