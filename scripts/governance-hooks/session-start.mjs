@@ -55,6 +55,13 @@ try {
   console.log("📂 仓外正本: 读取失败（不阻断开工）");
 }
 
+try {
+  const { formatIntegrationLineReport, inspectIntegrationLine } = await import("../lib/integration-line.mjs");
+  console.log(formatIntegrationLineReport(inspectIntegrationLine(root, { fetch: true })));
+} catch {
+  console.log("🛤 公共主干: 检查失败（不阻断开工）");
+}
+
 // 认领门：铭牌和跨 worktree 活跃认领公告板。Lite 没有 claim.mjs 时只跳过公告板，
 // 不影响已有的状态播报和危险命令保护。
 let claimModule = null;

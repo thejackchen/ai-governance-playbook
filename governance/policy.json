@@ -19,6 +19,11 @@
     "source": "docs/requirements/backlog.md",
     "validator": []
   },
+  "integrationLine": {
+    "remote": "origin",
+    "branch": "main",
+    "label": "GitHub main"
+  },
   "playbookUpdate": {
     "channel": "https://raw.githubusercontent.com/thejackchen/ai-governance-playbook/main",
     "check": "session-start",

@@ -2,6 +2,15 @@
 
 > 只追加有意义的仓库、架构、运行状态或治理变化。只读评审、讨论和无落盘任务不写。
 
+## 2026-08-24 · v3.4.4 · 眼前这份必须含有公共线
+- [feat] CORE §7.4：公共线是仓内约定（`integrationLine`），不是 Git 字段。缺同事已推上公共线的提交时不许继续改代码；跑测试、开 PR 另算。不是分支必须叫某个名字。
+- [feat] `governance/policy.json` 增加 `integrationLine`（remote/branch/label）。
+- [feat] SessionStart 用人话报告含有公共线 / 还缺同事的提交。不报吓人的领先数字，不要求改分支名。
+- [feat] PreToolUse 仅在主工作树**落后**公共线时拦截写代码；已经含有公共线即使在旁支上也可以写。允许合入、文档入箱、冲突解决、救火认领。不自动 merge、不自动 push。
+- [test] `tests/integration-line.test.mjs` 覆盖落后拦截、跟上的旁支放行、临时 worktree 放行。
+- [case] 新增判例：日常目录离开公共主干就会双线分叉（AIOS 2026-08-24）；2026-07-17 开工对账判例载体从待下沉改为 R14。
+- [governance] 发布候选升到 `v3.4.4`。来源：AIOS 日常目录在功能旁支上停了 8 天。
+
 ## 2026-08-23 · v3.4.3 · 压缩前必须留下可恢复坐标
 - [feat] CORE §7.3：压缩和重启会丢掉聊天记忆与 `/tmp`；未进 git 的路径不是正本。
 - [feat] 共享 `pre-compact.mjs` 检查临时目录/脏工作区，注入目录、分支、HEAD、下一步；不自动提交、不回收 worktree、不阻断压缩。

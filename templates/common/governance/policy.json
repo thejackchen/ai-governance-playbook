@@ -26,6 +26,11 @@
     ],
     "bashClaimPatterns": ["\\bcodex\\s+exec\\b", "\\bgrok\\s+(-p|--single)\\b"]
   },
+  "integrationLine": {
+    "remote": "origin",
+    "branch": "main",
+    "label": "origin/main"
+  },
   "playbookUpdate": {
     "channel": "https://raw.githubusercontent.com/thejackchen/ai-governance-playbook/main",
     "check": "session-start",

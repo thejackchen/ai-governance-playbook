@@ -118,6 +118,7 @@ const map = [
   ["governance/incidents.md", "governance/incidents.md"],
   ["governance/questions.md", "governance/questions.md"],
   ["scripts/lib/extra-repo-facts.mjs", "scripts/lib/extra-repo-facts.mjs"],
+  ["scripts/lib/integration-line.mjs", "scripts/lib/integration-line.mjs"],
   ["scripts/governance-lint.mjs", "scripts/governance-lint.mjs"],
   ["scripts/requirements-check.mjs", "scripts/requirements-check.mjs"],
   ["scripts/governance-status.mjs", "scripts/governance-status.mjs"],

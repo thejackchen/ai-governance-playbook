@@ -16,6 +16,7 @@ export const SAFE_ADDITIONS = [
   "scripts/governance-hooks/session-start-codex.mjs",
   "scripts/governance-hooks/pre-compact.mjs",
   "scripts/governance-hooks/pre-compact-codex.mjs",
+  "scripts/lib/integration-line.mjs",
 ];
 
 const PRECOMPACT_TEXT_CMD = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-compact.mjs"';
@@ -63,6 +64,52 @@ export function patchPreCompactHooks(projectRoot) {
     }];
     writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
     patched.push(target.rel);
+  }
+  return patched;
+}
+
+const INTEGRATION_BOOT = `try {
+  const { formatIntegrationLineReport, inspectIntegrationLine } = await import("../lib/integration-line.mjs");
+  console.log(formatIntegrationLineReport(inspectIntegrationLine(root, { fetch: true })));
+} catch {
+  console.log("🛤 公共主干: 检查失败（不阻断开工）");
+}
+`;
+
+const INTEGRATION_GATE = `try {
+  const { evaluateIntegrationLineGate } = await import("../lib/integration-line.mjs");
+  const integrationReason = evaluateIntegrationLineGate({
+    root,
+    toolName,
+    toolInput,
+    candidates,
+    policy,
+  });
+  if (integrationReason) block(integrationReason);
+} catch { /* 主干守卫失败不误拦 */ }
+`;
+
+export function patchIntegrationLineHooks(projectRoot) {
+  const patched = [];
+  const sessionPath = join(projectRoot, "scripts/governance-hooks/session-start.mjs");
+  if (existsSync(sessionPath)) {
+    const body = readFileSync(sessionPath, "utf8");
+    if (!body.includes("integration-line.mjs")) {
+      writeFileSync(sessionPath, `${body.trimEnd()}\n${INTEGRATION_BOOT}`);
+      patched.push("scripts/governance-hooks/session-start.mjs");
+    }
+  }
+  const pretoolPath = join(projectRoot, "scripts/governance-hooks/pre-tool-use.mjs");
+  if (existsSync(pretoolPath)) {
+    const body = readFileSync(pretoolPath, "utf8");
+    if (!body.includes("integration-line.mjs") && body.includes("process.exit(0)")) {
+      writeFileSync(pretoolPath, body.replace(
+        /if \(claimGateReason\) block\(claimGateReason\);\n\nprocess\.exit\(0\);/,
+        `if (claimGateReason) block(claimGateReason);\n${INTEGRATION_GATE}\nprocess.exit(0);`,
+      ));
+      const next = readFileSync(pretoolPath, "utf8");
+      if (next.includes("integration-line.mjs")) patched.push("scripts/governance-hooks/pre-tool-use.mjs");
+    }
   }
   return patched;
 }
@@ -204,7 +251,7 @@ export function formatUpdateReport({ localVersion, remoteVersion, kitVersion, st
   if (status === "kit-stale") return `${head} · 本机 playbook 落后 GitHub，先 git pull`;
   if (status === "behind") {
     const extra = added.length ? `已补 ${added.join(", ")}` : "无缺失载体可补";
-    const sockets = patched?.length ? `；已补 PreCompact 插座 ${patched.join(", ")}` : "";
+    const sockets = patched?.length ? `；已补插座 ${patched.join(", ")}` : "";
     return `${head} · 已做 lock 升级（${extra}；未覆盖已有文件${sockets}）`;
   }
   if (status === "available") return `${head} · 可升级：node $GOVERNANCE_PLAYBOOK_DIR/scripts/upgrade.mjs --target . --write`;
@@ -249,7 +296,7 @@ export async function checkAndMaybeUpgrade(projectRoot, options = {}) {
     return { status: "available", localVersion, remoteVersion, kitVersion, added: [] };
   }
   const { added } = applySafeAdditions(projectRoot, kitRoot);
-  const patched = patchPreCompactHooks(projectRoot);
+  const patched = [...patchPreCompactHooks(projectRoot), ...patchIntegrationLineHooks(projectRoot)];
   const nextLock = writeUpgradedLock(projectRoot, kitRoot);
   return {
     status: "behind",

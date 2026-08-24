@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "playbookVersion": "3.4.3",
-  "kitFingerprint": "sha256:167bbd72f8a7bda4b386c66cb3815319183e73808de3f6095d0fc7f2a553e5fe",
+  "playbookVersion": "3.4.4",
+  "kitFingerprint": "sha256:8bc08da0400d36f541d0ce49ef44f51b44e39aa1d3e846f990c6a34c2b1e4503",
   "runtime": "codex",
   "profile": "standard",
   "ruleBudget": 24,
@@ -39,8 +39,10 @@
     "scripts/governance-status.mjs",
     "scripts/governance-verify.mjs",
     "scripts/lib/extra-repo-facts.mjs",
+    "scripts/lib/integration-line.mjs",
     "scripts/lib/playbook-update.mjs",
     "scripts/upgrade.mjs",
     "scripts/weekly-governance-review.mjs"
-  ]
+  ],
+  "upgradedAt": "2026-08-24T10:58:42.813Z"
 }

@@ -49,14 +49,14 @@ test("safe upgrade adds missing carriers and bumps lock to kit version", async (
   const dir = project("3.4.0");
   const result = await checkAndMaybeUpgrade(dir, {
     skipCache: true,
-    remote: { ok: true, version: "3.4.3" },
+    remote: { ok: true, version: "3.4.4" },
     apply: "safe",
   });
   assert.equal(result.status, "behind");
   assert.ok(result.added.includes("docs/ops/extra-repo-facts.json"));
   assert.ok(result.added.includes("scripts/governance-hooks/pre-compact.mjs"));
   const lock = JSON.parse(readFileSync(join(dir, "governance.lock.json"), "utf8"));
-  assert.equal(lock.playbookVersion, "3.4.3");
+  assert.equal(lock.playbookVersion, "3.4.4");
   assert.match(lock.kitFingerprint, /^sha256:/);
   assert.ok(lock.installedFiles.includes("docs/ops/extra-repo-facts.json"));
   assert.ok(lock.installedFiles.includes("AGENTS.md"));
@@ -79,7 +79,7 @@ test("notify mode reports available and does not write", async () => {
   const dir = project("3.4.0");
   const result = await checkAndMaybeUpgrade(dir, {
     skipCache: true,
-    remote: { ok: true, version: "3.4.3" },
+    remote: { ok: true, version: "3.4.4" },
     apply: "notify",
   });
   assert.equal(result.status, "available");
@@ -106,7 +106,7 @@ test("upgrade patches missing PreCompact and replaces echo without touching othe
   }, null, 2)}\n`);
   const result = await checkAndMaybeUpgrade(dir, {
     skipCache: true,
-    remote: { ok: true, version: "3.4.3" },
+    remote: { ok: true, version: "3.4.4" },
     apply: "safe",
   });
   const codex = JSON.parse(readFileSync(join(dir, ".codex/hooks.json"), "utf8"));

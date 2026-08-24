@@ -59,6 +59,7 @@ test("extra-repo fact index is part of the kit", () => {
   const registry = readFileSync(`${root}/governance/registry.md`, "utf8");
   assert.ok(existsSync(`${root}/templates/common/docs/ops/extra-repo-facts.json`));
   assert.ok(existsSync(`${root}/templates/common/scripts/lib/extra-repo-facts.mjs`));
+  assert.ok(existsSync(`${root}/templates/common/scripts/lib/integration-line.mjs`));
   assert.match(core, /仓外正本必须有仓内指针/);
   assert.match(core, /正本未装载/);
   assert.match(core, /~\/\.config\//);
@@ -86,6 +87,17 @@ test("PreCompact inspect-and-inject is part of the kit", () => {
   assert.match(codex, /pre-compact-codex\.mjs/);
   assert.match(grok, /pre-compact\.mjs/);
   assert.doesNotMatch(grok, /\becho\b/);
+});
+
+test("integration line gate is part of the kit", () => {
+  const core = readFileSync(`${root}/CORE.md`, "utf8");
+  const registry = readFileSync(`${root}/governance/registry.md`, "utf8");
+  const instructions = readFileSync(`${root}/templates/common/INSTRUCTIONS.md`, "utf8");
+  assert.ok(existsSync(`${root}/scripts/lib/integration-line.mjs`));
+  assert.ok(existsSync(`${root}/governance/cases/2026-08-24-日常目录离开公共主干就会双线分叉.md`));
+  assert.match(core, /眼前这份代码必须含有公共线/);
+  assert.match(registry, /R14/);
+  assert.match(instructions, /integrationLine/);
 });
 
 test("Release governance is discoverable and covers the minimal contract", () => {

@@ -74,6 +74,7 @@ test("Codex Lite installs shared instruction files, hooks and frontend extension
   assert.ok(readFileSync(join(dir, "AGENTS.md"), "utf8").includes("frontend-design-system"));
   assert.ok(existsSync(join(dir, "docs/ops/extra-repo-facts.json")), "missing extra-repo facts index");
   assert.ok(existsSync(join(dir, "scripts/lib/extra-repo-facts.mjs")), "missing extra-repo facts library");
+  assert.ok(existsSync(join(dir, "scripts/lib/integration-line.mjs")), "missing integration-line library");
   assert.ok(existsSync(join(dir, ".grok/hooks/governance.json")), "missing Grok governance hooks");
   const extraRepoSession = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start.mjs")], join(dir, "docs"));
   assert.equal(extraRepoSession.status, 0, extraRepoSession.stderr);

@@ -52,6 +52,7 @@ for (const hook of ["session-start.mjs", "session-start-codex.mjs", "pre-tool-us
 }
 for (const extra of [
   "scripts/lib/extra-repo-facts.mjs",
+  "scripts/lib/integration-line.mjs",
   "scripts/governance-lint.mjs",
 ]) {
   const a = join(KIT_ROOT, extra);

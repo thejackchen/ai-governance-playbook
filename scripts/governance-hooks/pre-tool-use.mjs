@@ -91,6 +91,24 @@ if (/Bash/i.test(toolName)) {
 const claimGateReason = await evaluateClaimGate({ input, toolName, toolInput, candidates });
 if (claimGateReason) block(claimGateReason);
 
+try {
+  const { evaluateIntegrationLineGate } = await import("../lib/integration-line.mjs");
+  let claims = [];
+  try {
+    const claimModule = await loadClaimModule();
+    if (claimModule) claims = claimModule.loadClaims({ cwd: input.cwd || process.cwd(), strict: false }).records;
+  } catch { /* 无认领模块时仍做主干守卫 */ }
+  const integrationReason = evaluateIntegrationLineGate({
+    root,
+    toolName,
+    toolInput,
+    candidates,
+    policy,
+    claims,
+  });
+  if (integrationReason) block(integrationReason);
+} catch { /* 主干守卫失败不误拦 */ }
+
 process.exit(0);
 
 function block(reason) {
