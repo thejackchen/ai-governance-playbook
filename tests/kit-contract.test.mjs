@@ -36,10 +36,13 @@ test("Standard workflow pins third-party actions and has a real scheduled heartb
   }
 });
 
-test("AI review is explicitly advisory", () => {
+test("AI review is advisory by default; blocking power must be earned", () => {
   const core = readFileSync(`${root}/CORE.md`, "utf8");
   const workflow = readFileSync(`${root}/templates/standard-codex/.github/workflows/governance.yml`, "utf8");
-  assert.match(core, /不把 LLM 单次结论作为唯一合并阻断条件/);
+  // 3.5.0 学说升级(判例 30):默认只读不变;LLM 结论要有阻断权必须满足内容语义门五条件。
+  assert.match(core, /未满足下述条件的 LLM 单次结论，不得作为阻断条件/);
+  assert.match(core, /golden 正反案例套通过=装门前置/);
+  assert.match(core, /解析失败=检查失败/);
   assert.match(workflow, /不是唯一硬门禁|不应配置为唯一required check/);
 });
 
