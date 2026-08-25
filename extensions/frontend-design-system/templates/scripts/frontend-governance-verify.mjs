@@ -78,10 +78,13 @@ function validatePolicy(value) {
   } else {
     for (const key of ["designSystem", "tokens", "referencePack", "surfaces"]) {
       const fullPath = validateExistingPath(value.authority[key], `authority.${key}`);
+      if (key === "designSystem" && fullPath) validateDesignSystem(fullPath);
       if (key === "tokens" && fullPath) validateTokenLayers(fullPath);
       if (key === "referencePack" && fullPath) validateReferencePack(fullPath);
     }
   }
+
+  validateRepresentativeJourneys(value.representativeJourneys, value.lifecycle);
 
   if (!Array.isArray(value.generatedOutputs)) {
     structuralErrors.push("generatedOutputs 必须是数组");
@@ -224,12 +227,82 @@ function validateReferencePack(filePath) {
   }
 }
 
+function validateDesignSystem(filePath) {
+  let body;
+  try {
+    body = readFileSync(filePath, "utf8");
+  } catch (error) {
+    structuralErrors.push(`designSystem 无法读取: ${error.message}`);
+    return;
+  }
+  for (const heading of [
+    "设计意图",
+    "设计语言",
+    "信息层级",
+    "页面族与代表链路",
+    "组件、状态与边界",
+    "验证与晋级",
+  ]) {
+    if (!new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}\\s*$`, "m").test(body)) {
+      structuralErrors.push(`designSystem 缺少 ## ${heading}`);
+    }
+  }
+}
+
+function validateRepresentativeJourneys(value, lifecycle) {
+  if (!Array.isArray(value)) {
+    structuralErrors.push("representativeJourneys 必须是数组");
+    return;
+  }
+  const ids = new Set();
+  for (const [index, journey] of value.entries()) {
+    if (!isRecord(journey)) {
+      structuralErrors.push(`representativeJourneys[${index}] 必须是对象`);
+      continue;
+    }
+    if (!nonEmptyString(journey.id)) {
+      structuralErrors.push(`representativeJourneys[${index}].id 必须是非空字符串`);
+    } else if (ids.has(journey.id)) {
+      structuralErrors.push(`representativeJourneys.id 重复: ${journey.id}`);
+    } else {
+      ids.add(journey.id);
+    }
+    if (!nonEmptyStringArray(journey.surfaces)) {
+      structuralErrors.push(`representativeJourneys[${index}].surfaces 必须是非空字符串数组`);
+    }
+    if (!nonEmptyStringArray(journey.states)) {
+      structuralErrors.push(`representativeJourneys[${index}].states 必须是非空字符串数组`);
+    }
+    if (!Array.isArray(journey.evidence) || !journey.evidence.every(nonEmptyString)) {
+      structuralErrors.push(`representativeJourneys[${index}].evidence 必须是字符串路径数组`);
+    } else {
+      for (const [evidenceIndex, evidence] of journey.evidence.entries()) {
+        validateExistingPath(evidence, `representativeJourneys[${index}].evidence[${evidenceIndex}]`, { fileOrDirectory: true });
+      }
+    }
+    if (lifecycle !== "reference-pending" && (!Array.isArray(journey.evidence) || journey.evidence.length === 0)) {
+      structuralErrors.push(`representativeJourneys[${index}].evidence 在 ${lifecycle} lifecycle 必须至少有一条证据路径`);
+    }
+  }
+  if (lifecycle !== "reference-pending" && value.length === 0) {
+    structuralErrors.push(`${lifecycle} lifecycle 至少需要一个 representative journey`);
+  }
+}
+
 function isRecord(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function nonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function stringArray(value) {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function nonEmptyStringArray(value) {
+  return stringArray(value) && value.length > 0 && value.every(nonEmptyString);
 }
 
 function usage(bad) {
