@@ -1,0 +1,173 @@
+import { createHash, randomUUID } from "node:crypto";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { spawnSync } from "node:child_process";
+import { dirname, isAbsolute, join, resolve } from "node:path";
+
+export const DEFAULT_BOOT_ADMISSION_TTL_MS = 12 * 60 * 60 * 1000;
+
+const CRITICAL_FILES = {
+  codex: ["governance.lock.json", ".codex/hooks.json", "AGENTS.md", "CLAUDE.md"],
+};
+
+function canonicalRoot(root) {
+  try { return realpathSync.native(root); } catch { return resolve(root); }
+}
+
+function readJson(path) {
+  try {
+    return { ok: true, value: JSON.parse(readFileSync(path, "utf8")) };
+  } catch (cause) {
+    return { ok: false, error: cause instanceof Error ? cause.message : String(cause) };
+  }
+}
+
+function hashCriticalFiles(root, runtime) {
+  const hash = createHash("sha256");
+  for (const relativePath of CRITICAL_FILES[runtime] || ["governance.lock.json"]) {
+    const path = join(root, relativePath);
+    hash.update(relativePath);
+    hash.update("\0");
+    if (existsSync(path)) hash.update(readFileSync(path));
+    else hash.update("<missing>");
+    hash.update("\0");
+  }
+  return `sha256:${hash.digest("hex")}`;
+}
+
+function commandAt(config, event) {
+  return String(config?.hooks?.[event]?.[0]?.hooks?.[0]?.command || "");
+}
+
+export function inspectBootReadiness(root, { runtime = "codex", sharedMessage = "" } = {}) {
+  const checks = [];
+  const add = (id, ok, detail) => checks.push({ id, ok: Boolean(ok), detail });
+  const lockResult = readJson(join(root, "governance.lock.json"));
+  const version = lockResult.ok ? String(lockResult.value?.playbookVersion || "") : "";
+  add("lock", lockResult.ok && /^\d+\.\d+\.\d+/.test(version), lockResult.ok ? `v${version || "?"}` : lockResult.error);
+  const adaptation = lockResult.ok ? lockResult.value?.adaptation : null;
+  add(
+    "adaptation",
+    adaptation?.deterministicStatus === "pass" && adaptation?.sourceVersion === version,
+    adaptation ? `${adaptation.deterministicStatus || "unknown"}@${adaptation.sourceVersion || "?"}` : "missing"
+  );
+
+  for (const relativePath of ["AGENTS.md", "CLAUDE.md", "docs/index.md", "governance/policy.json"]) {
+    add(`authority:${relativePath}`, existsSync(join(root, relativePath)), relativePath);
+  }
+
+  if (runtime === "codex") {
+    const hookResult = readJson(join(root, ".codex/hooks.json"));
+    add("codex-hooks", hookResult.ok, hookResult.ok ? ".codex/hooks.json" : hookResult.error);
+    if (hookResult.ok) {
+      const session = commandAt(hookResult.value, "SessionStart");
+      const pretool = commandAt(hookResult.value, "PreToolUse");
+      add("codex-session-adapter", /session-start-codex\.mjs/.test(session), session || "missing");
+      add("codex-pretool-adapter", /pre-tool-use-codex\.mjs/.test(pretool), pretool || "missing");
+    }
+  }
+
+  if (sharedMessage) {
+    const badge = version ? new RegExp(`三句核心\\s+v${version.replaceAll(".", "\\.")}`) : null;
+    add("injected-version", Boolean(badge?.test(sharedMessage)), version ? `v${version}` : "unknown version");
+    add("injected-boot", /治理启动状态|boot\(|当前游标/.test(sharedMessage), "shared SessionStart output");
+  }
+  try {
+    add("admission-store", true, gitCommonDir(root));
+  } catch (cause) {
+    add("admission-store", false, cause instanceof Error ? cause.message : String(cause));
+  }
+
+  return {
+    ok: checks.every((check) => check.ok),
+    runtime,
+    version,
+    fingerprint: hashCriticalFiles(root, runtime),
+    checks,
+  };
+}
+
+function gitCommonDir(root) {
+  const result = spawnSync("git", ["-C", root, "rev-parse", "--git-common-dir"], {
+    encoding: "utf8",
+    timeout: 3000,
+  });
+  if (result.status !== 0) throw new Error("无法解析 git common dir");
+  const raw = String(result.stdout || "").trim();
+  if (!raw) throw new Error("git common dir 为空");
+  return isAbsolute(raw) ? raw : resolve(root, raw);
+}
+
+export function admissionPath(root, runtime = "codex") {
+  const worktreeId = createHash("sha256").update(canonicalRoot(root)).digest("hex").slice(0, 16);
+  return join(gitCommonDir(root), "ai-governance-admissions", `${worktreeId}-${runtime}.json`);
+}
+
+export function revokeBootAdmission(root, runtime = "codex") {
+  try { rmSync(admissionPath(root, runtime), { force: true }); } catch {}
+}
+
+export function issueBootAdmission(root, {
+  runtime = "codex",
+  sharedMessage = "",
+  now = Date.now(),
+  ttlMs = DEFAULT_BOOT_ADMISSION_TTL_MS,
+} = {}) {
+  const readiness = inspectBootReadiness(root, { runtime, sharedMessage });
+  if (!readiness.ok) {
+    revokeBootAdmission(root, runtime);
+    return { ok: false, readiness, admission: null };
+  }
+  const path = admissionPath(root, runtime);
+  mkdirSync(dirname(path), { recursive: true });
+  const admission = {
+    schemaVersion: 1,
+    admissionId: randomUUID(),
+    runtime,
+    projectRoot: canonicalRoot(root),
+    playbookVersion: readiness.version,
+    fingerprint: readiness.fingerprint,
+    issuedAt: new Date(now).toISOString(),
+    expiresAt: new Date(now + ttlMs).toISOString(),
+  };
+  const temporary = `${path}.${process.pid}.tmp`;
+  writeFileSync(temporary, `${JSON.stringify(admission, null, 2)}\n`, { mode: 0o600 });
+  chmodSync(temporary, 0o600);
+  renameSync(temporary, path);
+  return { ok: true, readiness, admission, path };
+}
+
+export function validateBootAdmission(root, { runtime = "codex", now = Date.now() } = {}) {
+  const readiness = inspectBootReadiness(root, { runtime });
+  if (!readiness.ok) return { ok: false, reason: "开机自检未通过", readiness };
+  let admission;
+  try {
+    admission = JSON.parse(readFileSync(admissionPath(root, runtime), "utf8"));
+  } catch {
+    return { ok: false, reason: "本次会话没有施工许可", readiness };
+  }
+  if (admission.runtime !== runtime || admission.projectRoot !== canonicalRoot(root)) {
+    return { ok: false, reason: "施工许可不属于当前项目或运行时", readiness };
+  }
+  if (Date.parse(admission.expiresAt || "") <= now) {
+    return { ok: false, reason: "施工许可已过期，请重新开始会话", readiness };
+  }
+  if (admission.playbookVersion !== readiness.version || admission.fingerprint !== readiness.fingerprint) {
+    return { ok: false, reason: "治理版本或关键接线已变化，请重新开始会话", readiness };
+  }
+  return { ok: true, reason: "允许施工", readiness, admission };
+}
+
+export function formatBootReadiness(readiness) {
+  const failed = readiness.checks.filter((check) => !check.ok);
+  if (readiness.ok) return `✅ 开机自检: 治理 v${readiness.version} · 规则注入成功 · 接线正常 · 已签发施工许可`;
+  return `❌ 开机自检失败: ${failed.map((check) => `${check.id}=${check.detail}`).join("；")} · 禁止施工，只允许查看和诊断`;
+}

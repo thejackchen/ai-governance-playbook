@@ -68,9 +68,9 @@ node scripts/init.mjs \
   --write
 ```
 
-## 1.2 存量版本升级（lock 升级）
+## 1.2 存量版本升级（治理编译）
 
-`governance.lock.json` 记下这个项目装的是哪一版 kit（`playbookVersion` + `kitFingerprint`）。**lock 升级** = 对照 GitHub 上的 `VERSION`，补本版新增、项目里还没有的载体，然后改 lock。不覆盖宪法、游标、已改过的 hook。
+`governance.lock.json` 记录项目实际采用的 kit 版本、指纹和适配结果。升级不是“补文件+改版本号”，而是把通用母版按项目事实编译成项目实例：项目宪法、游标、业务文档和 policy 保留；playbook 管理的薄适配器可更新；已知旧接线做窄迁移；未知定制停手并返回 `needs_human_decision`。
 
 线上正本是 GitHub 默认分支，不是某台电脑上的脏工作树。开机（SessionStart）查一次；不要每轮对话打网。
 
@@ -78,7 +78,7 @@ node scripts/init.mjs \
 node scripts/upgrade.mjs --target /path/to/project --write
 ```
 
-默认 `safe`：只 `add` 缺失文件。`init --force` 仍然禁止。本机 kit 领先 GitHub 时（未 push）不会把未发布版本写入消费仓 lock。
+默认 `safe`：只做上述可证明安全的分类动作并输出结构化适配报告；不会用模板原样重装项目。`init --force` 仍然禁止。本机 kit 领先 GitHub 时（未 push）不会把未发布版本写入消费仓 lock；版本号相同也会检查关键接线。
 
 `doctor` 发现 lock 版本或指纹与当前 kit 不一致时会阻断完成声明。那是体检，不是让人 `--force` 覆盖项目事实。
 
@@ -112,8 +112,9 @@ codex execpolicy check --pretty --resolve-host-executables --rules .codex/rules/
 不带`--resolve-host-executables`测不出绝对路径写法（例如`/usr/bin/git reset --hard`会判定`matchedRules`为空，即规则形同虚设）。
 
 4. 手工向PreToolUse Hook输入一个危险命令fixture，确认返回`decision:block`。
-5. 手工触发 SessionStart fixture，确认 Codex 侧返回可解析 JSON，且 `systemMessage` 与 `hookSpecificOutput.additionalContext` 同源、都包含治理版本与当前状态。
-6. 手工触发一次成功 Stop fixture，确认每轮结束都显式显示从 `governance.lock.json` 读取的治理版本铭牌和 `✅ 治理验证: 通过`；若存在 active claim 或 dirty worktree，只能追加这些确定性提示。
+5. 手工触发 SessionStart fixture，确认 Codex 侧返回可解析 JSON，`systemMessage` 与 `hookSpecificOutput.additionalContext` 同源，并出现治理版本、当前状态和 `✅ 开机自检`。
+6. 在未开机、许可过期和关键接线变化三个负例下，确认 Codex PreToolUse 拦截直接写文件；重新开机后正例放行。
+7. 手工触发一次成功 Stop fixture，确认每轮结束都显式显示从 `governance.lock.json` 读取的治理版本铭牌和 `✅ 治理验证: 通过`；若存在 active claim 或 dirty worktree，只能追加这些确定性提示。
 
 ### Claude Code
 

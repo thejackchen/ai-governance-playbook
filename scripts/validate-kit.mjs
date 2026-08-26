@@ -43,7 +43,7 @@ for (const runtime of ["codex", "claude-code", "generic"]) {
 }
 
 // root 自托管 hook 与 templates/common 副本必须字节一致(自托管不变式;root 副本保护本仓库自身,漂移即失守)
-for (const hook of ["session-start.mjs", "session-start-codex.mjs", "pre-tool-use.mjs", "stop.mjs", "pre-compact.mjs", "pre-compact-codex.mjs"]) {
+for (const hook of ["session-start.mjs", "session-start-codex.mjs", "pre-tool-use.mjs", "pre-tool-use-codex.mjs", "stop.mjs", "pre-compact.mjs", "pre-compact-codex.mjs"]) {
   const a = join(KIT_ROOT, "scripts/governance-hooks", hook);
   const b = join(KIT_ROOT, "templates/common/scripts/governance-hooks", hook);
   if (existsSync(a) && existsSync(b) && readFileSync(a, "utf8") !== readFileSync(b, "utf8")) {
@@ -53,6 +53,7 @@ for (const hook of ["session-start.mjs", "session-start-codex.mjs", "pre-tool-us
 for (const extra of [
   "scripts/lib/extra-repo-facts.mjs",
   "scripts/lib/integration-line.mjs",
+  "scripts/lib/boot-admission.mjs",
   "scripts/governance-lint.mjs",
 ]) {
   const a = join(KIT_ROOT, extra);

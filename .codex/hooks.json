@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-tool-use.mjs\"",
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-tool-use-codex.mjs\"",
             "timeout": 30,
             "statusMessage": "检查治理策略"
           }

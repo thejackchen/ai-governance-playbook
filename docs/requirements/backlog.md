@@ -6,12 +6,16 @@
 
 - source: local
 - owner: maintainer
-- updated: 2026-08-16
+- updated: 2026-08-26
 - mode: living
 
 ## 进行中需求
 
-> 当前无已受理需求。
+- [ ] REQ-GOV-003 | owner: maintainer | priority: P0 | title: 把文件升级器改造成治理编译器，并增加开机自检与施工许可
+  - source_refs: 负责人任务 2026-08-26；AIOS v3.5.0 lock 已新但 Codex SessionStart 仍接旧入口
+  - spec_refs: specs/REQ-GOV-003-governance-compilation-and-boot-self-test.md
+  - acceptance: 通用母版先按项目事实适配；同版本也修已知旧接线；未知定制不强覆；Codex 开机自检通过才允许写文件；确定性与语义验收分层，负责人保留最终解释权。
+  - evidence: npm run check; npm test; node scripts/governance-verify.mjs --ci；AIOS 新会话正负 fixture
 
 ## 已完成需求
 

@@ -21,5 +21,5 @@
 | 规则 | `governance/registry.md` | Profile启用时使用 |
 | 判例库 | `governance/cases/` | Profile启用时使用；同族场景先类比判例再动手 |
 | 仓外正本路径索引 | `docs/ops/extra-repo-facts.json`、CORE §7.1 | 只写路径；SessionStart 注入在/缺；未装载禁止用替身凑答案 |
-| 治理版本与 lock 升级 | `docs/playbook-update.md`、CORE §7.2 | GitHub VERSION 为正本；开机查一次；只补缺失载体 |
+| 治理编译、版本升级与开机自检 | `docs/playbook-update.md`、`docs/requirements/specs/REQ-GOV-003-governance-compilation-and-boot-self-test.md`、CORE §7.2 | GitHub VERSION 为通用母版；项目事实经适配编译保留；开机检查接线并签发施工许可 |
 | 压缩前可恢复坐标 | CORE §7.3、R13 | PreCompact 检查+注入目录/分支/HEAD；不自动提交 |

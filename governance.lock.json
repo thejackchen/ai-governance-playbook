@@ -1,11 +1,22 @@
 {
   "schemaVersion": 1,
-  "playbookVersion": "3.5.0",
-  "kitFingerprint": "sha256:3675208c4e054674b3db65802b0938881eea876e61e25cd2951e51f458267c64",
+  "playbookVersion": "3.6.0",
+  "kitFingerprint": "sha256:afa5da5291608cef5975b545dea991fe2d59cc62c768324900a081881b56d7c1",
   "runtime": "codex",
   "profile": "standard",
   "ruleBudget": 24,
   "extensions": [],
+  "adaptation": {
+    "schemaVersion": 1,
+    "sourceVersion": "3.6.0",
+    "deterministicStatus": "pass",
+    "projectFacts": "preserved",
+    "managedRuntimeFiles": [
+      "scripts/governance-hooks/session-start-codex.mjs",
+      "scripts/governance-hooks/pre-tool-use-codex.mjs",
+      "scripts/lib/boot-admission.mjs"
+    ]
+  },
   "installedAt": "2026-07-10",
   "installedFiles": [
     ".codex/config.toml",
@@ -31,6 +42,7 @@
     "governance/registry.md",
     "scripts/governance-hooks/pre-compact-codex.mjs",
     "scripts/governance-hooks/pre-compact.mjs",
+    "scripts/governance-hooks/pre-tool-use-codex.mjs",
     "scripts/governance-hooks/pre-tool-use.mjs",
     "scripts/governance-hooks/session-start-codex.mjs",
     "scripts/governance-hooks/session-start.mjs",
@@ -39,6 +51,7 @@
     "scripts/governance-status.mjs",
     "scripts/governance-verify.mjs",
     "scripts/lib/extra-repo-facts.mjs",
+    "scripts/lib/boot-admission.mjs",
     "scripts/lib/integration-line.mjs",
     "scripts/lib/playbook-update.mjs",
     "scripts/upgrade.mjs",

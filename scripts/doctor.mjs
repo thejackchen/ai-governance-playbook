@@ -22,6 +22,9 @@ if (!lockVersion) {
 } else if (lockVersion !== VERSION) {
   errors.push(`governance.lock.json playbookVersion 漂移: lock=${lockVersion}, kit=${VERSION}；按 setup.md 的存量版本升级流程审查差异并取得验证证据后再更新 lock；普通 init 不会覆盖旧文件，禁止直接 --force`);
 }
+if (lock.adaptation?.deterministicStatus !== "pass" || lock.adaptation?.sourceVersion !== lockVersion) {
+  errors.push("governance.lock.json 缺少与当前版本一致的确定性适配验收；版本号不能替代项目适配结果");
+}
 const currentFingerprint = fingerprintKit();
 if (!lock.kitFingerprint) {
   errors.push("governance.lock.json 缺少 kitFingerprint；无法区分同版本的不同或 dirty kit 内容。按 setup.md 的存量版本升级流程审查差异后重新安装或显式迁移。");
@@ -73,6 +76,18 @@ if (codexActive) {
       }
       for (const event of ["SessionStart", "PreToolUse", "Stop", "PreCompact"]) {
         if (!hooks.hooks?.[event]?.length) errors.push(`Codex缺少${event} Hook`);
+      }
+      const sessionCommand = String(hooks.hooks?.SessionStart?.[0]?.hooks?.[0]?.command || "");
+      const pretoolCommand = String(hooks.hooks?.PreToolUse?.[0]?.hooks?.[0]?.command || "");
+      const precompactCommand = String(hooks.hooks?.PreCompact?.[0]?.hooks?.[0]?.command || "");
+      if (!/session-start-codex\.mjs/.test(sessionCommand)) {
+        errors.push(`Codex SessionStart 未接 JSON 开机适配器: ${sessionCommand || "missing"}`);
+      }
+      if (!/pre-tool-use-codex\.mjs/.test(pretoolCommand)) {
+        errors.push(`Codex PreToolUse 未接施工许可适配器: ${pretoolCommand || "missing"}`);
+      }
+      if (!/pre-compact-codex\.mjs/.test(precompactCommand)) {
+        errors.push(`Codex PreCompact 未接 JSON 坐标适配器: ${precompactCommand || "missing"}`);
       }
     } catch (e) { errors.push(`.codex/hooks.json无法解析: ${e.message}`); }
   }

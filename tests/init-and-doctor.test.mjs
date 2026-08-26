@@ -4,6 +4,7 @@ import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, unlinkSy
 import { join, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
+import { admissionPath } from "../scripts/lib/boot-admission.mjs";
 
 const kit = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 const playbookVersion = readFileSync(join(kit, "VERSION"), "utf8").trim();
@@ -482,8 +483,8 @@ test("SessionStart keeps Claude human text and gives Codex a same-source JSON ad
   assert.equal(codex.status, 0, codex.stderr);
   const payload = JSON.parse(codex.stdout);
   const shared = human.stdout.trim();
-  assert.equal(payload.systemMessage, shared);
-  assert.equal(payload.hookSpecificOutput.additionalContext, shared);
+  assert.equal(payload.systemMessage, `${shared}\n✅ 开机自检: 治理 v${playbookVersion} · 规则注入成功 · 接线正常 · 已签发施工许可`);
+  assert.equal(payload.hookSpecificOutput.additionalContext, payload.systemMessage);
   assert.equal(payload.hookSpecificOutput.hookEventName, "SessionStart");
   assert.match(payload.systemMessage, badgeRe);
   assert.match(payload.systemMessage, /当前游标|治理启动状态/);
@@ -504,6 +505,69 @@ test("Codex hooks resolve governance state from a nested working directory", () 
   assert.equal(stopPayload.continue, true);
   assert.match(stopPayload.systemMessage, badgeRe);
   assert.match(stopPayload.systemMessage, /✅ 治理验证: 通过/);
+});
+
+test("Codex write adapter requires a current boot admission", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
+  const hook = join(dir, "scripts/governance-hooks/pre-tool-use-codex.mjs");
+  const writeInput = JSON.stringify({ tool_name: "apply_patch", tool_input: { file_path: join(dir, "scratch.txt") } });
+
+  const beforeBoot = run(process.execPath, [hook], dir, writeInput);
+  assert.equal(beforeBoot.status, 0, beforeBoot.stderr);
+  assert.equal(JSON.parse(beforeBoot.stdout).decision, "block");
+  assert.match(JSON.parse(beforeBoot.stdout).reason, /没有施工许可/);
+
+  const diagnostic = run(process.execPath, [hook], dir, JSON.stringify({
+    tool_name: "Bash",
+    tool_input: { command: "git status --short && rg -n TODO ROADMAP.md" },
+  }));
+  assert.equal(diagnostic.status, 0, diagnostic.stderr);
+  assert.equal(diagnostic.stdout, "", "未开机时仍应允许只读诊断");
+  const shellWrite = run(process.execPath, [hook], dir, JSON.stringify({
+    tool_name: "Bash",
+    tool_input: { command: "printf changed > scratch.txt" },
+  }));
+  assert.equal(shellWrite.status, 0, shellWrite.stderr);
+  assert.equal(JSON.parse(shellWrite.stdout).decision, "block");
+
+  const session = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start-codex.mjs")], dir);
+  assert.equal(session.status, 0, session.stderr);
+  assert.match(JSON.parse(session.stdout).systemMessage, /已签发施工许可/);
+  const admitted = run(process.execPath, [hook], dir, writeInput);
+  assert.equal(admitted.status, 0, admitted.stderr);
+  assert.equal(admitted.stdout, "");
+
+  const path = admissionPath(dir);
+  const expired = JSON.parse(readFileSync(path, "utf8"));
+  expired.expiresAt = new Date(0).toISOString();
+  writeFileSync(path, `${JSON.stringify(expired, null, 2)}\n`);
+  const afterExpiry = run(process.execPath, [hook], dir, writeInput);
+  assert.equal(afterExpiry.status, 0, afterExpiry.stderr);
+  assert.equal(JSON.parse(afterExpiry.stdout).decision, "block");
+  assert.match(JSON.parse(afterExpiry.stdout).reason, /已过期/);
+});
+
+test("Codex write admission is revoked when critical wiring changes", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
+  const session = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start-codex.mjs")], dir);
+  assert.equal(session.status, 0, session.stderr);
+  assert.match(JSON.parse(session.stdout).systemMessage, /已签发施工许可/);
+
+  const hooksPath = join(dir, ".codex/hooks.json");
+  const hooks = JSON.parse(readFileSync(hooksPath, "utf8"));
+  hooks.hooks.SessionStart[0].hooks[0].command = "node scripts/governance-hooks/session-start.mjs";
+  writeFileSync(hooksPath, `${JSON.stringify(hooks, null, 2)}\n`);
+
+  const hook = join(dir, "scripts/governance-hooks/pre-tool-use-codex.mjs");
+  const result = run(process.execPath, [hook], dir, JSON.stringify({
+    tool_name: "Write",
+    tool_input: { file_path: join(dir, "scratch.txt") },
+  }));
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).decision, "block");
+  assert.match(JSON.parse(result.stdout).reason, /开机自检未通过|关键接线已变化/);
 });
 
 test("Stop success always emits governance badge for clean and dirty worktrees", () => {
@@ -555,6 +619,22 @@ test("doctor rejects Codex hooks top-level fields outside description/hooks", ()
   const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
   assert.notEqual(doctor.status, 0);
   assert.match(doctor.stderr, /\.codex\/hooks\.json 顶层字段非法: \$comment/);
+});
+
+test("doctor rejects legacy Codex SessionStart and PreToolUse wiring", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, [
+    "scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
+  ]).status, 0);
+  const hooksPath = join(dir, ".codex/hooks.json");
+  const hooks = JSON.parse(readFileSync(hooksPath, "utf8"));
+  hooks.hooks.SessionStart[0].hooks[0].command = "node scripts/governance-hooks/session-start.mjs";
+  hooks.hooks.PreToolUse[0].hooks[0].command = "node scripts/governance-hooks/pre-tool-use.mjs";
+  writeFileSync(hooksPath, `${JSON.stringify(hooks, null, 2)}\n`);
+  const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  assert.notEqual(doctor.status, 0);
+  assert.match(doctor.stderr, /Codex SessionStart 未接 JSON 开机适配器/);
+  assert.match(doctor.stderr, /Codex PreToolUse 未接施工许可适配器/);
 });
 
 test("Stop falls back to a visible report hint instead of looping forever on repeated failure", () => {
@@ -646,6 +726,9 @@ test("Standard profile carries no Codex/OpenAI CI stowaway outside Codex runtime
     "governance/claim-gate.md",
     "governance/policy.json",
     "scripts/claim.mjs",
+    "scripts/governance-hooks/session-start-codex.mjs",
+    "scripts/governance-hooks/pre-tool-use-codex.mjs",
+    "scripts/lib/boot-admission.mjs",
   ]);
   const findLeaks = (dir) => {
     const hits = [];

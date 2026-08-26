@@ -14,18 +14,126 @@ export const SAFE_ADDITIONS = [
   "scripts/lib/extra-repo-facts.mjs",
   ".grok/hooks/governance.json",
   "scripts/governance-hooks/session-start-codex.mjs",
+  "scripts/governance-hooks/pre-tool-use-codex.mjs",
+  "scripts/lib/boot-admission.mjs",
   "scripts/governance-hooks/pre-compact.mjs",
   "scripts/governance-hooks/pre-compact-codex.mjs",
   "scripts/lib/integration-line.mjs",
 ];
 
+// 这些文件是运行时协议的薄适配器，不得承载项目事实；升级时由 playbook 管理。
+// 项目宪法、policy、游标和共享治理逻辑不在这里，仍然绝不原样覆盖。
+export const MANAGED_RUNTIME_FILES = [
+  "scripts/governance-hooks/session-start-codex.mjs",
+  "scripts/governance-hooks/pre-tool-use-codex.mjs",
+  "scripts/lib/boot-admission.mjs",
+];
+
 const PRECOMPACT_TEXT_CMD = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-compact.mjs"';
 const PRECOMPACT_CODEX_CMD = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-compact-codex.mjs"';
+const SESSION_START_CODEX_CMD = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/session-start-codex.mjs"';
+const PRETOOL_CODEX_CMD = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-tool-use-codex.mjs"';
+
+function sameBytes(left, right) {
+  return existsSync(left) && existsSync(right) && readFileSync(left).equals(readFileSync(right));
+}
+
+export function refreshManagedRuntimeFiles(projectRoot, kitRoot = KIT_ROOT) {
+  const updated = [];
+  for (const relativePath of MANAGED_RUNTIME_FILES) {
+    const source = kitSourcePath(relativePath, kitRoot);
+    const dest = join(projectRoot, relativePath);
+    if (!existsSync(source)) continue;
+    if (sameBytes(source, dest)) continue;
+    mkdirSync(dirname(dest), { recursive: true });
+    copyFileSync(source, dest);
+    updated.push(relativePath);
+  }
+  return updated;
+}
+
+function setCommand(json, event, command, { matcher, timeout, statusMessage } = {}) {
+  if (!json.hooks || typeof json.hooks !== "object") json.hooks = {};
+  if (!json.hooks[event]?.[0]?.hooks?.[0]) {
+    json.hooks[event] = [{
+      ...(matcher ? { matcher } : {}),
+      hooks: [{ type: "command", command, ...(timeout ? { timeout } : {}), ...(statusMessage ? { statusMessage } : {}) }],
+    }];
+    return;
+  }
+  json.hooks[event][0].hooks[0].command = command;
+}
+
+function eventCommands(json, event) {
+  return (json?.hooks?.[event] || []).flatMap((entry) => entry?.hooks || [])
+    .map((hook) => String(hook?.command || ""))
+    .filter(Boolean);
+}
+
+export function patchCodexRuntimeHooks(projectRoot) {
+  const path = join(projectRoot, ".codex/hooks.json");
+  if (!existsSync(path)) return { patched: [], conflicts: [] };
+  let current;
+  try {
+    current = JSON.parse(readFileSync(path, "utf8"));
+  } catch (cause) {
+    return { patched: [], conflicts: [`.codex/hooks.json 无法解析: ${cause instanceof Error ? cause.message : String(cause)}`] };
+  }
+  const json = structuredClone(current);
+  const conflicts = [];
+  let changed = false;
+  for (const event of ["SessionStart", "PreToolUse"]) {
+    if (eventCommands(current, event).length > 1) {
+      conflicts.push(`Codex ${event} 包含额外定制 Hook，未覆盖`);
+    }
+  }
+  const session = String(json?.hooks?.SessionStart?.[0]?.hooks?.[0]?.command || "");
+  if (!session) {
+    setCommand(json, "SessionStart", SESSION_START_CODEX_CMD, {
+      matcher: "startup|resume|clear|compact",
+      timeout: 30,
+      statusMessage: "读取治理状态",
+    });
+    changed = true;
+  } else if (!/session-start-codex\.mjs/.test(session)) {
+    if (/session-start\.mjs/.test(session)) {
+      setCommand(json, "SessionStart", SESSION_START_CODEX_CMD);
+      changed = true;
+    } else {
+      conflicts.push(`Codex SessionStart 是未知定制，未覆盖: ${session}`);
+    }
+  }
+
+  const pretool = String(json?.hooks?.PreToolUse?.[0]?.hooks?.[0]?.command || "");
+  if (!pretool) {
+    setCommand(json, "PreToolUse", PRETOOL_CODEX_CMD, {
+      matcher: "Bash|apply_patch|Edit|Write",
+      timeout: 30,
+      statusMessage: "检查治理策略",
+    });
+    changed = true;
+  } else if (!/pre-tool-use-codex\.mjs/.test(pretool)) {
+    if (/pre-tool-use\.mjs/.test(pretool)) {
+      setCommand(json, "PreToolUse", PRETOOL_CODEX_CMD);
+      changed = true;
+    } else {
+      conflicts.push(`Codex PreToolUse 是未知定制，未覆盖: ${pretool}`);
+    }
+  }
+  const precompact = String(json?.hooks?.PreCompact?.[0]?.hooks?.[0]?.command || "");
+  if (precompact && !/\becho\b/.test(precompact) && !/pre-compact(?:-codex)?\.mjs/.test(precompact)) {
+    conflicts.push(`Codex PreCompact 是未知定制，未覆盖: ${precompact}`);
+  }
+  // 同一配置内只要有一个未知定制，整个 Codex 接线迁移都不落盘，避免半适配状态。
+  if (conflicts.length) return { patched: [], conflicts };
+  if (changed) writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
+  return { patched: changed ? [".codex/hooks.json"] : [], conflicts };
+}
 
 function needsPreCompactPatch(command = "") {
   if (!command) return true;
   if (/\becho\b/.test(command)) return true;
-  return !/pre-compact/.test(command);
+  return false;
 }
 
 export function patchPreCompactHooks(projectRoot) {
@@ -236,6 +344,13 @@ export function writeUpgradedLock(projectRoot, kitRoot = KIT_ROOT) {
     ...lock,
     playbookVersion: kitVersionOf(kitRoot),
     kitFingerprint: fingerprintKit(kitRoot),
+    adaptation: {
+      schemaVersion: 1,
+      sourceVersion: kitVersionOf(kitRoot),
+      deterministicStatus: "pass",
+      projectFacts: "preserved",
+      managedRuntimeFiles: [...MANAGED_RUNTIME_FILES],
+    },
     installedFiles,
     upgradedAt: new Date().toISOString(),
   };
@@ -243,16 +358,33 @@ export function writeUpgradedLock(projectRoot, kitRoot = KIT_ROOT) {
   return next;
 }
 
-export function formatUpdateReport({ localVersion, remoteVersion, kitVersion, status, added = [], patched = [], error }) {
+function adaptationReport({ kitVersion, desiredVersion, added = [], updated = [], patched = [], conflicts = [] }) {
+  return {
+    schemaVersion: 1,
+    verdict: conflicts.length ? "needs_human_decision" : "pass",
+    sourceVersion: kitVersion,
+    targetVersion: desiredVersion,
+    projectFacts: "preserved",
+    added,
+    updated,
+    patched,
+    conflicts,
+  };
+}
+
+export function formatUpdateReport({ localVersion, remoteVersion, kitVersion, status, added = [], updated = [], patched = [], conflicts = [], error }) {
   const remote = remoteVersion || "不可用";
   const head = `📦 治理版本: 本仓 ${localVersion || "?"} · GitHub ${remote} · kit ${kitVersion || "?"}`;
   if (status === "current") return `${head} · 已是线上版本`;
+  if (status === "repaired-current") return `${head} · 版本未变，已修复适配载体 ${[...updated, ...patched].join(", ")}`;
+  if (status === "needs-adaptation") return `${head} · 适配冲突，未宣称可施工（${conflicts.join("；")}）`;
   if (status === "unpublished-local") return `${head} · 本机 kit 领先 GitHub（未发布，其他组还吃不到）`;
   if (status === "kit-stale") return `${head} · 本机 playbook 落后 GitHub，先 git pull`;
   if (status === "behind") {
     const extra = added.length ? `已补 ${added.join(", ")}` : "无缺失载体可补";
-    const sockets = patched?.length ? `；已补插座 ${patched.join(", ")}` : "";
-    return `${head} · 已做 lock 升级（${extra}；未覆盖已有文件${sockets}）`;
+    const managed = updated?.length ? `；已更新薄适配器 ${updated.join(", ")}` : "";
+    const sockets = patched?.length ? `；已迁移接线 ${patched.join(", ")}` : "";
+    return `${head} · 已完成治理适配并升级 lock（${extra}；项目事实未覆盖${managed}${sockets}）`;
   }
   if (status === "available") return `${head} · 可升级：node $GOVERNANCE_PLAYBOOK_DIR/scripts/upgrade.mjs --target . --write`;
   if (status === "offline") return `${head} · 线上版本查询失败，未改 lock（${error || "offline"}）`;
@@ -275,7 +407,12 @@ export async function checkAndMaybeUpgrade(projectRoot, options = {}) {
     }
   }
   const remoteVersion = remote?.ok ? remote.version : null;
-  const lockBehindKit = localVersion ? compareVersions(kitVersion, localVersion) > 0 : true;
+  const localKitVerified = Boolean(
+    localVersion
+    && compareVersions(localVersion, kitVersion) === 0
+    && lock?.kitFingerprint
+    && lock.kitFingerprint === fingerprintKit(kitRoot)
+  );
 
   if (remoteVersion && compareVersions(kitVersion, remoteVersion) < 0) {
     return { status: "kit-stale", localVersion, remoteVersion, kitVersion, added: [] };
@@ -283,20 +420,50 @@ export async function checkAndMaybeUpgrade(projectRoot, options = {}) {
   if (remoteVersion && compareVersions(kitVersion, remoteVersion) > 0) {
     return { status: "unpublished-local", localVersion, remoteVersion, kitVersion, added: [] };
   }
-  if (!remote?.ok && !lockBehindKit) {
+  // 离线时不得把可能尚未发布的本机新版本写进消费项目。只有 lock 指纹证明
+  // 当前项目原本就来自这一份同版本 kit 时，才允许做同版本载体活性修复。
+  if (!remote?.ok && !localKitVerified) {
     return { status: "offline", localVersion, remoteVersion, kitVersion, added: [], error: remote?.error };
   }
   const desired = remoteVersion || kitVersion;
-  if (localVersion && compareVersions(localVersion, desired) >= 0) {
-    return { status: "current", localVersion, remoteVersion, kitVersion, added: [] };
-  }
-
   const apply = options.apply ?? policy.apply ?? "safe";
   if (apply !== "safe" && apply !== true) {
+    if (localVersion && compareVersions(localVersion, desired) >= 0) {
+      return { status: "current", localVersion, remoteVersion, kitVersion, added: [] };
+    }
     return { status: "available", localVersion, remoteVersion, kitVersion, added: [] };
   }
+
+  // 即使版本号相同，也必须检查并修复已知旧接线；版本标签不能替代载体活性。
+  const codex = patchCodexRuntimeHooks(projectRoot);
+  const conflicts = codex.conflicts;
+  if (conflicts.length) {
+    const report = adaptationReport({ kitVersion, desiredVersion: desired, conflicts });
+    return { status: "needs-adaptation", localVersion, remoteVersion, kitVersion, added: [], updated: [], patched: [], conflicts, adaptationReport: report };
+  }
+  const updated = refreshManagedRuntimeFiles(projectRoot, kitRoot);
+  const patched = [
+    ...codex.patched,
+    ...patchPreCompactHooks(projectRoot),
+    ...patchIntegrationLineHooks(projectRoot),
+  ];
+  if (localVersion && compareVersions(localVersion, desired) >= 0) {
+    const changed = updated.length || patched.length;
+    const nextLock = changed ? writeUpgradedLock(projectRoot, kitRoot) : undefined;
+    return {
+      status: changed ? "repaired-current" : "current",
+      localVersion,
+      remoteVersion,
+      kitVersion,
+      added: [],
+      updated,
+      patched,
+      conflicts,
+      adaptationReport: adaptationReport({ kitVersion, desiredVersion: desired, updated, patched }),
+      ...(nextLock ? { lock: nextLock } : {}),
+    };
+  }
   const { added } = applySafeAdditions(projectRoot, kitRoot);
-  const patched = [...patchPreCompactHooks(projectRoot), ...patchIntegrationLineHooks(projectRoot)];
   const nextLock = writeUpgradedLock(projectRoot, kitRoot);
   return {
     status: "behind",
@@ -304,7 +471,10 @@ export async function checkAndMaybeUpgrade(projectRoot, options = {}) {
     remoteVersion,
     kitVersion,
     added,
+    updated,
     patched,
+    conflicts,
+    adaptationReport: adaptationReport({ kitVersion, desiredVersion: desired, added, updated, patched }),
     lock: nextLock,
   };
 }

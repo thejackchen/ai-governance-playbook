@@ -3,14 +3,17 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { compareVersions } from "../scripts/lib.mjs";
+import { compareVersions, fingerprintKit } from "../scripts/lib.mjs";
 import {
   applySafeAdditions,
   checkAndMaybeUpgrade,
   formatUpdateReport,
   patchPreCompactHooks,
+  patchCodexRuntimeHooks,
   planSafeAdditions,
 } from "../scripts/lib/playbook-update.mjs";
+
+const kitVersion = readFileSync(new URL("../VERSION", import.meta.url), "utf8").trim();
 
 function project(version = "3.4.0") {
   const dir = mkdtempSync(join(tmpdir(), "playbook-update-"));
@@ -49,14 +52,14 @@ test("safe upgrade adds missing carriers and bumps lock to kit version", async (
   const dir = project("3.4.0");
   const result = await checkAndMaybeUpgrade(dir, {
     skipCache: true,
-    remote: { ok: true, version: "3.5.0" },
+    remote: { ok: true, version: kitVersion },
     apply: "safe",
   });
   assert.equal(result.status, "behind");
   assert.ok(result.added.includes("docs/ops/extra-repo-facts.json"));
   assert.ok(result.added.includes("scripts/governance-hooks/pre-compact.mjs"));
   const lock = JSON.parse(readFileSync(join(dir, "governance.lock.json"), "utf8"));
-  assert.equal(lock.playbookVersion, "3.5.0");
+  assert.equal(lock.playbookVersion, kitVersion);
   assert.match(lock.kitFingerprint, /^sha256:/);
   assert.ok(lock.installedFiles.includes("docs/ops/extra-repo-facts.json"));
   assert.ok(lock.installedFiles.includes("AGENTS.md"));
@@ -79,7 +82,7 @@ test("notify mode reports available and does not write", async () => {
   const dir = project("3.4.0");
   const result = await checkAndMaybeUpgrade(dir, {
     skipCache: true,
-    remote: { ok: true, version: "3.5.0" },
+    remote: { ok: true, version: kitVersion },
     apply: "notify",
   });
   assert.equal(result.status, "available");
@@ -93,8 +96,8 @@ test("upgrade patches missing PreCompact and replaces echo without touching othe
   mkdirSync(join(dir, ".claude"), { recursive: true });
   writeFileSync(join(dir, ".codex/hooks.json"), `${JSON.stringify({
     hooks: {
-      SessionStart: [{ hooks: [{ type: "command", command: "keep-session-start" }] }],
-      PreToolUse: [{ hooks: [{ type: "command", command: "keep-pre-tool" }] }],
+      SessionStart: [{ hooks: [{ type: "command", command: "node scripts/governance-hooks/session-start-codex.mjs" }] }],
+      PreToolUse: [{ hooks: [{ type: "command", command: "node scripts/governance-hooks/pre-tool-use-codex.mjs" }] }],
       Stop: [{ hooks: [{ type: "command", command: "keep-stop" }] }],
     },
   }, null, 2)}\n`);
@@ -106,12 +109,12 @@ test("upgrade patches missing PreCompact and replaces echo without touching othe
   }, null, 2)}\n`);
   const result = await checkAndMaybeUpgrade(dir, {
     skipCache: true,
-    remote: { ok: true, version: "3.5.0" },
+    remote: { ok: true, version: kitVersion },
     apply: "safe",
   });
   const codex = JSON.parse(readFileSync(join(dir, ".codex/hooks.json"), "utf8"));
   const claude = JSON.parse(readFileSync(join(dir, ".claude/settings.json"), "utf8"));
-  assert.equal(codex.hooks.SessionStart[0].hooks[0].command, "keep-session-start");
+  assert.match(codex.hooks.SessionStart[0].hooks[0].command, /session-start-codex\.mjs/);
   assert.equal(codex.hooks.Stop[0].hooks[0].command, "keep-stop");
   assert.match(codex.hooks.PreCompact[0].hooks[0].command, /pre-compact-codex\.mjs/);
   assert.match(claude.hooks.PreCompact[0].hooks[0].command, /pre-compact\.mjs/);
@@ -120,4 +123,98 @@ test("upgrade patches missing PreCompact and replaces echo without touching othe
   assert.ok(result.patched.includes(".claude/settings.json"));
   const again = patchPreCompactHooks(dir);
   assert.deepEqual(again, []);
+});
+
+test("current version still repairs known legacy Codex wiring", async () => {
+  const dir = project(kitVersion);
+  mkdirSync(join(dir, ".codex"), { recursive: true });
+  writeFileSync(join(dir, ".codex/hooks.json"), `${JSON.stringify({
+    hooks: {
+      SessionStart: [{ hooks: [{ type: "command", command: "node scripts/governance-hooks/session-start.mjs" }] }],
+      PreToolUse: [{ hooks: [{ type: "command", command: "node scripts/governance-hooks/pre-tool-use.mjs" }] }],
+    },
+  }, null, 2)}\n`);
+  const result = await checkAndMaybeUpgrade(dir, {
+    skipCache: true,
+    remote: { ok: true, version: kitVersion },
+    apply: "safe",
+  });
+  assert.equal(result.status, "repaired-current");
+  const codex = JSON.parse(readFileSync(join(dir, ".codex/hooks.json"), "utf8"));
+  assert.match(codex.hooks.SessionStart[0].hooks[0].command, /session-start-codex\.mjs/);
+  assert.match(codex.hooks.PreToolUse[0].hooks[0].command, /pre-tool-use-codex\.mjs/);
+  assert.ok(result.patched.includes(".codex/hooks.json"));
+});
+
+test("offline current version repairs wiring only from the lock-verified local kit", async () => {
+  const dir = project(kitVersion);
+  const lockPath = join(dir, "governance.lock.json");
+  const lock = JSON.parse(readFileSync(lockPath, "utf8"));
+  lock.kitFingerprint = fingerprintKit();
+  writeFileSync(lockPath, `${JSON.stringify(lock, null, 2)}\n`);
+  mkdirSync(join(dir, ".codex"), { recursive: true });
+  writeFileSync(join(dir, ".codex/hooks.json"), `${JSON.stringify({
+    hooks: {
+      SessionStart: [{ hooks: [{ type: "command", command: "node scripts/governance-hooks/session-start.mjs" }] }],
+      PreToolUse: [{ hooks: [{ type: "command", command: "node scripts/governance-hooks/pre-tool-use.mjs" }] }],
+    },
+  }, null, 2)}\n`);
+  const result = await checkAndMaybeUpgrade(dir, {
+    skipCache: true,
+    remote: { ok: false, version: null, error: "offline" },
+    apply: "safe",
+  });
+  assert.equal(result.status, "repaired-current");
+  const codex = JSON.parse(readFileSync(join(dir, ".codex/hooks.json"), "utf8"));
+  assert.match(codex.hooks.SessionStart[0].hooks[0].command, /session-start-codex\.mjs/);
+  assert.match(codex.hooks.PreToolUse[0].hooks[0].command, /pre-tool-use-codex\.mjs/);
+});
+
+test("offline does not adopt an unverified local kit", async () => {
+  const dir = project(kitVersion);
+  const result = await checkAndMaybeUpgrade(dir, {
+    skipCache: true,
+    remote: { ok: false, version: null, error: "offline" },
+    apply: "safe",
+  });
+  assert.equal(result.status, "offline");
+});
+
+test("unknown Codex hook customization is not overwritten and needs human adaptation", () => {
+  const dir = project(kitVersion);
+  mkdirSync(join(dir, ".codex"), { recursive: true });
+  writeFileSync(join(dir, ".codex/hooks.json"), `${JSON.stringify({
+    hooks: {
+      SessionStart: [{ hooks: [{ type: "command", command: "node custom/start.mjs" }] }],
+      PreToolUse: [{ hooks: [{ type: "command", command: "node custom/gate.mjs" }] }],
+    },
+  }, null, 2)}\n`);
+  const result = patchCodexRuntimeHooks(dir);
+  assert.deepEqual(result.patched, []);
+  assert.equal(result.conflicts.length, 2);
+  const codex = JSON.parse(readFileSync(join(dir, ".codex/hooks.json"), "utf8"));
+  assert.equal(codex.hooks.SessionStart[0].hooks[0].command, "node custom/start.mjs");
+  assert.equal(codex.hooks.PreToolUse[0].hooks[0].command, "node custom/gate.mjs");
+});
+
+test("unknown Codex customization stops the whole adaptation without partial writes", async () => {
+  const dir = project(kitVersion);
+  mkdirSync(join(dir, ".codex"), { recursive: true });
+  const hooksPath = join(dir, ".codex/hooks.json");
+  const original = `${JSON.stringify({
+    hooks: {
+      SessionStart: [{ hooks: [{ type: "command", command: "node custom/start.mjs" }] }],
+      PreToolUse: [{ hooks: [{ type: "command", command: "node scripts/governance-hooks/pre-tool-use.mjs" }] }],
+    },
+  }, null, 2)}\n`;
+  writeFileSync(hooksPath, original);
+  const result = await checkAndMaybeUpgrade(dir, {
+    skipCache: true,
+    remote: { ok: true, version: kitVersion },
+    apply: "safe",
+  });
+  assert.equal(result.status, "needs-adaptation");
+  assert.equal(readFileSync(hooksPath, "utf8"), original);
+  assert.deepEqual(result.updated, []);
+  assert.deepEqual(result.patched, []);
 });

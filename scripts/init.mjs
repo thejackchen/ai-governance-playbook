@@ -119,6 +119,7 @@ const map = [
   ["governance/questions.md", "governance/questions.md"],
   ["scripts/lib/extra-repo-facts.mjs", "scripts/lib/extra-repo-facts.mjs"],
   ["scripts/lib/integration-line.mjs", "scripts/lib/integration-line.mjs"],
+  ["scripts/lib/boot-admission.mjs", "scripts/lib/boot-admission.mjs"],
   ["scripts/governance-lint.mjs", "scripts/governance-lint.mjs"],
   ["scripts/requirements-check.mjs", "scripts/requirements-check.mjs"],
   ["scripts/governance-status.mjs", "scripts/governance-status.mjs"],
@@ -126,6 +127,7 @@ const map = [
   ["scripts/governance-hooks/session-start.mjs", "scripts/governance-hooks/session-start.mjs"],
   ["scripts/governance-hooks/session-start-codex.mjs", "scripts/governance-hooks/session-start-codex.mjs"],
   ["scripts/governance-hooks/pre-tool-use.mjs", "scripts/governance-hooks/pre-tool-use.mjs"],
+  ["scripts/governance-hooks/pre-tool-use-codex.mjs", "scripts/governance-hooks/pre-tool-use-codex.mjs"],
   ["scripts/governance-hooks/stop.mjs", "scripts/governance-hooks/stop.mjs"],
   ["scripts/governance-hooks/pre-compact.mjs", "scripts/governance-hooks/pre-compact.mjs"],
   ["scripts/governance-hooks/pre-compact-codex.mjs", "scripts/governance-hooks/pre-compact-codex.mjs"]
@@ -220,6 +222,17 @@ if (!existsSync(lockPath) || args.force) {
     profile,
     ruleBudget: profileInfo.ruleBudget,
     extensions,
+    adaptation: {
+      schemaVersion: 1,
+      sourceVersion: VERSION,
+      deterministicStatus: "pass",
+      projectFacts: "preserved",
+      managedRuntimeFiles: [
+        "scripts/governance-hooks/session-start-codex.mjs",
+        "scripts/governance-hooks/pre-tool-use-codex.mjs",
+        "scripts/lib/boot-admission.mjs"
+      ]
+    },
     installedAt: today,
     installedFiles
   }, null, 2) + "\n");

@@ -67,7 +67,7 @@ test("extra-repo fact index is part of the kit", () => {
   assert.match(core, /正本未装载/);
   assert.match(core, /~\/\.config\//);
   assert.match(core, /## Grok/);
-  assert.match(core, /治理版本以 GitHub 为正本/);
+  assert.match(core, /治理母版在 GitHub，项目实例由适配编译产生/);
   assert.ok(existsSync(`${root}/scripts/upgrade.mjs`));
   assert.match(instructions, /extra-repo-facts\.md/);
   assert.match(registry, /R11/);
