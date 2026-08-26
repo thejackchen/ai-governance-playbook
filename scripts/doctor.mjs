@@ -1,9 +1,16 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { createHash } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
-import { parseArgs, KIT_ROOT, VERSION } from "./lib.mjs";
+import { fingerprintKit, parseArgs, KIT_ROOT, VERSION } from "./lib.mjs";
+
+const MANAGED_RUNTIME_FILES = [
+  "scripts/governance-hooks/session-start-codex.mjs",
+  "scripts/governance-hooks/pre-tool-use-codex.mjs",
+  "scripts/lib/boot-admission.mjs",
+];
+const CODEX_SESSION_COMMAND = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/session-start-codex.mjs"';
+const CODEX_PRETOOL_COMMAND = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-tool-use-codex.mjs"';
 
 const args = parseArgs(process.argv.slice(2));
 const target = resolve(String(args.target || ""));
@@ -31,11 +38,6 @@ if (!lock.kitFingerprint) {
 } else if (lock.kitFingerprint !== currentFingerprint) {
   errors.push(`governance.lock.json kitFingerprint 漂移: lock=${lock.kitFingerprint}, kit=${currentFingerprint}；当前 kit 内容与安装时不同，审查差异后显式迁移，不能只更新版本字符串。`);
 }
-
-const lint = spawnSync(process.execPath, [join(KIT_ROOT, "scripts/governance-lint.mjs"), "--root", target], { encoding: "utf8" });
-process.stdout.write(lint.stdout || "");
-process.stderr.write(lint.stderr || "");
-if (lint.status !== 0) errors.push("governance-lint未通过");
 
 const read = (p) => readFileSync(join(target, p), "utf8");
 const required = (p) => {
@@ -77,14 +79,18 @@ if (codexActive) {
       for (const event of ["SessionStart", "PreToolUse", "Stop", "PreCompact"]) {
         if (!hooks.hooks?.[event]?.length) errors.push(`Codex缺少${event} Hook`);
       }
-      const sessionCommand = String(hooks.hooks?.SessionStart?.[0]?.hooks?.[0]?.command || "");
-      const pretoolCommand = String(hooks.hooks?.PreToolUse?.[0]?.hooks?.[0]?.command || "");
+      const commands = (event) => (hooks.hooks?.[event] || []).flatMap((entry) => entry?.hooks || [])
+        .map((hook) => String(hook?.command || "").trim()).filter(Boolean);
+      const sessionCommands = commands("SessionStart");
+      const pretoolCommands = commands("PreToolUse");
+      const sessionCommand = sessionCommands[0] || "";
+      const pretoolCommand = pretoolCommands[0] || "";
       const precompactCommand = String(hooks.hooks?.PreCompact?.[0]?.hooks?.[0]?.command || "");
-      if (!/session-start-codex\.mjs/.test(sessionCommand)) {
-        errors.push(`Codex SessionStart 未接 JSON 开机适配器: ${sessionCommand || "missing"}`);
+      if (sessionCommands.length !== 1 || sessionCommand !== CODEX_SESSION_COMMAND) {
+        errors.push(`Codex SessionStart 必须且只能接一条受管 JSON 开机适配器: ${sessionCommands.join(" | ") || "missing"}`);
       }
-      if (!/pre-tool-use-codex\.mjs/.test(pretoolCommand)) {
-        errors.push(`Codex PreToolUse 未接施工许可适配器: ${pretoolCommand || "missing"}`);
+      if (pretoolCommands.length !== 1 || pretoolCommand !== CODEX_PRETOOL_COMMAND) {
+        errors.push(`Codex PreToolUse 必须且只能接一条受管施工许可适配器: ${pretoolCommands.join(" | ") || "missing"}`);
       }
       if (!/pre-compact-codex\.mjs/.test(precompactCommand)) {
         errors.push(`Codex PreCompact 未接 JSON 坐标适配器: ${precompactCommand || "missing"}`);
@@ -97,6 +103,33 @@ if (codexActive) {
   if (existsSync(join(target, ".codex/rules/default.rules")) && !read(".codex/rules/default.rules").includes("match =")) {
     errors.push("Codex rules缺少内联匹配测试");
   }
+}
+
+for (const relativePath of MANAGED_RUNTIME_FILES) {
+  const projectPath = join(target, relativePath);
+  const kitPath = join(KIT_ROOT, "templates/common", relativePath);
+  if (!existsSync(projectPath) || !existsSync(kitPath)) continue;
+  if (!readFileSync(projectPath).equals(readFileSync(kitPath))) {
+    errors.push(`受管运行时文件与当前 kit 不一致: ${relativePath}`);
+  }
+}
+
+// 母版只判断通用接线和版本；项目领域规则必须由项目自己的验证器解释。
+// 这样既不会拿通用目录假设误扫项目，也不会把项目定制从硬门里删掉。
+const projectVerifier = join(target, "scripts/governance-verify.mjs");
+if (!existsSync(projectVerifier)) {
+  errors.push("缺少项目实例验证器: scripts/governance-verify.mjs");
+} else {
+  const verify = spawnSync(process.execPath, [projectVerifier, "--fast"], {
+    cwd: target,
+    encoding: "utf8",
+    timeout: 60_000,
+    env: { ...process.env, GOVERNANCE_DOCTOR_VALIDATION: "1" },
+  });
+  process.stdout.write(verify.stdout || "");
+  process.stderr.write(verify.stderr || "");
+  if (verify.error) errors.push(`项目实例验证器执行失败: ${verify.error.message}`);
+  else if (verify.status !== 0) errors.push("项目实例验证器未通过");
 }
 
 if (claudeExpected || claudePresent) {
@@ -149,30 +182,3 @@ console.log(`[doctor] ${errors.length} error / ${warnings.length} warn`);
 process.exit(errors.length ? 1 : 0);
 
 function fail(message) { console.error(`[doctor] ${message}`); process.exit(1); }
-
-function fingerprintKit() {
-  const hash = createHash("sha256");
-  const excluded = new Set([".git", "node_modules", "governance.lock.json"]);
-  const stack = [KIT_ROOT];
-  const contents = [];
-  while (stack.length) {
-    const dir = stack.pop();
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (excluded.has(entry.name)) continue;
-      const full = join(dir, entry.name);
-      if (entry.isDirectory()) stack.push(full);
-      else contents.push(full);
-    }
-  }
-  for (const file of contents.sort()) {
-    hash.update(fullPathRelative(file));
-    hash.update("\0");
-    hash.update(readFileSync(file));
-    hash.update("\0");
-  }
-  return `sha256:${hash.digest("hex")}`;
-}
-
-function fullPathRelative(file) {
-  return file.slice(KIT_ROOT.length + 1);
-}

@@ -633,8 +633,43 @@ test("doctor rejects legacy Codex SessionStart and PreToolUse wiring", () => {
   writeFileSync(hooksPath, `${JSON.stringify(hooks, null, 2)}\n`);
   const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
   assert.notEqual(doctor.status, 0);
-  assert.match(doctor.stderr, /Codex SessionStart 未接 JSON 开机适配器/);
-  assert.match(doctor.stderr, /Codex PreToolUse 未接施工许可适配器/);
+  assert.match(doctor.stderr, /Codex SessionStart 必须且只能接一条受管 JSON 开机适配器/);
+  assert.match(doctor.stderr, /Codex PreToolUse 必须且只能接一条受管施工许可适配器/);
+});
+
+test("Boot and doctor reject extra unknown SessionStart or PreToolUse hooks", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, [
+    "scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
+  ]).status, 0);
+  const hooksPath = join(dir, ".codex/hooks.json");
+  const hooks = JSON.parse(readFileSync(hooksPath, "utf8"));
+  hooks.hooks.SessionStart.push({ hooks: [{ type: "command", command: "node custom/also-start.mjs" }] });
+  hooks.hooks.PreToolUse[0].hooks.push({ type: "command", command: "node custom/also-gate.mjs" });
+  writeFileSync(hooksPath, `${JSON.stringify(hooks, null, 2)}\n`);
+
+  const session = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start-codex.mjs")], dir);
+  assert.equal(session.status, 0, session.stderr);
+  assert.match(JSON.parse(session.stdout).systemMessage, /开机自检失败/);
+  assert.doesNotMatch(JSON.parse(session.stdout).systemMessage, /已签发施工许可$/);
+
+  const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  assert.notEqual(doctor.status, 0);
+  assert.match(doctor.stderr, /SessionStart 必须且只能接一条/);
+  assert.match(doctor.stderr, /PreToolUse 必须且只能接一条/);
+});
+
+test("Boot refuses an admission when the project instance verifier fails", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, [
+    "scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
+  ]).status, 0);
+  writeFileSync(join(dir, "scripts/governance-verify.mjs"), "#!/usr/bin/env node\nconsole.error('fixture project gate failed');\nprocess.exit(9);\n");
+  const session = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start-codex.mjs")], dir);
+  assert.equal(session.status, 0, session.stderr);
+  const message = JSON.parse(session.stdout).systemMessage;
+  assert.match(message, /project-validator=.*fixture project gate failed/);
+  assert.match(message, /禁止施工/);
 });
 
 test("Stop falls back to a visible report hint instead of looping forever on repeated failure", () => {

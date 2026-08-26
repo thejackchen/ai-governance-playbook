@@ -19,6 +19,8 @@ export const SAFE_ADDITIONS = [
   "scripts/governance-hooks/pre-compact.mjs",
   "scripts/governance-hooks/pre-compact-codex.mjs",
   "scripts/lib/integration-line.mjs",
+  "scripts/requirements-check.mjs",
+  "scripts/governance-verify.mjs",
 ];
 
 // 这些文件是运行时协议的薄适配器，不得承载项目事实；升级时由 playbook 管理。
@@ -335,7 +337,7 @@ export function kitVersionOf(kitRoot = KIT_ROOT) {
   }
 }
 
-export function writeUpgradedLock(projectRoot, kitRoot = KIT_ROOT) {
+export function writeUpgradedLock(projectRoot, kitRoot = KIT_ROOT, { deterministicStatus = "pass" } = {}) {
   const { path, lock, error } = readLock(projectRoot);
   if (!lock) throw new Error(error || "缺少 governance.lock.json，不能升级；新仓请走 init");
   const additions = SAFE_ADDITIONS.filter((relativePath) => existsSync(join(projectRoot, relativePath)));
@@ -347,7 +349,7 @@ export function writeUpgradedLock(projectRoot, kitRoot = KIT_ROOT) {
     adaptation: {
       schemaVersion: 1,
       sourceVersion: kitVersionOf(kitRoot),
-      deterministicStatus: "pass",
+      deterministicStatus,
       projectFacts: "preserved",
       managedRuntimeFiles: [...MANAGED_RUNTIME_FILES],
     },
@@ -356,6 +358,41 @@ export function writeUpgradedLock(projectRoot, kitRoot = KIT_ROOT) {
   };
   writeFileSync(path, `${JSON.stringify(next, null, 2)}\n`);
   return next;
+}
+
+function writeAdaptationFailure(projectRoot, deterministicStatus, conflicts) {
+  const { path, lock } = readLock(projectRoot);
+  if (!lock) return;
+  const next = {
+    ...lock,
+    adaptation: {
+      ...(lock.adaptation || {}),
+      schemaVersion: 1,
+      sourceVersion: lock.playbookVersion,
+      deterministicStatus,
+      projectFacts: "preserved",
+      managedRuntimeFiles: [...MANAGED_RUNTIME_FILES],
+      ...(conflicts?.length ? { conflicts } : {}),
+    },
+  };
+  writeFileSync(path, `${JSON.stringify(next, null, 2)}\n`);
+}
+
+function validateProjectInstance(projectRoot) {
+  const verifier = join(projectRoot, "scripts/governance-verify.mjs");
+  if (!existsSync(verifier)) return { ok: false, detail: "缺少 scripts/governance-verify.mjs" };
+  const result = spawnSync(process.execPath, [verifier, "--fast"], {
+    cwd: projectRoot,
+    encoding: "utf8",
+    timeout: 60_000,
+    env: { ...process.env, GOVERNANCE_UPGRADE_VALIDATION: "1" },
+  });
+  if (result.error) return { ok: false, detail: result.error.message };
+  if (result.status !== 0) {
+    const output = `${result.stdout || ""}\n${result.stderr || ""}`.trim().split(/\r?\n/).slice(-6).join(" | ");
+    return { ok: false, detail: output || `exit ${result.status}` };
+  }
+  return { ok: true, detail: "scripts/governance-verify.mjs --fast passed" };
 }
 
 function adaptationReport({ kitVersion, desiredVersion, added = [], updated = [], patched = [], conflicts = [] }) {
@@ -377,6 +414,7 @@ export function formatUpdateReport({ localVersion, remoteVersion, kitVersion, st
   const head = `📦 治理版本: 本仓 ${localVersion || "?"} · GitHub ${remote} · kit ${kitVersion || "?"}`;
   if (status === "current") return `${head} · 已是线上版本`;
   if (status === "repaired-current") return `${head} · 版本未变，已修复适配载体 ${[...updated, ...patched].join(", ")}`;
+  if (status === "restart-required") return `${head} · 运行时治理载体已更新，本会话禁止施工；请新开一次会话完成开机自检`;
   if (status === "needs-adaptation") return `${head} · 适配冲突，未宣称可施工（${conflicts.join("；")}）`;
   if (status === "unpublished-local") return `${head} · 本机 kit 领先 GitHub（未发布，其他组还吃不到）`;
   if (status === "kit-stale") return `${head} · 本机 playbook 落后 GitHub，先 git pull`;
@@ -438,6 +476,7 @@ export async function checkAndMaybeUpgrade(projectRoot, options = {}) {
   const codex = patchCodexRuntimeHooks(projectRoot);
   const conflicts = codex.conflicts;
   if (conflicts.length) {
+    writeAdaptationFailure(projectRoot, "needs_human_decision", conflicts);
     const report = adaptationReport({ kitVersion, desiredVersion: desired, conflicts });
     return { status: "needs-adaptation", localVersion, remoteVersion, kitVersion, added: [], updated: [], patched: [], conflicts, adaptationReport: report };
   }
@@ -448,10 +487,32 @@ export async function checkAndMaybeUpgrade(projectRoot, options = {}) {
     ...patchIntegrationLineHooks(projectRoot),
   ];
   if (localVersion && compareVersions(localVersion, desired) >= 0) {
+    const projectValidation = validateProjectInstance(projectRoot);
+    if (!projectValidation.ok) {
+      const validationConflicts = [`项目实例验证未通过: ${projectValidation.detail}`];
+      writeAdaptationFailure(projectRoot, "failed", validationConflicts);
+      const report = adaptationReport({ kitVersion, desiredVersion: desired, updated, patched, conflicts: validationConflicts });
+      return {
+        status: "needs-adaptation",
+        localVersion,
+        remoteVersion,
+        kitVersion,
+        added: [],
+        updated,
+        patched,
+        conflicts: validationConflicts,
+        adaptationReport: report,
+      };
+    }
     const changed = updated.length || patched.length;
-    const nextLock = changed ? writeUpgradedLock(projectRoot, kitRoot) : undefined;
+    const needsRestart = changed;
+    const needsFinalization = lock?.adaptation?.deterministicStatus !== "pass"
+      || lock?.adaptation?.sourceVersion !== localVersion;
+    const nextLock = (changed || needsFinalization)
+      ? writeUpgradedLock(projectRoot, kitRoot, { deterministicStatus: needsRestart ? "restart_required" : "pass" })
+      : undefined;
     return {
-      status: changed ? "repaired-current" : "current",
+      status: needsRestart ? "restart-required" : (needsFinalization ? "repaired-current" : "current"),
       localVersion,
       remoteVersion,
       kitVersion,
@@ -464,9 +525,27 @@ export async function checkAndMaybeUpgrade(projectRoot, options = {}) {
     };
   }
   const { added } = applySafeAdditions(projectRoot, kitRoot);
-  const nextLock = writeUpgradedLock(projectRoot, kitRoot);
+  const validationAfterAdditions = validateProjectInstance(projectRoot);
+  if (!validationAfterAdditions.ok) {
+    const validationConflicts = [`项目实例验证未通过: ${validationAfterAdditions.detail}`];
+    writeAdaptationFailure(projectRoot, "failed", validationConflicts);
+    return {
+      status: "needs-adaptation",
+      localVersion,
+      remoteVersion,
+      kitVersion,
+      added,
+      updated,
+      patched,
+      conflicts: validationConflicts,
+      adaptationReport: adaptationReport({ kitVersion, desiredVersion: desired, added, updated, patched, conflicts: validationConflicts }),
+    };
+  }
+  const nextLock = writeUpgradedLock(projectRoot, kitRoot, {
+    deterministicStatus: (updated.length || patched.length) ? "restart_required" : "pass",
+  });
   return {
-    status: "behind",
+    status: (updated.length || patched.length) ? "restart-required" : "behind",
     localVersion,
     remoteVersion,
     kitVersion,

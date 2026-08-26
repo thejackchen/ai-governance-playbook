@@ -24,8 +24,9 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
       encoding: "utf8",
       env: { ...process.env, GOVERNANCE_PLAYBOOK_DIR: pb },
     });
-    const line = String(out.stdout || "").trim().split(/\r?\n/).find(Boolean);
-    if (line) console.log(line);
+    const output = `${out.stdout || ""}${out.stderr || ""}`.trim();
+    if (output) console.log(output);
+    if (out.status !== 0) console.log(`📦 治理升级器执行失败(exit=${out.status ?? "unknown"})；本会话不得施工`);
   }
 }
 

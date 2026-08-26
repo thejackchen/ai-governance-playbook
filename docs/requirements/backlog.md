@@ -19,7 +19,7 @@
   - source_refs: 负责人任务 2026-08-26；AIOS v3.5.0 lock 已新但 Codex SessionStart 仍接旧入口
   - spec_refs: specs/REQ-GOV-003-governance-compilation-and-boot-self-test.md
   - acceptance: 通用母版先按项目事实适配；同版本也修已知旧接线；未知定制不强覆；Codex 开机自检通过才允许写文件；确定性与语义验收分层，负责人保留最终解释权。
-  - evidence: `npm run check` 通过；`npm test` 94/94；`node scripts/governance-verify.mjs --ci` 0 error / 0 warn；GitHub main `7499cf8` 回读；AIOS 缺许可/正常签发/许可过期 fixture 通过。
+  - evidence: v3.6.1 首轮 94/94 与 AIOS 许可 fixture 通过；随后零上下文验收发现“母版 doctor 17 error 但仍发证”。v3.7.0 已加入母版/项目两层验证、Hook 唯一性、扩大许可指纹和热升级 `restart_required`，最终发布证据待完整测试与第二轮零上下文验收回填。
 
 - [x] REQ-GOV-001 | owner: maintainer | priority: P1 | title: 增加本地/外部单一需求权威模式
   - source_refs: governance/cases/2026-07-29-单一需求指针与版本漂移.md

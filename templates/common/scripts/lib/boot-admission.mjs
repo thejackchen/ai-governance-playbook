@@ -15,8 +15,30 @@ import { dirname, isAbsolute, join, resolve } from "node:path";
 export const DEFAULT_BOOT_ADMISSION_TTL_MS = 12 * 60 * 60 * 1000;
 
 const CRITICAL_FILES = {
-  codex: ["governance.lock.json", ".codex/hooks.json", "AGENTS.md", "CLAUDE.md"],
+  codex: [
+    "governance.lock.json",
+    ".codex/hooks.json",
+    ".claude/settings.json",
+    ".grok/hooks/governance.json",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "docs/index.md",
+    "governance/policy.json",
+    "scripts/governance-status.mjs",
+    "scripts/governance-verify.mjs",
+    "scripts/governance-lint.mjs",
+    "scripts/governance-hooks/session-start.mjs",
+    "scripts/governance-hooks/session-start-codex.mjs",
+    "scripts/governance-hooks/pre-tool-use.mjs",
+    "scripts/governance-hooks/pre-tool-use-codex.mjs",
+    "scripts/lib/boot-admission.mjs",
+    "scripts/lib/extra-repo-facts.mjs",
+    "scripts/lib/integration-line.mjs",
+  ],
 };
+
+const CODEX_SESSION_COMMAND = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/session-start-codex.mjs"';
+const CODEX_PRETOOL_COMMAND = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-tool-use-codex.mjs"';
 
 function canonicalRoot(root) {
   try { return realpathSync.native(root); } catch { return resolve(root); }
@@ -43,11 +65,35 @@ function hashCriticalFiles(root, runtime) {
   return `sha256:${hash.digest("hex")}`;
 }
 
-function commandAt(config, event) {
-  return String(config?.hooks?.[event]?.[0]?.hooks?.[0]?.command || "");
+function eventCommands(config, event) {
+  return (config?.hooks?.[event] || []).flatMap((entry) => entry?.hooks || [])
+    .map((hook) => String(hook?.command || "").trim())
+    .filter(Boolean);
 }
 
-export function inspectBootReadiness(root, { runtime = "codex", sharedMessage = "" } = {}) {
+function checkSingleManagedCommand(add, config, event, expected, id) {
+  const commands = eventCommands(config, event);
+  add(id, commands.length === 1 && commands[0] === expected, commands.length ? commands.join(" | ") : "missing");
+}
+
+function runProjectVerifier(root) {
+  const verifier = join(root, "scripts/governance-verify.mjs");
+  if (!existsSync(verifier)) return { ok: false, detail: "missing scripts/governance-verify.mjs" };
+  const result = spawnSync(process.execPath, [verifier, "--fast"], {
+    cwd: root,
+    encoding: "utf8",
+    timeout: 60_000,
+    env: { ...process.env, GOVERNANCE_BOOT_VALIDATION: "1" },
+  });
+  if (result.error) return { ok: false, detail: result.error.message };
+  if (result.status !== 0) {
+    const output = `${result.stdout || ""}\n${result.stderr || ""}`.trim().split(/\r?\n/).slice(-4).join(" | ");
+    return { ok: false, detail: output || `exit ${result.status}` };
+  }
+  return { ok: true, detail: "scripts/governance-verify.mjs --fast passed" };
+}
+
+export function inspectBootReadiness(root, { runtime = "codex", sharedMessage = "", runProjectValidation = false } = {}) {
   const checks = [];
   const add = (id, ok, detail) => checks.push({ id, ok: Boolean(ok), detail });
   const lockResult = readJson(join(root, "governance.lock.json"));
@@ -68,11 +114,14 @@ export function inspectBootReadiness(root, { runtime = "codex", sharedMessage = 
     const hookResult = readJson(join(root, ".codex/hooks.json"));
     add("codex-hooks", hookResult.ok, hookResult.ok ? ".codex/hooks.json" : hookResult.error);
     if (hookResult.ok) {
-      const session = commandAt(hookResult.value, "SessionStart");
-      const pretool = commandAt(hookResult.value, "PreToolUse");
-      add("codex-session-adapter", /session-start-codex\.mjs/.test(session), session || "missing");
-      add("codex-pretool-adapter", /pre-tool-use-codex\.mjs/.test(pretool), pretool || "missing");
+      checkSingleManagedCommand(add, hookResult.value, "SessionStart", CODEX_SESSION_COMMAND, "codex-session-adapter");
+      checkSingleManagedCommand(add, hookResult.value, "PreToolUse", CODEX_PRETOOL_COMMAND, "codex-pretool-adapter");
     }
+  }
+
+  if (runProjectValidation) {
+    const projectValidation = runProjectVerifier(root);
+    add("project-validator", projectValidation.ok, projectValidation.detail);
   }
 
   if (sharedMessage) {
@@ -121,7 +170,7 @@ export function issueBootAdmission(root, {
   now = Date.now(),
   ttlMs = DEFAULT_BOOT_ADMISSION_TTL_MS,
 } = {}) {
-  const readiness = inspectBootReadiness(root, { runtime, sharedMessage });
+  const readiness = inspectBootReadiness(root, { runtime, sharedMessage, runProjectValidation: true });
   if (!readiness.ok) {
     revokeBootAdmission(root, runtime);
     return { ok: false, readiness, admission: null };

@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "playbookVersion": "3.6.1",
-  "kitFingerprint": "sha256:2ca16bcad38fa9a80cdbd99af1324c9b3d5c557584282586d719df992cf92e19",
+  "playbookVersion": "3.7.0",
+  "kitFingerprint": "sha256:d3095522b1450a4b8d9cea9d5ff3b2a037cf20b2cd2eb8e2e31932a9957677a0",
   "runtime": "codex",
   "profile": "standard",
   "ruleBudget": 24,
   "extensions": [],
   "adaptation": {
     "schemaVersion": 1,
-    "sourceVersion": "3.6.1",
+    "sourceVersion": "3.7.0",
     "deterministicStatus": "pass",
     "projectFacts": "preserved",
     "managedRuntimeFiles": [
@@ -57,5 +57,5 @@
     "scripts/upgrade.mjs",
     "scripts/weekly-governance-review.mjs"
   ],
-  "upgradedAt": "2026-08-24T10:58:42.813Z"
+  "upgradedAt": "2026-08-26T00:00:00.000Z"
 }

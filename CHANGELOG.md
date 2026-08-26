@@ -2,6 +2,13 @@
 
 > 只追加有意义的仓库、架构、运行状态或治理变化。只读评审、讨论和无落盘任务不写。
 
+## 2026-08-26 · v3.7.0 · 开机许可与项目验证闭环
+- [fix] 母版 doctor 改为两层：通用层只核对版本、kit 指纹、受管适配器和唯一接线；项目领域规则由消费仓自己的 `scripts/governance-verify.mjs --fast` 解释。项目验证失败时 SessionStart 不再签发施工许可。
+- [fix] Codex SessionStart/PreToolUse 必须各只有一条精确受管命令；额外未知 Hook 不再被首条命令遮住。许可指纹扩大到三套 Hook、共享 SessionStart/PreToolUse、policy、index、状态与验证脚本。
+- [fix] 热升级采用两次开机：运行时文件被替换后 lock 先记 `restart_required` 并阻断当前会话；下一次由新适配器复验通过再记 `pass`。未知定制和项目验证失败会分别撤销为 `needs_human_decision` / `failed`。
+- [governance] 内容语义门补充真实性约束：只有已接线且能阻断合并的远程门才叫权威；远程权威悬空时，本地门不得 API 失败放行。
+- [source] v3.6.1 零上下文 AI 验收：三句核心与许可正负例理解正确，但官方 doctor 对 AIOS 报 17 error 时开机仍发证，故裁决 block。
+
 ## 2026-08-26 · v3.6.1 · 发布状态结账
 - [docs] REQ-GOV-003 在远端回读与 AIOS 正负开机 fixture 后由进行中移入完成；ROADMAP 替换为现役 v3.6.1 投影。
 - [governance] 版本补丁用于避免 v3.6.0 发布后继续以同版本修改 kit 指纹；行为合同与 v3.6.0 相同。

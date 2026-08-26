@@ -26,6 +26,8 @@ function project(version = "3.4.0") {
     installedFiles: ["AGENTS.md"],
   }, null, 2)}\n`);
   mkdirSync(join(dir, "governance"), { recursive: true });
+  mkdirSync(join(dir, "scripts"), { recursive: true });
+  writeFileSync(join(dir, "scripts/governance-verify.mjs"), "#!/usr/bin/env node\nprocess.exit(0);\n");
   writeFileSync(join(dir, "governance/policy.json"), `${JSON.stringify({
     playbookUpdate: { check: "session-start", apply: "safe", cacheSeconds: 1 },
   }, null, 2)}\n`);
@@ -55,11 +57,12 @@ test("safe upgrade adds missing carriers and bumps lock to kit version", async (
     remote: { ok: true, version: kitVersion },
     apply: "safe",
   });
-  assert.equal(result.status, "behind");
+  assert.equal(result.status, "restart-required");
   assert.ok(result.added.includes("docs/ops/extra-repo-facts.json"));
   assert.ok(result.added.includes("scripts/governance-hooks/pre-compact.mjs"));
   const lock = JSON.parse(readFileSync(join(dir, "governance.lock.json"), "utf8"));
   assert.equal(lock.playbookVersion, kitVersion);
+  assert.equal(lock.adaptation.deterministicStatus, "restart_required");
   assert.match(lock.kitFingerprint, /^sha256:/);
   assert.ok(lock.installedFiles.includes("docs/ops/extra-repo-facts.json"));
   assert.ok(lock.installedFiles.includes("AGENTS.md"));
@@ -139,7 +142,7 @@ test("current version still repairs known legacy Codex wiring", async () => {
     remote: { ok: true, version: kitVersion },
     apply: "safe",
   });
-  assert.equal(result.status, "repaired-current");
+  assert.equal(result.status, "restart-required");
   const codex = JSON.parse(readFileSync(join(dir, ".codex/hooks.json"), "utf8"));
   assert.match(codex.hooks.SessionStart[0].hooks[0].command, /session-start-codex\.mjs/);
   assert.match(codex.hooks.PreToolUse[0].hooks[0].command, /pre-tool-use-codex\.mjs/);
@@ -164,7 +167,7 @@ test("offline current version repairs wiring only from the lock-verified local k
     remote: { ok: false, version: null, error: "offline" },
     apply: "safe",
   });
-  assert.equal(result.status, "repaired-current");
+  assert.equal(result.status, "restart-required");
   const codex = JSON.parse(readFileSync(join(dir, ".codex/hooks.json"), "utf8"));
   assert.match(codex.hooks.SessionStart[0].hooks[0].command, /session-start-codex\.mjs/);
   assert.match(codex.hooks.PreToolUse[0].hooks[0].command, /pre-tool-use-codex\.mjs/);
@@ -217,4 +220,45 @@ test("unknown Codex customization stops the whole adaptation without partial wri
   assert.equal(readFileSync(hooksPath, "utf8"), original);
   assert.deepEqual(result.updated, []);
   assert.deepEqual(result.patched, []);
+  const lock = JSON.parse(readFileSync(join(dir, "governance.lock.json"), "utf8"));
+  assert.equal(lock.adaptation.deterministicStatus, "needs_human_decision");
+});
+
+test("a second SessionStart finalizes restart_required only after project validation passes", async () => {
+  const dir = project(kitVersion);
+  mkdirSync(join(dir, ".codex"), { recursive: true });
+  writeFileSync(join(dir, ".codex/hooks.json"), `${JSON.stringify({
+    hooks: {
+      SessionStart: [{ hooks: [{ type: "command", command: "node scripts/governance-hooks/session-start.mjs" }] }],
+      PreToolUse: [{ hooks: [{ type: "command", command: "node scripts/governance-hooks/pre-tool-use.mjs" }] }],
+    },
+  }, null, 2)}\n`);
+  const first = await checkAndMaybeUpgrade(dir, {
+    skipCache: true,
+    remote: { ok: true, version: kitVersion },
+    apply: "safe",
+  });
+  assert.equal(first.status, "restart-required");
+  assert.equal(JSON.parse(readFileSync(join(dir, "governance.lock.json"), "utf8")).adaptation.deterministicStatus, "restart_required");
+
+  const second = await checkAndMaybeUpgrade(dir, {
+    skipCache: true,
+    remote: { ok: true, version: kitVersion },
+    apply: "safe",
+  });
+  assert.equal(second.status, "repaired-current");
+  assert.equal(JSON.parse(readFileSync(join(dir, "governance.lock.json"), "utf8")).adaptation.deterministicStatus, "pass");
+});
+
+test("project validation failure revokes adaptation pass instead of bumping the lock", async () => {
+  const dir = project(kitVersion);
+  writeFileSync(join(dir, "scripts/governance-verify.mjs"), "#!/usr/bin/env node\nprocess.exit(7);\n");
+  const result = await checkAndMaybeUpgrade(dir, {
+    skipCache: true,
+    remote: { ok: true, version: kitVersion },
+    apply: "safe",
+  });
+  assert.equal(result.status, "needs-adaptation");
+  const lock = JSON.parse(readFileSync(join(dir, "governance.lock.json"), "utf8"));
+  assert.equal(lock.adaptation.deterministicStatus, "failed");
 });

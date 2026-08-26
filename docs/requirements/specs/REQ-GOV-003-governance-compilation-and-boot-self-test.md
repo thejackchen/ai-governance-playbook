@@ -12,6 +12,8 @@
 4. Codex Session Start 必须经 JSON 适配器注入同源状态，并完成版本、接线、权威入口和输出铭牌自检。
 5. 自检成功才签发短期施工许可；Codex 写文件前验证许可。缺失、过期或关键载体变化时 fail-closed，读与诊断仍可进行。
 6. 定制后的项目实例必须输出确定性适配报告；内容语义检查以冻结规则、固定 I/O、golden 案例和 `pass | block | needs_human_decision` 裁决，负责人拥有最终解释权。
+7. 母版通用检查与项目领域检查分层；开机许可必须真实运行项目验证器。受管 SessionStart/PreToolUse 各只能有一条接线，关键启动载体变化必须使许可失效。
+8. SessionStart 内发生运行时热升级时，本会话必须停在 `restart_required`；只有下一次新适配器开机并复验通过才能转为 `pass`。
 
 ## 这次不碰什么
 
