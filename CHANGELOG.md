@@ -2,6 +2,11 @@
 
 > 只追加有意义的仓库、架构、运行状态或治理变化。只读评审、讨论和无落盘任务不写。
 
+## 2026-08-26 · v3.7.5 · 写入工具别名认领门
+- [fix] 通用 PreToolUse 的控制面保护与 claim 判断补齐 `MultiEdit`、`search_replace`，与三套运行时 matcher 的五种直接写入别名一致。
+- [test] 新增 Grok/Claude 常见写入别名修改 `.grok/hooks/governance.json` 时无 claim 必须阻断的回归。
+- [source] v3.7.4 母版复审发现 admission 适配器已识别全部别名，但共享 claim 门仍只认三种旧工具名。
+
 ## 2026-08-26 · v3.7.4 · 控制面终端写入认领门
 - [fix] `alwaysClaimPaths` 从直接文件工具扩到常见 Bash/terminal 写入形态；有开机许可但无 claim 时，重定向、tee、sed/perl 原地改写、复制移动删除、patch 与常见文件写 API 不能修改治理控制面。
 - [test] 新增 `echo > governance/policy.json` 无认领必须阻断、`cat governance/policy.json` 纯读保持放行的反向用例。

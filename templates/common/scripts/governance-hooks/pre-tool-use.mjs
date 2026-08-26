@@ -67,7 +67,7 @@ if (grokHarnessReason) block(grokHarnessReason);
 // protectedPaths 判定面最小化(3.1.2):判「改什么」只看目标路径字段,不做全输入序列化子串匹配——
 // 被保护文件名必然被合法引用(文档链接/注释/commit message),全文匹配首启即误伤(首个安装项目当场实证);
 // 误伤率决定门禁存活率(高误伤门禁终被 --no-verify 或拆除,保护归零)。
-if (/apply_patch|Edit|Write/i.test(toolName)) {
+if (/^(?:apply_patch|Edit|Write|MultiEdit|search_replace)$/i.test(toolName)) {
   const targetPath = String(toolInput.file_path || toolInput.notebook_path || toolInput.path || "");
   for (const path of policy.protectedPaths || []) {
     if (targetPath === path || targetPath.endsWith(`/${path}`)) {
@@ -229,7 +229,7 @@ async function evaluateClaimGate({ input: hookInput, toolName: currentToolName, 
   }
 
   const effectiveClaimGate = { ...claimModule.DEFAULT_CLAIM_GATE, ...(policy.claimGate || {}) };
-  const isWriteTool = /^(?:apply_patch|Edit|Write)$/i.test(currentToolName);
+  const isWriteTool = /^(?:apply_patch|Edit|Write|MultiEdit|search_replace)$/i.test(currentToolName);
   const isShellTool = /^(?:Bash|run_terminal_command)$/i.test(currentToolName);
   const targetPath = String(currentToolInput.file_path || currentToolInput.notebook_path || currentToolInput.path || "");
   const isClaimCommand = isShellTool && (effectiveClaimGate.bashClaimPatterns || []).some((pattern) => {

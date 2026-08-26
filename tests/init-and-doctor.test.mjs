@@ -575,6 +575,14 @@ test("governance control plane always requires a claim while ordinary docs remai
   }), { GROK_SESSION_ID: "fixture", GROK_HOOK_EVENT: "PreToolUse" });
   assert.equal(JSON.parse(control.stdout).decision, "deny");
   assert.match(JSON.parse(control.stdout).reason, /认领门拦截/);
+  for (const toolName of ["MultiEdit", "search_replace"]) {
+    const aliasControl = run(process.execPath, [hook], dir, JSON.stringify({
+      tool_name: toolName,
+      tool_input: { file_path: join(dir, ".grok/hooks/governance.json") },
+    }), { GROK_SESSION_ID: "fixture", GROK_HOOK_EVENT: "PreToolUse" });
+    assert.equal(JSON.parse(aliasControl.stdout).decision, "deny", toolName);
+    assert.match(JSON.parse(aliasControl.stdout).reason, /认领门拦截/, toolName);
+  }
   const shellControl = run(process.execPath, [hook], dir, JSON.stringify({
     tool_name: "Bash",
     tool_input: { command: "echo changed > governance/policy.json" },
