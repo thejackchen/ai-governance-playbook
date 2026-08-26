@@ -2,6 +2,13 @@
 
 > 只追加有意义的仓库、架构、运行状态或治理变化。只读评审、讨论和无落盘任务不写。
 
+## 2026-08-26 · v3.7.3 · 三运行时统一施工许可
+- [fix] Codex、Claude Code、Grok 的 SessionStart/PreToolUse 统一经过 playbook 管理的 admission 薄适配器，共用一张项目级短期许可；任一运行时接线不唯一、票据缺失/过期或关键载体变化都会阻断写入。
+- [fix] 治理控制面加入 `alwaysClaimPaths`，根宪法、lock、policy、三套 Hook 与 git hooks 不再因 Markdown 或目录豁免绕过认领门。
+- [fix] Grok harness 门补齐读取配置、注入 `XAI_API_KEY` 和直打已知 xAI/g2api 主机的阻断；CLI 识别改为命令位锚定，`rg grok` / `echo grok` 不再误伤。
+- [test] 新增 Claude/Grok 缺票、有效票、接线漂移、控制面无认领、未知共享 Hook 原子停手和 Grok 旁路/误伤回归。
+- [source] v3.7.2 Grok 4.6/xhigh 零上下文验收：Codex 许可门通过，但项目指定施工代理仍走无许可共享入口，故总裁决 block。
+
 ## 2026-08-26 · v3.7.2 · Grok harness 调用合同
 - [fix] Grok 无头入口改为已配置 harness 的 `--prompt-file` 合同；禁止调用方读/注入密钥、使用 `-p` / `--always-approve`、登录或直打模型网关。
 - [fix] 认领门识别正确的 Grok harness 调用；PreToolUse 校验模型、effort、必备参数和禁止动作，避免文档已改而机器仍认旧入口。

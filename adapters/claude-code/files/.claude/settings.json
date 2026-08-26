@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/session-start.mjs\"",
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/session-start-admission.mjs\"",
             "timeout": 30
           }
         ]
@@ -14,11 +14,11 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|Edit|Write",
+        "matcher": "Bash|run_terminal_command|apply_patch|Edit|Write|MultiEdit|search_replace",
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-tool-use.mjs\"",
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-tool-use-admission.mjs\"",
             "timeout": 30
           }
         ]

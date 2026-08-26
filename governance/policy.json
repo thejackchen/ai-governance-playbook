@@ -30,6 +30,18 @@
     "apply": "safe",
     "cacheSeconds": 21600
   },
+  "grokHarness": {
+    "models": ["grok-4.6", "grok-4.5"],
+    "efforts": ["low", "medium", "high", "xhigh"],
+    "defaultModel": "grok-4.6",
+    "defaultEffort": "high",
+    "requiredFlags": ["--verbatim", "--output-format", "--prompt-file"],
+    "forbiddenFlags": ["-p", "--single", "--always-approve"],
+    "forbidLoginCommands": ["grok", "codex"],
+    "forbidDirectHttpHosts": ["g2api.somro.com", "api.x.ai", "cli-chat-proxy.grok.com"],
+    "forbidEnvironmentKeys": ["XAI_API_KEY"],
+    "forbidCredentialPathFragments": [".grok/config.toml"]
+  },
   "protectedPaths": [],
   "allowedTopLevelEntries": [
     ".codex",

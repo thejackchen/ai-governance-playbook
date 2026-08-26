@@ -5,12 +5,22 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { fingerprintKit, parseArgs, KIT_ROOT, VERSION } from "./lib.mjs";
 
 const MANAGED_RUNTIME_FILES = [
+  "scripts/governance-hooks/session-start-admission.mjs",
   "scripts/governance-hooks/session-start-codex.mjs",
+  "scripts/governance-hooks/pre-tool-use-admission.mjs",
   "scripts/governance-hooks/pre-tool-use-codex.mjs",
   "scripts/lib/boot-admission.mjs",
 ];
 const CODEX_SESSION_COMMAND = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/session-start-codex.mjs"';
 const CODEX_PRETOOL_COMMAND = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-tool-use-codex.mjs"';
+const SHARED_SESSION_COMMAND = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/session-start-admission.mjs"';
+const SHARED_PRETOOL_COMMAND = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-tool-use-admission.mjs"';
+const WRITE_TOOL_ALIASES = ["Bash", "run_terminal_command", "apply_patch", "Edit", "Write", "MultiEdit", "search_replace"];
+
+function missingWriteAliases(config) {
+  const matcher = (config?.hooks?.PreToolUse || []).map((entry) => String(entry?.matcher || "")).join("|");
+  return WRITE_TOOL_ALIASES.filter((name) => !new RegExp(`(?:^|\\|)${name}(?:\\||$)`, "i").test(matcher));
+}
 
 const args = parseArgs(process.argv.slice(2));
 const target = resolve(String(args.target || ""));
@@ -92,6 +102,8 @@ if (codexActive) {
       if (pretoolCommands.length !== 1 || pretoolCommand !== CODEX_PRETOOL_COMMAND) {
         errors.push(`Codex PreToolUse 必须且只能接一条受管施工许可适配器: ${pretoolCommands.join(" | ") || "missing"}`);
       }
+      const missingAliases = missingWriteAliases(hooks);
+      if (missingAliases.length) errors.push(`Codex PreToolUse matcher 漏写入工具: ${missingAliases.join(", ")}`);
       if (!/pre-compact-codex\.mjs/.test(precompactCommand)) {
         errors.push(`Codex PreCompact 未接 JSON 坐标适配器: ${precompactCommand || "missing"}`);
       }
@@ -139,8 +151,39 @@ if (claudeExpected || claudePresent) {
       for (const event of ["SessionStart", "PreToolUse", "Stop", "PreCompact"]) {
         if (!settings.hooks?.[event]?.length) errors.push(`Claude Code缺少${event} Hook`);
       }
+      const commands = (event) => (settings.hooks?.[event] || []).flatMap((entry) => entry?.hooks || [])
+        .map((hook) => String(hook?.command || "").trim()).filter(Boolean);
+      const sessionCommands = commands("SessionStart");
+      const pretoolCommands = commands("PreToolUse");
+      if (sessionCommands.length !== 1 || sessionCommands[0] !== SHARED_SESSION_COMMAND) {
+        errors.push(`Claude SessionStart 必须且只能接一条受管施工许可适配器: ${sessionCommands.join(" | ") || "missing"}`);
+      }
+      if (pretoolCommands.length !== 1 || pretoolCommands[0] !== SHARED_PRETOOL_COMMAND) {
+        errors.push(`Claude PreToolUse 必须且只能接一条受管施工许可适配器: ${pretoolCommands.join(" | ") || "missing"}`);
+      }
+      const missingAliases = missingWriteAliases(settings);
+      if (missingAliases.length) errors.push(`Claude PreToolUse matcher 漏写入工具: ${missingAliases.join(", ")}`);
     } catch (e) { errors.push(`${claudePath}无法解析: ${e.message}`); }
   }
+}
+
+const grokPath = ".grok/hooks/governance.json";
+if (installedFiles.has(grokPath) || existsSync(join(target, grokPath))) {
+  try {
+    const hooks = JSON.parse(read(grokPath));
+    const commands = (event) => (hooks.hooks?.[event] || []).flatMap((entry) => entry?.hooks || [])
+      .map((hook) => String(hook?.command || "").trim()).filter(Boolean);
+    const sessionCommands = commands("SessionStart");
+    const pretoolCommands = commands("PreToolUse");
+    if (sessionCommands.length !== 1 || sessionCommands[0] !== SHARED_SESSION_COMMAND) {
+      errors.push(`Grok SessionStart 必须且只能接一条受管施工许可适配器: ${sessionCommands.join(" | ") || "missing"}`);
+    }
+    if (pretoolCommands.length !== 1 || pretoolCommands[0] !== SHARED_PRETOOL_COMMAND) {
+      errors.push(`Grok PreToolUse 必须且只能接一条受管施工许可适配器: ${pretoolCommands.join(" | ") || "missing"}`);
+    }
+    const missingAliases = missingWriteAliases(hooks);
+    if (missingAliases.length) errors.push(`Grok PreToolUse matcher 漏写入工具: ${missingAliases.join(", ")}`);
+  } catch (e) { errors.push(`${grokPath}无法解析: ${e.message}`); }
 }
 
 if (codexActive) {

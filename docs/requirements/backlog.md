@@ -29,5 +29,5 @@
 - [x] REQ-GOV-002 | owner: maintainer | priority: P1 | title: 提供 Codex/Claude Code Hook 等价启动状态与确定性收口提示
   - source_refs: 负责人任务 2026-08-16
   - spec_refs: specs/REQ-GOV-002-codex-hook-parity.md
-  - acceptance: Claude SessionStart 保持人类文本；Codex SessionStart 返回可解析 JSON 且 `systemMessage`/`additionalContext` 同源并包含治理版本与当前状态；每次 Stop 都显式输出治理版本与通过/失败状态，二次失败不无限续轮；doctor 对缺失载体报错且不漏报 Codex trust 边界。
+  - acceptance: Claude/Grok SessionStart 保持同源人类文本并签发统一许可；Codex SessionStart 返回可解析 JSON 且 `systemMessage`/`additionalContext` 与该文本同源并包含治理版本与当前状态；三运行时写入前都验同一许可；每次 Stop 都显式输出治理版本与通过/失败状态，二次失败不无限续轮；doctor 对缺失载体报错且不漏报 Codex trust 边界。
   - evidence: npm run check; npm test; node scripts/governance-verify.mjs --ci

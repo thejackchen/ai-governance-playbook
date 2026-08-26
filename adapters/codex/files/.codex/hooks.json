@@ -15,7 +15,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|apply_patch|Edit|Write",
+        "matcher": "Bash|run_terminal_command|apply_patch|Edit|Write|MultiEdit|search_replace",
         "hooks": [
           {
             "type": "command",

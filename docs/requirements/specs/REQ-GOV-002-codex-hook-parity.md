@@ -6,8 +6,8 @@
 
 ## 约束
 
-- Claude Code 继续直接消费 `session-start.mjs` 的人类可读 stdout。
-- Codex 必须通过最薄 JSON 适配器复用同一份 `session-start.mjs` 输出，至少写入 `systemMessage` 与 `hookSpecificOutput.additionalContext`。
+- Claude Code 与 Grok 消费 `session-start-admission.mjs` 的人类可读 stdout；该薄层复用 `session-start.mjs` 并签发三运行时共用的项目级许可。
+- Codex 必须通过最薄 JSON 适配器复用同一份 admission 输出，至少写入 `systemMessage` 与 `hookSpecificOutput.additionalContext`，不得另建许可逻辑。
 - doctor 必须能拦住 `.codex/hooks.json` 顶层 schema 漂移；JSON 语法通过但不属于官方顶层字段（当前仅 `description` / `hooks`）也不能放过。
 - 状态来源只允许来自 `governance-status` 当前游标/工作树、`governance.lock.json` 版本、活跃 claims 与可验证的未收口信号。
 - Stop Hook 只做确定性收口检查与提示，不做语义猜测，也不能在重复失败时无限续轮。
@@ -16,5 +16,5 @@
 
 ## 验收
 
-- `npm test` 覆盖 Claude 文本、Codex JSON 同源、缺载体 doctor 失败、Stop success clean/dirty 与 repeated failure 均带版本铭牌，且二次失败不无限续轮。
+- `npm test` 覆盖 Claude/Grok 文本、Codex JSON 同源、三运行时缺票/过期/接线变化阻断、缺载体 doctor 失败、Stop success clean/dirty 与 repeated failure 均带版本铭牌，且二次失败不无限续轮。
 - `npm run check` 与 `node scripts/governance-verify.mjs --ci` 通过。

@@ -54,7 +54,7 @@
 4. 复杂或高风险任务明确目标、边界和可证伪验收；简单任务直接执行。
 5. 新文件先按仓库结构地图选择归属；不得把临时文件、生成物或新模块随意堆在项目根。
 6. 需求是活文档：唯一入口为[需求]({{REQUIREMENTS_SOURCE}})；外部来源不得保留第二套本地状态正文。
-7. 若 `governance/claim-gate.md` 存在，说明本项目装了认领门；写行为代码或派发 `codex exec` 前，先检查该文件并按其中说明开一条认领。
+7. SessionStart 必须显示 `✅ 开机自检` 后才允许施工；Codex、Claude Code、Grok 共用同一张项目级许可。若 `governance/claim-gate.md` 存在，写行为代码、修改治理控制面或派发实现代理前，还必须按其中说明开一条范围匹配的认领。
 8. 仓内知识核心是 `docs/index.md`；仓外正本核心是 `docs/ops/extra-repo-facts.md`（机器表 JSON）。未装载报「正本未装载」，禁止用仓内替身文件凑答案。共享秘密走 `~/.config/<域>/`，不进 `~/.claude/` / `~/.grok/`。SessionStart 只注入路径与在/缺。
 
 ## 验证与完成

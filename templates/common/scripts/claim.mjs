@@ -23,6 +23,18 @@ const VALID_CURRENT_STATUSES = new Set(["active", "continued"]);
 const DAY = 24 * 60 * 60 * 1000;
 export const DEFAULT_CLAIM_GATE = {
   codeRoots: ["src/", "scripts/"],
+  alwaysClaimPaths: [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "governance.lock.json",
+    "governance/",
+    ".codex/",
+    ".claude/",
+    ".grok/",
+    ".githooks/",
+    "scripts/governance-hooks/",
+    "scripts/lib/boot-admission.mjs"
+  ],
   exemptPatterns: [
     "\\.md$",
     "^docs/",
@@ -383,10 +395,17 @@ function normalizedRelativePath(path) {
 export function matchesClaimGateCodePath(path, claimGate = loadClaimGatePolicy()) {
   const candidate = normalizedRelativePath(path);
   if (!candidate) return false;
+  if ((claimGate.alwaysClaimPaths || []).some((prefix) => matchesPathPrefix(candidate, prefix))) return true;
   for (const pattern of claimGate.exemptPatterns || []) {
     if (new RegExp(pattern, "i").test(candidate)) return false;
   }
   return (claimGate.codeRoots || []).some((prefix) => candidate.startsWith(normalizedRelativePath(prefix)));
+}
+
+function matchesPathPrefix(candidate, prefix) {
+  const normalized = normalizedRelativePath(prefix);
+  if (!normalized) return false;
+  return normalized.endsWith("/") ? candidate.startsWith(normalized) : candidate === normalized;
 }
 
 export function stagedCodePaths({ cwd = process.cwd(), env = process.env, claimGate = loadClaimGatePolicy() } = {}) {

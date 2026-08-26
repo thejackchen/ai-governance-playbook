@@ -16,6 +16,7 @@
   },
   "claimGate": {
     "codeRoots": ["src/", "scripts/"],
+    "alwaysClaimPaths": ["AGENTS.md", "CLAUDE.md", "governance.lock.json", "governance/", ".codex/", ".claude/", ".grok/", ".githooks/", "scripts/governance-hooks/", "scripts/lib/boot-admission.mjs"],
     "exemptPatterns": [
       "\\.md$",
       "^docs/",
@@ -33,8 +34,10 @@
     "defaultEffort": "high",
     "requiredFlags": ["--verbatim", "--output-format", "--prompt-file"],
     "forbiddenFlags": ["-p", "--single", "--always-approve"],
-    "forbidLoginCommands": ["grok"],
-    "forbidDirectHttpHosts": ["g2api.somro.com"]
+    "forbidLoginCommands": ["grok", "codex"],
+    "forbidDirectHttpHosts": ["g2api.somro.com", "api.x.ai", "cli-chat-proxy.grok.com"],
+    "forbidEnvironmentKeys": ["XAI_API_KEY"],
+    "forbidCredentialPathFragments": [".grok/config.toml"]
   },
   "integrationLine": {
     "remote": "origin",

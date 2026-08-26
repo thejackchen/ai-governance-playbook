@@ -19,17 +19,17 @@ Session Start 只做一次以下流程，不在每轮对话或每次工具调用
 3. 保留项目宪法、游标、业务文档和 policy，更新 playbook 管理的薄适配器，窄迁移能够证明等价的旧接线；
 4. 输出结构化适配报告。未知定制返回 `needs_human_decision`，不做半套迁移；
 5. 母版通用层核对版本、kit 指纹和受管载体；项目自己的 `scripts/governance-verify.mjs --fast` 解释项目目录与领域规则；
-6. Codex JSON 适配器检查权威入口、实际注入铭牌，并要求 Session Start/PreToolUse 各只有一条精确受管接线；
+6. 统一 admission 适配器检查权威入口、实际注入铭牌，并要求 Codex、Claude Code、Grok 的 Session Start/PreToolUse 各只有一条精确受管接线；Codex JSON 层只包装同源文本；
 7. 两层都通过后才把短期施工许可写入 Git common dir。许可不进仓库、不跨项目复用。
 
-写文件前，Codex PreToolUse 会验证许可。许可缺失、过期，或三套 Hook、共享启动/动作脚本、policy、index、项目验证器等关键载体变化时，写入 fail-closed；查看与诊断仍可继续。
+写文件前，三个运行时的 PreToolUse 都验证同一张项目级许可。许可缺失、过期，或三套 Hook、统一许可适配器、共享启动/动作脚本、policy、index、项目验证器等关键载体变化时，写入 fail-closed；查看与诊断仍可继续。治理控制面还必须有认领，不能借 `.md` 或目录豁免拆门。
 
 运行时适配器在一次 Session Start 里被升级时，当前进程仍可能装着旧代码。因此升级器先把 lock 标成 `restart_required`，本会话不发证；下一次 Session Start 由新适配器复验通过后才转为 `pass`。未知定制和项目验证失败分别记为 `needs_human_decision` / `failed`，不能藏在日志首行后继续施工。
 
 ## 哪些会自动改，哪些不会
 
-- 自动更新：`session-start-codex.mjs`、`pre-tool-use-codex.mjs`、`boot-admission.mjs` 等 playbook 管理的薄运行时适配器。
-- 窄迁移：明确指向旧共享入口的 Codex Session Start/PreToolUse，以及已知的缺失/`echo` PreCompact 插座。
+- 自动更新：`session-start-admission.mjs`、`pre-tool-use-admission.mjs`、Codex JSON 薄适配器和 `boot-admission.mjs` 等 playbook 管理的运行时协议层。
+- 窄迁移：明确指向旧共享入口的 Codex/Claude Code/Grok Session Start/PreToolUse，以及已知的缺失/`echo` PreCompact 插座。
 - 只补不改：仓外正本索引等项目可继续定制的载体。
 - 绝不自动覆盖：项目宪法、业务文档、ROADMAP/游标和项目 policy。
 - 停手请负责人裁决：无法证明等价的自定义 Hook 或语义冲突。

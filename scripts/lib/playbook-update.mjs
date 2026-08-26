@@ -13,7 +13,9 @@ export const SAFE_ADDITIONS = [
   "docs/ops/extra-repo-facts.md",
   "scripts/lib/extra-repo-facts.mjs",
   ".grok/hooks/governance.json",
+  "scripts/governance-hooks/session-start-admission.mjs",
   "scripts/governance-hooks/session-start-codex.mjs",
+  "scripts/governance-hooks/pre-tool-use-admission.mjs",
   "scripts/governance-hooks/pre-tool-use-codex.mjs",
   "scripts/lib/boot-admission.mjs",
   "scripts/governance-hooks/pre-compact.mjs",
@@ -26,7 +28,9 @@ export const SAFE_ADDITIONS = [
 // 这些文件是运行时协议的薄适配器，不得承载项目事实；升级时由 playbook 管理。
 // 项目宪法、policy、游标和共享治理逻辑不在这里，仍然绝不原样覆盖。
 export const MANAGED_RUNTIME_FILES = [
+  "scripts/governance-hooks/session-start-admission.mjs",
   "scripts/governance-hooks/session-start-codex.mjs",
+  "scripts/governance-hooks/pre-tool-use-admission.mjs",
   "scripts/governance-hooks/pre-tool-use-codex.mjs",
   "scripts/lib/boot-admission.mjs",
 ];
@@ -35,6 +39,17 @@ const PRECOMPACT_TEXT_CMD = 'node "$(git rev-parse --show-toplevel)/scripts/gove
 const PRECOMPACT_CODEX_CMD = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-compact-codex.mjs"';
 const SESSION_START_CODEX_CMD = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/session-start-codex.mjs"';
 const PRETOOL_CODEX_CMD = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-tool-use-codex.mjs"';
+const SESSION_START_SHARED_CMD = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/session-start-admission.mjs"';
+const PRETOOL_SHARED_CMD = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-tool-use-admission.mjs"';
+const SHARED_PRETOOL_MATCHER = "Bash|run_terminal_command|apply_patch|Edit|Write|MultiEdit|search_replace";
+const LEGACY_SHARED_SESSION_COMMANDS = new Set([
+  'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/session-start.mjs"',
+  "node scripts/governance-hooks/session-start.mjs",
+]);
+const LEGACY_SHARED_PRETOOL_COMMANDS = new Set([
+  'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-tool-use.mjs"',
+  "node scripts/governance-hooks/pre-tool-use.mjs",
+]);
 
 function sameBytes(left, right) {
   return existsSync(left) && existsSync(right) && readFileSync(left).equals(readFileSync(right));
@@ -109,7 +124,7 @@ export function patchCodexRuntimeHooks(projectRoot) {
   const pretool = String(json?.hooks?.PreToolUse?.[0]?.hooks?.[0]?.command || "");
   if (!pretool) {
     setCommand(json, "PreToolUse", PRETOOL_CODEX_CMD, {
-      matcher: "Bash|apply_patch|Edit|Write",
+      matcher: SHARED_PRETOOL_MATCHER,
       timeout: 30,
       statusMessage: "检查治理策略",
     });
@@ -122,6 +137,10 @@ export function patchCodexRuntimeHooks(projectRoot) {
       conflicts.push(`Codex PreToolUse 是未知定制，未覆盖: ${pretool}`);
     }
   }
+  if (json?.hooks?.PreToolUse?.[0] && json.hooks.PreToolUse[0].matcher !== SHARED_PRETOOL_MATCHER) {
+    json.hooks.PreToolUse[0].matcher = SHARED_PRETOOL_MATCHER;
+    changed = true;
+  }
   const precompact = String(json?.hooks?.PreCompact?.[0]?.hooks?.[0]?.command || "");
   if (precompact && !/\becho\b/.test(precompact) && !/pre-compact(?:-codex)?\.mjs/.test(precompact)) {
     conflicts.push(`Codex PreCompact 是未知定制，未覆盖: ${precompact}`);
@@ -130,6 +149,61 @@ export function patchCodexRuntimeHooks(projectRoot) {
   if (conflicts.length) return { patched: [], conflicts };
   if (changed) writeFileSync(path, `${JSON.stringify(json, null, 2)}\n`);
   return { patched: changed ? [".codex/hooks.json"] : [], conflicts };
+}
+
+export function patchSharedRuntimeHooks(projectRoot, { write = true } = {}) {
+  const targets = [".claude/settings.json", ".grok/hooks/governance.json"];
+  const plans = [];
+  const conflicts = [];
+  for (const relativePath of targets) {
+    const path = join(projectRoot, relativePath);
+    if (!existsSync(path)) continue;
+    let current;
+    try {
+      current = JSON.parse(readFileSync(path, "utf8"));
+    } catch (cause) {
+      conflicts.push(`${relativePath} 无法解析: ${cause instanceof Error ? cause.message : String(cause)}`);
+      continue;
+    }
+    for (const event of ["SessionStart", "PreToolUse"]) {
+      if (eventCommands(current, event).length > 1) conflicts.push(`${relativePath} ${event} 包含额外定制 Hook，未覆盖`);
+    }
+    const json = structuredClone(current);
+    let changed = false;
+    const session = String(json?.hooks?.SessionStart?.[0]?.hooks?.[0]?.command || "");
+    if (!session) {
+      setCommand(json, "SessionStart", SESSION_START_SHARED_CMD, { matcher: "startup|resume|clear|compact", timeout: 30 });
+      changed = true;
+    } else if (session !== SESSION_START_SHARED_CMD) {
+      if (LEGACY_SHARED_SESSION_COMMANDS.has(session)) {
+        setCommand(json, "SessionStart", SESSION_START_SHARED_CMD);
+        changed = true;
+      } else {
+        conflicts.push(`${relativePath} SessionStart 是未知定制，未覆盖: ${session}`);
+      }
+    }
+
+    const pretool = String(json?.hooks?.PreToolUse?.[0]?.hooks?.[0]?.command || "");
+    if (!pretool) {
+      setCommand(json, "PreToolUse", PRETOOL_SHARED_CMD, { matcher: SHARED_PRETOOL_MATCHER, timeout: 30 });
+      changed = true;
+    } else if (pretool !== PRETOOL_SHARED_CMD) {
+      if (LEGACY_SHARED_PRETOOL_COMMANDS.has(pretool)) {
+        setCommand(json, "PreToolUse", PRETOOL_SHARED_CMD);
+        changed = true;
+      } else {
+        conflicts.push(`${relativePath} PreToolUse 是未知定制，未覆盖: ${pretool}`);
+      }
+    }
+    if (json?.hooks?.PreToolUse?.[0] && json.hooks.PreToolUse[0].matcher !== SHARED_PRETOOL_MATCHER) {
+      json.hooks.PreToolUse[0].matcher = SHARED_PRETOOL_MATCHER;
+      changed = true;
+    }
+    if (changed) plans.push({ relativePath, path, json });
+  }
+  if (conflicts.length || !write) return { patched: conflicts.length ? [] : plans.map((plan) => plan.relativePath), conflicts };
+  for (const plan of plans) writeFileSync(plan.path, `${JSON.stringify(plan.json, null, 2)}\n`);
+  return { patched: plans.map((plan) => plan.relativePath), conflicts };
 }
 
 function needsPreCompactPatch(command = "") {
@@ -478,6 +552,13 @@ export async function checkAndMaybeUpgrade(projectRoot, options = {}) {
   }
 
   // 即使版本号相同，也必须检查并修复已知旧接线；版本标签不能替代载体活性。
+  const sharedInspection = patchSharedRuntimeHooks(projectRoot, { write: false });
+  if (sharedInspection.conflicts.length) {
+    const conflicts = sharedInspection.conflicts;
+    writeAdaptationFailure(projectRoot, "needs_human_decision", conflicts);
+    const report = adaptationReport({ kitVersion, desiredVersion: desired, conflicts });
+    return { status: "needs-adaptation", localVersion, remoteVersion, kitVersion, added: [], updated: [], patched: [], conflicts, adaptationReport: report };
+  }
   const codex = patchCodexRuntimeHooks(projectRoot);
   const conflicts = codex.conflicts;
   if (conflicts.length) {
@@ -485,9 +566,11 @@ export async function checkAndMaybeUpgrade(projectRoot, options = {}) {
     const report = adaptationReport({ kitVersion, desiredVersion: desired, conflicts });
     return { status: "needs-adaptation", localVersion, remoteVersion, kitVersion, added: [], updated: [], patched: [], conflicts, adaptationReport: report };
   }
+  const shared = patchSharedRuntimeHooks(projectRoot);
   const updated = refreshManagedRuntimeFiles(projectRoot, kitRoot);
   const patched = [
     ...codex.patched,
+    ...shared.patched,
     ...patchPreCompactHooks(projectRoot),
     ...patchIntegrationLineHooks(projectRoot),
   ];

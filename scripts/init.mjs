@@ -125,8 +125,10 @@ const map = [
   ["scripts/governance-status.mjs", "scripts/governance-status.mjs"],
   ["scripts/governance-verify.mjs", "scripts/governance-verify.mjs"],
   ["scripts/governance-hooks/session-start.mjs", "scripts/governance-hooks/session-start.mjs"],
+  ["scripts/governance-hooks/session-start-admission.mjs", "scripts/governance-hooks/session-start-admission.mjs"],
   ["scripts/governance-hooks/session-start-codex.mjs", "scripts/governance-hooks/session-start-codex.mjs"],
   ["scripts/governance-hooks/pre-tool-use.mjs", "scripts/governance-hooks/pre-tool-use.mjs"],
+  ["scripts/governance-hooks/pre-tool-use-admission.mjs", "scripts/governance-hooks/pre-tool-use-admission.mjs"],
   ["scripts/governance-hooks/pre-tool-use-codex.mjs", "scripts/governance-hooks/pre-tool-use-codex.mjs"],
   ["scripts/governance-hooks/stop.mjs", "scripts/governance-hooks/stop.mjs"],
   ["scripts/governance-hooks/pre-compact.mjs", "scripts/governance-hooks/pre-compact.mjs"],
@@ -228,7 +230,9 @@ if (!existsSync(lockPath) || args.force) {
       deterministicStatus: "pass",
       projectFacts: "preserved",
       managedRuntimeFiles: [
+        "scripts/governance-hooks/session-start-admission.mjs",
         "scripts/governance-hooks/session-start-codex.mjs",
+        "scripts/governance-hooks/pre-tool-use-admission.mjs",
         "scripts/governance-hooks/pre-tool-use-codex.mjs",
         "scripts/lib/boot-admission.mjs"
       ]

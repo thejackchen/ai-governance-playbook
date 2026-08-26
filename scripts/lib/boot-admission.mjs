@@ -14,8 +14,7 @@ import { dirname, isAbsolute, join, resolve } from "node:path";
 
 export const DEFAULT_BOOT_ADMISSION_TTL_MS = 12 * 60 * 60 * 1000;
 
-const CRITICAL_FILES = {
-  codex: [
+const UNIVERSAL_CRITICAL_FILES = [
     "governance.lock.json",
     ".codex/hooks.json",
     ".claude/settings.json",
@@ -28,17 +27,25 @@ const CRITICAL_FILES = {
     "scripts/governance-verify.mjs",
     "scripts/governance-lint.mjs",
     "scripts/governance-hooks/session-start.mjs",
+    "scripts/governance-hooks/session-start-admission.mjs",
     "scripts/governance-hooks/session-start-codex.mjs",
     "scripts/governance-hooks/pre-tool-use.mjs",
+    "scripts/governance-hooks/pre-tool-use-admission.mjs",
     "scripts/governance-hooks/pre-tool-use-codex.mjs",
     "scripts/lib/boot-admission.mjs",
     "scripts/lib/extra-repo-facts.mjs",
     "scripts/lib/integration-line.mjs",
-  ],
+];
+const CRITICAL_FILES = {
+  universal: UNIVERSAL_CRITICAL_FILES,
+  codex: UNIVERSAL_CRITICAL_FILES,
 };
 
 const CODEX_SESSION_COMMAND = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/session-start-codex.mjs"';
 const CODEX_PRETOOL_COMMAND = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-tool-use-codex.mjs"';
+const SHARED_SESSION_COMMAND = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/session-start-admission.mjs"';
+const SHARED_PRETOOL_COMMAND = 'node "$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-tool-use-admission.mjs"';
+const WRITE_TOOL_ALIASES = ["Bash", "run_terminal_command", "apply_patch", "Edit", "Write", "MultiEdit", "search_replace"];
 
 function canonicalRoot(root) {
   try { return realpathSync.native(root); } catch { return resolve(root); }
@@ -76,6 +83,16 @@ function checkSingleManagedCommand(add, config, event, expected, id) {
   add(id, commands.length === 1 && commands[0] === expected, commands.length ? commands.join(" | ") : "missing");
 }
 
+function eventMatchers(config, event) {
+  return (config?.hooks?.[event] || []).map((entry) => String(entry?.matcher || "")).filter(Boolean);
+}
+
+function checkWriteMatcherCoverage(add, config, id) {
+  const matcher = eventMatchers(config, "PreToolUse").join("|");
+  const missing = WRITE_TOOL_ALIASES.filter((name) => !new RegExp(`(?:^|\\|)${name}(?:\\||$)`, "i").test(matcher));
+  add(id, missing.length === 0, missing.length ? `missing ${missing.join(",")}` : matcher);
+}
+
 function runProjectVerifier(root) {
   const verifier = join(root, "scripts/governance-verify.mjs");
   if (!existsSync(verifier)) return { ok: false, detail: "missing scripts/governance-verify.mjs" };
@@ -93,7 +110,7 @@ function runProjectVerifier(root) {
   return { ok: true, detail: "scripts/governance-verify.mjs --fast passed" };
 }
 
-export function inspectBootReadiness(root, { runtime = "codex", sharedMessage = "", runProjectValidation = false } = {}) {
+export function inspectBootReadiness(root, { runtime = "universal", sharedMessage = "", runProjectValidation = false } = {}) {
   const checks = [];
   const add = (id, ok, detail) => checks.push({ id, ok: Boolean(ok), detail });
   const lockResult = readJson(join(root, "governance.lock.json"));
@@ -110,14 +127,44 @@ export function inspectBootReadiness(root, { runtime = "codex", sharedMessage = 
     add(`authority:${relativePath}`, existsSync(join(root, relativePath)), relativePath);
   }
 
-  if (runtime === "codex") {
+  let carrierCount = 0;
+  const installedFiles = new Set(lockResult.ok && Array.isArray(lockResult.value?.installedFiles) ? lockResult.value.installedFiles : []);
+  const codexExpected = installedFiles.has(".codex/hooks.json") || existsSync(join(root, ".codex/hooks.json"));
+  if (codexExpected) {
+    carrierCount += 1;
     const hookResult = readJson(join(root, ".codex/hooks.json"));
     add("codex-hooks", hookResult.ok, hookResult.ok ? ".codex/hooks.json" : hookResult.error);
     if (hookResult.ok) {
       checkSingleManagedCommand(add, hookResult.value, "SessionStart", CODEX_SESSION_COMMAND, "codex-session-adapter");
       checkSingleManagedCommand(add, hookResult.value, "PreToolUse", CODEX_PRETOOL_COMMAND, "codex-pretool-adapter");
+      checkWriteMatcherCoverage(add, hookResult.value, "codex-pretool-matcher");
     }
   }
+
+  const claudeExpected = installedFiles.has(".claude/settings.json") || existsSync(join(root, ".claude/settings.json"));
+  if (claudeExpected) {
+    carrierCount += 1;
+    const hookResult = readJson(join(root, ".claude/settings.json"));
+    add("claude-hooks", hookResult.ok, hookResult.ok ? ".claude/settings.json" : hookResult.error);
+    if (hookResult.ok) {
+      checkSingleManagedCommand(add, hookResult.value, "SessionStart", SHARED_SESSION_COMMAND, "claude-session-adapter");
+      checkSingleManagedCommand(add, hookResult.value, "PreToolUse", SHARED_PRETOOL_COMMAND, "claude-pretool-adapter");
+      checkWriteMatcherCoverage(add, hookResult.value, "claude-pretool-matcher");
+    }
+  }
+
+  const grokExpected = installedFiles.has(".grok/hooks/governance.json") || existsSync(join(root, ".grok/hooks/governance.json"));
+  if (grokExpected) {
+    carrierCount += 1;
+    const hookResult = readJson(join(root, ".grok/hooks/governance.json"));
+    add("grok-hooks", hookResult.ok, hookResult.ok ? ".grok/hooks/governance.json" : hookResult.error);
+    if (hookResult.ok) {
+      checkSingleManagedCommand(add, hookResult.value, "SessionStart", SHARED_SESSION_COMMAND, "grok-session-adapter");
+      checkSingleManagedCommand(add, hookResult.value, "PreToolUse", SHARED_PRETOOL_COMMAND, "grok-pretool-adapter");
+      checkWriteMatcherCoverage(add, hookResult.value, "grok-pretool-matcher");
+    }
+  }
+  add("runtime-carrier", carrierCount > 0, carrierCount ? `${carrierCount} carrier(s)` : "missing");
 
   if (runProjectValidation) {
     const projectValidation = runProjectVerifier(root);
@@ -155,17 +202,17 @@ function gitCommonDir(root) {
   return isAbsolute(raw) ? raw : resolve(root, raw);
 }
 
-export function admissionPath(root, runtime = "codex") {
+export function admissionPath(root, runtime = "universal") {
   const worktreeId = createHash("sha256").update(canonicalRoot(root)).digest("hex").slice(0, 16);
   return join(gitCommonDir(root), "ai-governance-admissions", `${worktreeId}-${runtime}.json`);
 }
 
-export function revokeBootAdmission(root, runtime = "codex") {
+export function revokeBootAdmission(root, runtime = "universal") {
   try { rmSync(admissionPath(root, runtime), { force: true }); } catch {}
 }
 
 export function issueBootAdmission(root, {
-  runtime = "codex",
+  runtime = "universal",
   sharedMessage = "",
   now = Date.now(),
   ttlMs = DEFAULT_BOOT_ADMISSION_TTL_MS,
@@ -194,7 +241,7 @@ export function issueBootAdmission(root, {
   return { ok: true, readiness, admission, path };
 }
 
-export function validateBootAdmission(root, { runtime = "codex", now = Date.now() } = {}) {
+export function validateBootAdmission(root, { runtime = "universal", now = Date.now() } = {}) {
   const readiness = inspectBootReadiness(root, { runtime });
   if (!readiness.ok) return { ok: false, reason: "开机自检未通过", readiness };
   let admission;

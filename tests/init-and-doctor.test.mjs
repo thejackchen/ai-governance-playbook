@@ -9,7 +9,12 @@ import { admissionPath } from "../scripts/lib/boot-admission.mjs";
 const kit = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 const playbookVersion = readFileSync(join(kit, "VERSION"), "utf8").trim();
 const badgeRe = new RegExp(`三句核心 v${playbookVersion.replaceAll(".", "\\.")}`);
-const run = (command, args, cwd = kit, input) => spawnSync(command, args, { cwd, input, encoding: "utf8" });
+const run = (command, args, cwd = kit, input, env = {}) => spawnSync(command, args, {
+  cwd,
+  input,
+  encoding: "utf8",
+  env: { ...process.env, ...env },
+});
 const project = () => {
   const dir = mkdtempSync(join(tmpdir(), "governance-kit-"));
   assert.equal(run("git", ["init", "-q"], dir).status, 0);
@@ -320,6 +325,7 @@ test("every new runtime/profile install carries both hook schemas", () => {
 
       const claude = JSON.parse(readFileSync(join(dir, ".claude/settings.json"), "utf8"));
       const codex = JSON.parse(readFileSync(join(dir, ".codex/hooks.json"), "utf8"));
+      const grok = JSON.parse(readFileSync(join(dir, ".grok/hooks/governance.json"), "utf8"));
       for (const event of events) {
         assert.ok(claude.hooks?.[event]?.length, `${runtime}+${profile} Claude ${event}`);
         assert.ok(codex.hooks?.[event]?.length, `${runtime}+${profile} Codex ${event}`);
@@ -331,9 +337,12 @@ test("every new runtime/profile install carries both hook schemas", () => {
       );
       assert.match(
         claude.hooks.SessionStart[0].hooks[0].command,
-        /session-start\.mjs/,
-        `${runtime}+${profile} Claude SessionStart 应保留人类文本脚本`,
+        /session-start-admission\.mjs/,
+        `${runtime}+${profile} Claude SessionStart 应接统一施工许可适配器`,
       );
+      assert.match(claude.hooks.PreToolUse[0].hooks[0].command, /pre-tool-use-admission\.mjs/);
+      assert.match(grok.hooks.SessionStart[0].hooks[0].command, /session-start-admission\.mjs/);
+      assert.match(grok.hooks.PreToolUse[0].hooks[0].command, /pre-tool-use-admission\.mjs/);
       assert.match(
         codex.hooks.PreCompact[0].hooks[0].command,
         /pre-compact-codex\.mjs/,
@@ -420,6 +429,9 @@ test("PreToolUse enforces the configured Grok harness contract", () => {
     "~/.grok/bin/grok -m grok-4.6 --effort high --verbatim --output-format json --prompt-file /tmp/task.md",
     "~/.grok/bin/grok login",
     "curl https://g2api.somro.com/v1/responses",
+    "curl https://api.x.ai/v1/responses",
+    "cat ~/.grok/config.toml",
+    "XAI_API_KEY=secret ~/.grok/bin/grok -m grok-4.6 --effort high --verbatim --output-format plain --prompt-file /tmp/task.md",
   ]) {
     const result = invoke(command);
     assert.equal(result.status, 0, command);
@@ -429,6 +441,7 @@ test("PreToolUse enforces the configured Grok harness contract", () => {
   const diagnostic = invoke("~/.grok/bin/grok models");
   assert.equal(diagnostic.status, 0);
   assert.equal(diagnostic.stdout, "");
+  assert.equal(invoke("rg -n grok AGENTS.md").stdout, "", "只搜索 grok 单词不应误判成 CLI 调用");
 
   const canonical = invoke("~/.grok/bin/grok -m grok-4.6 --effort xhigh --verbatim --output-format plain --prompt-file /tmp/task.md");
   assert.equal(canonical.status, 0);
@@ -500,11 +513,11 @@ test("PreToolUse matches deny patterns per command segment, not across connector
   }
 });
 
-test("SessionStart keeps Claude human text and gives Codex a same-source JSON adapter", () => {
+test("SessionStart gives all runtimes the same admitted human text and wraps Codex as JSON", () => {
   const dir = project();
   assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
   const nested = join(dir, "docs");
-  const human = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start.mjs")], nested);
+  const human = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start-admission.mjs")], nested);
   assert.equal(human.status, 0, human.stderr);
   assert.match(human.stdout, /治理启动状态/);
   assert.throws(() => JSON.parse(human.stdout));
@@ -512,11 +525,61 @@ test("SessionStart keeps Claude human text and gives Codex a same-source JSON ad
   assert.equal(codex.status, 0, codex.stderr);
   const payload = JSON.parse(codex.stdout);
   const shared = human.stdout.trim();
-  assert.equal(payload.systemMessage, `${shared}\n✅ 开机自检: 治理 v${playbookVersion} · 规则注入成功 · 接线正常 · 已签发施工许可`);
+  assert.equal(payload.systemMessage, shared);
   assert.equal(payload.hookSpecificOutput.additionalContext, payload.systemMessage);
   assert.equal(payload.hookSpecificOutput.hookEventName, "SessionStart");
   assert.match(payload.systemMessage, badgeRe);
   assert.match(payload.systemMessage, /当前游标|治理启动状态/);
+
+  const colored = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start-codex.mjs")], nested, undefined, {
+    NO_COLOR: "1",
+    FORCE_COLOR: "1",
+  });
+  assert.doesNotThrow(() => JSON.parse(colored.stdout));
+  assert.doesNotMatch(JSON.parse(colored.stdout).systemMessage, /NO_COLOR|FORCE_COLOR/);
+});
+
+test("Claude and Grok shared write adapter require the same current boot admission", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "standard", "--write"]).status, 0);
+  const hook = join(dir, "scripts/governance-hooks/pre-tool-use-admission.mjs");
+  const writeInput = JSON.stringify({ tool_name: "Write", tool_input: { file_path: join(dir, "scratch.txt") } });
+
+  const beforeBoot = run(process.execPath, [hook], dir, writeInput, { GROK_HOOK_EVENT: "PreToolUse" });
+  assert.equal(JSON.parse(beforeBoot.stdout).decision, "deny");
+  assert.match(JSON.parse(beforeBoot.stdout).reason, /没有施工许可/);
+
+  const session = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start-admission.mjs")], dir);
+  assert.match(session.stdout, /已签发施工许可/);
+  const admitted = run(process.execPath, [hook], dir, writeInput, { GROK_HOOK_EVENT: "PreToolUse" });
+  assert.equal(admitted.stdout, "");
+
+  const grokPath = join(dir, ".grok/hooks/governance.json");
+  const grok = JSON.parse(readFileSync(grokPath, "utf8"));
+  grok.hooks.PreToolUse[0].hooks[0].command = "node custom/gate.mjs";
+  writeFileSync(grokPath, `${JSON.stringify(grok, null, 2)}\n`);
+  const drifted = run(process.execPath, [hook], dir, writeInput, { GROK_HOOK_EVENT: "PreToolUse" });
+  assert.equal(JSON.parse(drifted.stdout).decision, "deny");
+  assert.match(JSON.parse(drifted.stdout).reason, /开机自检未通过|关键接线已变化/);
+});
+
+test("governance control plane always requires a claim while ordinary docs remain exempt", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "standard", "--write"]).status, 0);
+  const session = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start-admission.mjs")], dir);
+  assert.match(session.stdout, /已签发施工许可/);
+  const hook = join(dir, "scripts/governance-hooks/pre-tool-use-admission.mjs");
+  const control = run(process.execPath, [hook], dir, JSON.stringify({
+    tool_name: "Write",
+    tool_input: { file_path: join(dir, "governance/policy.json") },
+  }), { GROK_SESSION_ID: "fixture", GROK_HOOK_EVENT: "PreToolUse" });
+  assert.equal(JSON.parse(control.stdout).decision, "deny");
+  assert.match(JSON.parse(control.stdout).reason, /认领门拦截/);
+  const docs = run(process.execPath, [hook], dir, JSON.stringify({
+    tool_name: "Write",
+    tool_input: { file_path: join(dir, "docs/notes.md") },
+  }), { GROK_SESSION_ID: "fixture", GROK_HOOK_EVENT: "PreToolUse" });
+  assert.equal(docs.stdout, "");
 });
 
 test("Codex hooks resolve governance state from a nested working directory", () => {
@@ -788,7 +851,10 @@ test("Standard profile carries no Codex/OpenAI CI stowaway outside Codex runtime
     "governance.lock.json",
     "scripts/governance-lint.mjs",
     "governance/claim-gate.md",
+    "governance/registry.md",
     "governance/policy.json",
+    "AGENTS.md",
+    "CLAUDE.md",
     "scripts/claim.mjs",
     "scripts/governance-hooks/session-start-codex.mjs",
     "scripts/governance-hooks/pre-tool-use-codex.mjs",
@@ -804,8 +870,6 @@ test("Standard profile carries no Codex/OpenAI CI stowaway outside Codex runtime
         if (exempt.has(relative(dir, full))) continue;
         let body = "";
         try { body = readFileSync(full, "utf8"); } catch { continue; }
-        const relativePath = relative(dir, full);
-        if (relativePath === "AGENTS.md" || relativePath === "CLAUDE.md") body = body.replace("`codex exec`", "");
         if (/codex|openai/i.test(body)) hits.push(full);
       }
     };

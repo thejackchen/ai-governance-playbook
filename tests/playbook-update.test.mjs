@@ -10,6 +10,7 @@ import {
   formatUpdateReport,
   patchPreCompactHooks,
   patchCodexRuntimeHooks,
+  patchSharedRuntimeHooks,
   planSafeAdditions,
 } from "../scripts/lib/playbook-update.mjs";
 
@@ -106,7 +107,9 @@ test("upgrade patches missing PreCompact and replaces echo without touching othe
   }, null, 2)}\n`);
   writeFileSync(join(dir, ".claude/settings.json"), `${JSON.stringify({
     hooks: {
-      SessionStart: [{ hooks: [{ type: "command", command: "keep-claude-start" }] }],
+      SessionStart: [{ hooks: [{ type: "command", command: "node scripts/governance-hooks/session-start.mjs" }] }],
+      PreToolUse: [{ hooks: [{ type: "command", command: "node scripts/governance-hooks/pre-tool-use.mjs" }] }],
+      Stop: [{ hooks: [{ type: "command", command: "keep-claude-stop" }] }],
       PreCompact: [{ hooks: [{ type: "command", command: "echo leftover" }] }],
     },
   }, null, 2)}\n`);
@@ -121,11 +124,44 @@ test("upgrade patches missing PreCompact and replaces echo without touching othe
   assert.equal(codex.hooks.Stop[0].hooks[0].command, "keep-stop");
   assert.match(codex.hooks.PreCompact[0].hooks[0].command, /pre-compact-codex\.mjs/);
   assert.match(claude.hooks.PreCompact[0].hooks[0].command, /pre-compact\.mjs/);
+  assert.match(claude.hooks.SessionStart[0].hooks[0].command, /session-start-admission\.mjs/);
+  assert.match(claude.hooks.PreToolUse[0].hooks[0].command, /pre-tool-use-admission\.mjs/);
+  assert.equal(claude.hooks.Stop[0].hooks[0].command, "keep-claude-stop");
   assert.equal(/echo/.test(claude.hooks.PreCompact[0].hooks[0].command), false);
   assert.ok(result.patched.includes(".codex/hooks.json"));
   assert.ok(result.patched.includes(".claude/settings.json"));
   const again = patchPreCompactHooks(dir);
   assert.deepEqual(again, []);
+});
+
+test("unknown shared runtime customization is preserved and blocks adaptation atomically", async () => {
+  const dir = project(kitVersion);
+  mkdirSync(join(dir, ".claude"), { recursive: true });
+  mkdirSync(join(dir, ".codex"), { recursive: true });
+  const claudePath = join(dir, ".claude/settings.json");
+  const codexPath = join(dir, ".codex/hooks.json");
+  const claudeOriginal = `${JSON.stringify({ hooks: {
+    SessionStart: [{ hooks: [{ type: "command", command: "node custom/start.mjs" }] }],
+    PreToolUse: [{ hooks: [{ type: "command", command: "node custom/gate.mjs" }] }],
+  } }, null, 2)}\n`;
+  const codexOriginal = `${JSON.stringify({ hooks: {
+    SessionStart: [{ hooks: [{ type: "command", command: "node scripts/governance-hooks/session-start.mjs" }] }],
+    PreToolUse: [{ hooks: [{ type: "command", command: "node scripts/governance-hooks/pre-tool-use.mjs" }] }],
+  } }, null, 2)}\n`;
+  writeFileSync(claudePath, claudeOriginal);
+  writeFileSync(codexPath, codexOriginal);
+  assert.equal(patchSharedRuntimeHooks(dir, { write: false }).conflicts.length, 2);
+
+  const result = await checkAndMaybeUpgrade(dir, {
+    skipCache: true,
+    remote: { ok: true, version: kitVersion },
+    apply: "safe",
+  });
+  assert.equal(result.status, "needs-adaptation");
+  assert.equal(readFileSync(claudePath, "utf8"), claudeOriginal);
+  assert.equal(readFileSync(codexPath, "utf8"), codexOriginal);
+  assert.deepEqual(result.updated, []);
+  assert.deepEqual(result.patched, []);
 });
 
 test("current version still repairs known legacy Codex wiring", async () => {

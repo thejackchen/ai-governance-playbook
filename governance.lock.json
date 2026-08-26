@@ -1,18 +1,20 @@
 {
   "schemaVersion": 1,
-  "playbookVersion": "3.7.2",
-  "kitFingerprint": "sha256:7fb34395f95b86f37b49d43eeb7a2e911a240a612ba24e245d5b4b3cac230d91",
+  "playbookVersion": "3.7.3",
+  "kitFingerprint": "sha256:4201591d0e4c89c730e72981036d8083a76af22b7fc886f401dbbcad4f523f69",
   "runtime": "codex",
   "profile": "standard",
   "ruleBudget": 24,
   "extensions": [],
   "adaptation": {
     "schemaVersion": 1,
-    "sourceVersion": "3.7.2",
+    "sourceVersion": "3.7.3",
     "deterministicStatus": "pass",
     "projectFacts": "preserved",
     "managedRuntimeFiles": [
+      "scripts/governance-hooks/session-start-admission.mjs",
       "scripts/governance-hooks/session-start-codex.mjs",
+      "scripts/governance-hooks/pre-tool-use-admission.mjs",
       "scripts/governance-hooks/pre-tool-use-codex.mjs",
       "scripts/lib/boot-admission.mjs"
     ]
@@ -42,8 +44,10 @@
     "governance/registry.md",
     "scripts/governance-hooks/pre-compact-codex.mjs",
     "scripts/governance-hooks/pre-compact.mjs",
+    "scripts/governance-hooks/pre-tool-use-admission.mjs",
     "scripts/governance-hooks/pre-tool-use-codex.mjs",
     "scripts/governance-hooks/pre-tool-use.mjs",
+    "scripts/governance-hooks/session-start-admission.mjs",
     "scripts/governance-hooks/session-start-codex.mjs",
     "scripts/governance-hooks/session-start.mjs",
     "scripts/governance-hooks/stop.mjs",

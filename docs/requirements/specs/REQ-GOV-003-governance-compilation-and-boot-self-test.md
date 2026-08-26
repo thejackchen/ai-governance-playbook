@@ -9,11 +9,12 @@
 1. 远端 playbook 继续只保存通用原则、适配规则和验收合同，不保存消费项目事实。
 2. 升级器把项目文件分成项目所有、playbook 管理、已知旧接线和未知定制四类；只自动更新 playbook 管理件和可证明的旧接线，未知定制必须停止并报告。
 3. 版本相同也要检查运行时接线，不能用 lock 的版本号跳过载体修复。
-4. Codex Session Start 必须经 JSON 适配器注入同源状态，并完成版本、接线、权威入口和输出铭牌自检。
-5. 自检成功才签发短期施工许可；Codex 写文件前验证许可。缺失、过期或关键载体变化时 fail-closed，读与诊断仍可进行。
+4. Codex Session Start 必须经 JSON 适配器注入同源状态；Claude Code 与 Grok 经文本适配器读取同一状态。三者完成版本、接线、权威入口和输出铭牌自检。
+5. 自检成功才签发一张项目级短期施工许可；Codex、Claude Code、Grok 写文件前都验证同一许可。缺失、过期或关键载体变化时 fail-closed，读与诊断仍可进行。
 6. 定制后的项目实例必须输出确定性适配报告；内容语义检查以冻结规则、固定 I/O、golden 案例和 `pass | block | needs_human_decision` 裁决，负责人拥有最终解释权。
 7. 母版通用检查与项目领域检查分层；开机许可必须真实运行项目验证器。受管 SessionStart/PreToolUse 各只能有一条接线，关键启动载体变化必须使许可失效。
 8. SessionStart 内发生运行时热升级时，本会话必须停在 `restart_required`；只有下一次新适配器开机并复验通过才能转为 `pass`。
+9. `governance/`、三套 Hook、git hooks、根宪法和 lock 等治理控制面始终需要有效认领；不能靠普通文档豁免绕过。
 
 ## 这次不碰什么
 

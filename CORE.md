@@ -175,8 +175,8 @@ AI 审计默认只读，输出固定结构并附证据。未满足下述条件�
 - 本仓记录：`governance.lock.json` 的 `playbookVersion`、kit 指纹和项目适配结果。lock 只在适配与最低验收完成后前移，不能把“下载过模板”冒充“项目已采用”；`deterministicStatus=pass` 必须来自项目实例验证器的真实通过，不能由升级器自行填写。
 - **治理编译**：母版先按消费项目的真实目录、权威文本、运行时和风险边界生成项目实例。项目自己的宪法、游标、业务文档和 policy 不由模板原样覆盖；playbook 管理的薄适配器允许随版本更新；能够精确识别的旧接线可做窄迁移；未知定制停止并交负责人裁决。
 - **两层验收**：确定性层检查版本、文件归属、接线、入口可读和载体活性；语义层只检查机器判不了的核心含义是否保持，并遵守 §5 的冻结规则、固定 I/O、golden 案例和 `pass | block | needs_human_decision`。负责人拥有最终解释权。
-- **开机自检**：Session Start 不只比版本，还验证当前运行时确实收到适配后的规则，并执行消费项目自己的 `scripts/governance-verify.mjs --fast`。母版 doctor 只核对通用版本、受管适配器和唯一接线，项目目录与领域规则由项目验证器解释；两层任一失败都不得签发许可。
-- **线路完整性**：SessionStart 与 PreToolUse 各只能存在一条受管接线；命令名碰巧包含目标脚本不算通过。施工许可指纹覆盖三套 Hook、共享启动/动作脚本、policy、知识入口和项目验证器，任一变化立即失效。
+- **开机自检**：Session Start 不只比版本，还验证当前运行时确实收到适配后的规则，并执行消费项目自己的 `scripts/governance-verify.mjs --fast`。Codex、Claude Code、Grok 经各自载体进入同一个 admission 适配器并共用一张项目级许可；母版 doctor 只核对通用版本、受管适配器和唯一接线，项目目录与领域规则由项目验证器解释；两层任一失败都不得签发许可。
+- **线路完整性**：三个运行时的 SessionStart 与 PreToolUse 各只能存在一条精确受管接线；命令名碰巧包含目标脚本不算通过。施工许可指纹覆盖三套 Hook、统一许可适配器、共享启动/动作脚本、policy、知识入口和项目验证器，任一变化立即失效。治理控制面始终进入认领门，不能在无许可或无认领时拆门。
 - **热升级分两次开机**：运行时适配器在当前 SessionStart 内被替换时，lock 先记 `restart_required`，本会话禁止施工；下一次 SessionStart 使用新适配器并通过项目验证后才写 `pass`。未知定制或验证失败分别写 `needs_human_decision` / `failed`，避免旧进程继续用旧门发证。
 - 本机 kit 领先 GitHub = 未发布，不把未推送的版本写进消费仓 lock。
 - 离线且已有未过期的已验适配可降级继续；适配冲突、接线失效或从未验收不得以旧 lock 冒充可施工。
@@ -307,7 +307,7 @@ AI 审计默认只读，输出固定结构并附证据。未满足下述条件�
 ### 权威载体
 
 - `AGENTS.md`：短、准确、每次自动加载；放项目意图摘要、权威路由、红线、验证命令和完成标准。
-- `.codex/hooks.json`：配置 `SessionStart`、`PreToolUse`、`Stop`、`PreCompact`。其中 `SessionStart` 与 `PreCompact` 需经最薄 JSON 适配器包装共享文本播报，把同一份状态同时送入 `systemMessage` 与 `hookSpecificOutput.additionalContext`，不要复制第二套状态生成逻辑。
+- `.codex/hooks.json`：配置 `SessionStart`、`PreToolUse`、`Stop`、`PreCompact`。其中 `SessionStart` 只把统一 admission 文本包装成 JSON，`PreToolUse` 进入统一许可门；`PreCompact` 仍用最薄 JSON 适配器。不要复制第二套状态或许可逻辑。
 - `.codex/rules/default.rules`：对明确危险命令做第二层约束；Rules 仍属实验能力，不能单独承担红线。
 - GitHub Actions：运行确定性验证；`openai/codex-action`只做只读语义审计。
 
@@ -349,9 +349,9 @@ Grok 的 PreToolUse 用 `deny`（Stop 仍用 `block`）。共享脚本在检测�
 ### 权威载体
 
 - `AGENTS.md`：与其它运行时同一份项目指令；Grok 也读取 `CLAUDE.md` 作兼容。
-- `.grok/hooks/*.json`：项目级 SessionStart / PreToolUse / Stop / PreCompact，指向与 Claude/Codex **同一批** `scripts/governance-hooks/*.mjs`。不另写核心。
+- `.grok/hooks/*.json`：项目级 SessionStart / PreToolUse / Stop / PreCompact；前两者经统一 admission 薄适配器进入与 Claude/Codex 同一张施工许可，底层规则仍指向同一批共享脚本。不另写核心。
 - Grok 默认还会读 `.claude/settings.json`；第一等入口仍是 `.grok/hooks/`，以免关掉 Claude 兼容后开工钩子消失。
-- 项目 hook 须文件夹信任才会跑；未信任时静默跳过。兜底 = 手动运行 `node scripts/governance-hooks/session-start.mjs`。
+- 项目 hook 须文件夹信任才会跑；未信任时静默跳过。兜底 = 手动运行 `node scripts/governance-hooks/session-start-admission.mjs`。
 
 ### 已知边界
 

@@ -162,8 +162,19 @@ function evaluateGrokHarness(commandCandidates, config) {
   const models = new Set(config.models || []);
   const efforts = new Set(config.efforts || []);
   for (const candidate of commandCandidates) {
+    for (const key of config.forbidEnvironmentKeys || []) {
+      const escaped = String(key).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      if (new RegExp(`(?:^|\\s)(?:export\\s+)?${escaped}\\s*=`, "i").test(candidate)) {
+        return `Grok harness 拦截：禁止调用方读取或注入 ${key}`;
+      }
+    }
+    for (const fragment of config.forbidCredentialPathFragments || []) {
+      if (candidate.includes(fragment) && /^(?:cat|sed|awk|grep|rg|head|tail|less|more|cp|python(?:3)?|node|perl|ruby|openssl)\b/i.test(candidate.trim())) {
+        return `Grok harness 拦截：禁止调用方读取 ${fragment}`;
+      }
+    }
     for (const host of config.forbidDirectHttpHosts || []) {
-      if (/\b(?:curl|wget|http|xh)\b/i.test(candidate) && candidate.includes(host)) {
+      if (/\b(?:curl|wget|http|xh|python3?|node)\b/i.test(candidate) && candidate.includes(host)) {
         return `Grok harness 拦截：禁止调用方直打 ${host}，请使用已配置的 ~/.grok/bin/grok`;
       }
     }
@@ -173,7 +184,7 @@ function evaluateGrokHarness(commandCandidates, config) {
         return `Grok harness 拦截：禁止 ${commandName} login`;
       }
     }
-    const match = candidate.match(/(?:^|\s)(?:~\/\.grok\/bin\/|\/[^\s]*\/)?grok(?=\s|$)([\s\S]*)/i);
+    const match = candidate.match(/^(?:(?:env|command)\s+)?(?:[A-Za-z_][A-Za-z0-9_]*=\S+\s+)*(?:(?:~|\/\S+)\/\.grok\/bin\/)?grok(?=\s|$)([\s\S]*)/i);
     if (!match) continue;
     const args = match[1] || "";
     if (/^\s*(?:--version|-v|version|models|inspect|doctor|help)(?:\s|$)/i.test(args)) continue;
@@ -229,9 +240,6 @@ async function evaluateClaimGate({ input: hookInput, toolName: currentToolName, 
   const operationCwd = hookInput.cwd || process.cwd();
   let relativeTarget = null;
   if (isWriteTool) {
-    // 文档写入是明确豁免面；先短路，保持 docs/*.md 写入不增加 Git/账本读取。
-    const rawTarget = targetPath.replaceAll("\\", "/");
-    if (/\.md$/i.test(rawTarget) || /(^|\/)docs\//i.test(rawTarget)) return null;
     if (targetPath) {
       try {
         const context = claimModule.resolveGitContext({ cwd: operationCwd });

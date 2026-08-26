@@ -304,7 +304,7 @@ try {
     if (typeof policy.claimGate !== "object" || policy.claimGate === null || Array.isArray(policy.claimGate)) {
       errors.push("governance/policy.json claimGate 需为对象");
     } else {
-      for (const key of ["codeRoots", "exemptPatterns", "bashClaimPatterns"]) {
+      for (const key of ["codeRoots", "alwaysClaimPaths", "exemptPatterns", "bashClaimPatterns"]) {
         if (policy.claimGate[key] !== undefined && !Array.isArray(policy.claimGate[key])) {
           errors.push(`governance/policy.json claimGate.${key} 必须是数组`);
         }
@@ -315,7 +315,7 @@ try {
     if (typeof policy.grokHarness !== "object" || policy.grokHarness === null || Array.isArray(policy.grokHarness)) {
       errors.push("governance/policy.json grokHarness 需为对象");
     } else {
-      for (const key of ["models", "efforts", "requiredFlags", "forbiddenFlags", "forbidLoginCommands", "forbidDirectHttpHosts"]) {
+      for (const key of ["models", "efforts", "requiredFlags", "forbiddenFlags", "forbidLoginCommands", "forbidDirectHttpHosts", "forbidEnvironmentKeys", "forbidCredentialPathFragments"]) {
         if (!Array.isArray(policy.grokHarness[key])) errors.push(`governance/policy.json grokHarness.${key} 必须是数组`);
       }
       if (!(policy.grokHarness.models || []).includes(policy.grokHarness.defaultModel)) {
