@@ -4,7 +4,7 @@
 
 ## 当前游标
 
-当前线上基线为 v3.5.0（执行正本结账制与内容语义门）。正在把“补文件+改 lock”的旧升级器收敛为治理编译器：通用母版按项目事实适配，已知旧接线可迁移、未知定制停手，版本相同也检查载体；Codex Session Start 增加开机自检和短期施工许可。完成标准见 REQ-GOV-003；线上正本仍是 GitHub 默认分支。
+当前线上基线为 v3.6.1：通用母版先按项目事实适配，已知旧接线窄迁移、未知定制停手；版本相同也检查载体。Codex Session Start 自检通过后签发短期施工许可。远端 main 与 AIOS 正负开机 fixture 已回读，后续观察真实会话误报与跨运行时需求。
 
 ## 硬约束
 
@@ -22,7 +22,7 @@
 | v3核心与内容审计 | 完成 | 旧规则逐条归并、降级或删除 | 根据前向测试修订 | - | `CORE.md`、`docs/audits/v3-content-audit.md` |
 | 运行时与Profile | 完成 | Codex/Claude Code/Generic适配器和三档Profile | 验证安装契约 | - | `CORE.md 附(运行时适配)`、`profiles/README.md` |
 | 脚手架与门禁 | 完成 | init/doctor/verify、Hooks、Rules、定时CI和契约测试可运行 | 随运行时变化持续复测 | - | `setup.md`、`setup.md 附B(验收自检)` |
-| 治理编译与开机自检 | 推进 | REQ-GOV-003 规格已受理 | 实现适配分类、同版本接线修复、Codex 开机自检与施工许可；在 AIOS 做正负验收 | - | `docs/requirements/specs/REQ-GOV-003-governance-compilation-and-boot-self-test.md`、`docs/playbook-update.md` |
+| 治理编译与开机自检 | 完成 | v3.6.1 已发布；AIOS 缺许可拦截、正常签发、过期拒绝 fixture 通过 | 观察真实会话误报；未知定制继续由负责人裁决 | Codex 项目 Hook 仍需真实 UI trust | `docs/requirements/specs/REQ-GOV-003-governance-compilation-and-boot-self-test.md`、`docs/playbook-update.md` |
 | 前端设计系统扩展 | 推进 | 产品架构正本、设计语言章节、representativeJourneys 结构/证据生命周期门、扩展验证器和SessionStart触达已落盘 | 由消费项目选择页面族、代表链路、参考包并配置真实检查；本轮 local-only 未发布 | - | `extensions/frontend-design-system/README.md`、`docs/decisions/001-frontend-design-language-journeys.md`、`CORE.md` |
 | 无上下文前向测试 | 完成 | 新项目、存量迁移和红线压力通过 | 后续版本复用同类夹具 | - | `docs/evals/v3-forward-tests.md` |
-| v3发布 | 推进 | v3.4.4 日常目录=公共主干 | 提交、推送并回读远端；不创建正式tag | Codex 非托管 Hook 仍需真实 UI trusted + `/hooks` 审核验收 | `CHANGELOG.md` |
+| v3发布 | 推进 | v3.6.1 治理编译与开机许可已推送并回读 | 按消费项目逐步升级；不创建正式tag | Codex 非托管 Hook 仍需真实 UI trusted + `/hooks` 审核验收 | `CHANGELOG.md` |

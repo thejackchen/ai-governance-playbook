@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "playbookVersion": "3.6.0",
-  "kitFingerprint": "sha256:afa5da5291608cef5975b545dea991fe2d59cc62c768324900a081881b56d7c1",
+  "playbookVersion": "3.6.1",
+  "kitFingerprint": "sha256:2ca16bcad38fa9a80cdbd99af1324c9b3d5c557584282586d719df992cf92e19",
   "runtime": "codex",
   "profile": "standard",
   "ruleBudget": 24,
   "extensions": [],
   "adaptation": {
     "schemaVersion": 1,
-    "sourceVersion": "3.6.0",
+    "sourceVersion": "3.6.1",
     "deterministicStatus": "pass",
     "projectFacts": "preserved",
     "managedRuntimeFiles": [
