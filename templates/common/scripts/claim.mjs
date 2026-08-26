@@ -31,7 +31,7 @@ export const DEFAULT_CLAIM_GATE = {
     "\\.gen\\.",
     "(^|/)node_modules/",
   ],
-  bashClaimPatterns: ["\\bcodex\\s+exec\\b", "\\bgrok\\s+(-p|--single)\\b"],
+  bashClaimPatterns: ["\\bcodex\\s+exec\\b", "\\bgrok\\b[^\\n]*--prompt-file(?:=|\\s)"],
 };
 
 export class ClaimDataError extends Error {

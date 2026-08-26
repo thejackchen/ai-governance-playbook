@@ -14,14 +14,14 @@ $(git rev-parse --git-common-dir)/governance-claims/<claimId>.json
 
 ## 默认策略与记录 schema
 
-默认行为代码范围是 `src/` 和 `scripts/`；`.md`、`docs/**`、锁文件、生成文件和 `node_modules` 豁免。默认 Bash 触发模式是 `codex exec`。项目可在 `governance/policy.json` 的 `claimGate` 中浅覆盖 `codeRoots`、`exemptPatterns` 和 `bashClaimPatterns`，不需要修改脚本：
+默认行为代码范围是 `src/` 和 `scripts/`；`.md`、`docs/**`、锁文件、生成文件和 `node_modules` 豁免。默认 Bash 触发模式是 `codex exec` 与带 `--prompt-file` 的 Grok harness。项目可在 `governance/policy.json` 的 `claimGate` 中浅覆盖 `codeRoots`、`exemptPatterns` 和 `bashClaimPatterns`，不需要修改脚本：
 
 ```json
 {
   "claimGate": {
     "codeRoots": ["src/", "scripts/"],
     "exemptPatterns": ["\\.md$", "^docs/"],
-    "bashClaimPatterns": ["\\bcodex\\s+exec\\b"]
+    "bashClaimPatterns": ["\\bcodex\\s+exec\\b", "\\bgrok\\b[^\\n]*--prompt-file(?:=|\\s)"]
   }
 }
 ```

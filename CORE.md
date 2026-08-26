@@ -298,7 +298,7 @@ AI 审计默认只读，输出固定结构并附证据。未满足下述条件�
 | 动作前 Hook | `PreToolUse`，可拒绝部分工具调用 | `PreToolUse` | `PreToolUse`（`deny`） | shell wrapper / 权限 |
 | 收尾 Hook | `Stop`，可要求继续修复 | `Stop` | `Stop` | pre-commit / CI |
 | 命令策略 | `.codex/rules/*.rules`，实验能力 | PreToolUse / permissions | PreToolUse | 容器、sudo、shell policy |
-| 非交互执行 | `codex exec` | Claude CLI | `grok -p` | 自选 agent CLI |
+| 非交互执行 | `codex exec` | Claude CLI | `~/.grok/bin/grok --verbatim --output-format plain --prompt-file <文件>` | 自选 agent CLI |
 | GitHub AI | `openai/codex-action` | 未内置，自行接入 | 未内置，自行接入 | 未内置，自行接入 |
 | 本地定时任务 | Codex/ChatGPT Scheduled Tasks | 外部 cron / CI | 外部 cron / CI | 外部 cron / CI |
 
@@ -357,7 +357,9 @@ Grok 的 PreToolUse 用 `deny`（Stop 仍用 `block`）。共享脚本在检测�
 
 - PreToolUse 拦截 JSON：`decision: "deny"`。未识别的 `block` 在 PreToolUse 上会 fail-open。
 - 工具名是 `run_terminal_command` / `search_replace`；matcher 里 Claude 名（`Bash`/`Edit`/`Write`）有别名，脚本侧仍应同时认两套名字。
-- 无头 `grok -p` 与 `codex exec` 同类，派单前须有认领。
+- 无头 Grok 只走已经配置好的 harness：`~/.grok/bin/grok -m <grok-4.6|grok-4.5> --effort <low|medium|high|xhigh> --verbatim --output-format plain --prompt-file <文件>`；默认 `grok-4.6/high`。长提示必须进文件，stdout 才是回答。
+- 调用方不得读取或注入密钥，不改 `~/.codex/config.toml`，不直接向模型网关发 HTTP；不得使用 `-p` / `--single`、`--always-approve`、`grok login` 或 `codex login`。否则会绕开 Grok 的工具、权限、压缩和技能，或扩大授权面。
+- 上述 Grok harness 与 `codex exec` 同类，派单前须有认领；项目 PreToolUse 应把调用合同和认领同时装进机器门。
 
 ## Generic
 

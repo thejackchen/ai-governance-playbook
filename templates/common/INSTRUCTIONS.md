@@ -34,6 +34,12 @@
 - 眼前这份代码必须含有 `integrationLine` 公共线上已有的提交。不是分支必须叫某个名字。缺同事的提交时拦改文件，不拦测试；已经含有公共线即使在旁支上也可以写。
 {{PROJECT_RED_LINES}}
 
+## Grok harness
+
+- 需要 Grok 时，不改其它 agent 的配置，不自己发模型 HTTP，不读取或注入密钥；只调用已经配置好的 `~/.grok/bin/grok`。密钥由 Grok 自己的用户配置管理，调用方把它当作不透明实现细节。
+- 标准入口：`~/.grok/bin/grok -m <模型> --effort <强度> --verbatim --output-format plain --prompt-file <文件>`。模型只能是 `grok-4.6` 或 `grok-4.5`；强度只能是 `low`、`medium`、`high`、`xhigh`；默认 `grok-4.6/high`。
+- 长提示必须进文件；`stdout` 是回答。禁止 `-p` / `--single`、`--always-approve` 和 `grok login`。这是 Grok harness，不得改成其它 agent 直打模型网关，否则会丢失 Grok CLI 的工具、权限、压缩和技能。
+
 ## 决策
 
 - 可逆且局部：自行决定，说明理由并验证。

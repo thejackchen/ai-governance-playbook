@@ -24,7 +24,17 @@
       "\\.gen\\.",
       "(^|/)node_modules/"
     ],
-    "bashClaimPatterns": ["\\bcodex\\s+exec\\b", "\\bgrok\\s+(-p|--single)\\b"]
+    "bashClaimPatterns": ["\\bcodex\\s+exec\\b", "\\bgrok\\b[^\\n]*--prompt-file(?:=|\\s)"]
+  },
+  "grokHarness": {
+    "models": ["grok-4.6", "grok-4.5"],
+    "efforts": ["low", "medium", "high", "xhigh"],
+    "defaultModel": "grok-4.6",
+    "defaultEffort": "high",
+    "requiredFlags": ["--verbatim", "--output-format", "--prompt-file"],
+    "forbiddenFlags": ["-p", "--single", "--always-approve"],
+    "forbidLoginCommands": ["grok"],
+    "forbidDirectHttpHosts": ["g2api.somro.com"]
   },
   "integrationLine": {
     "remote": "origin",

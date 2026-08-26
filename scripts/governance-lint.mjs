@@ -311,6 +311,21 @@ try {
       }
     }
   }
+  if (policy.grokHarness !== undefined) {
+    if (typeof policy.grokHarness !== "object" || policy.grokHarness === null || Array.isArray(policy.grokHarness)) {
+      errors.push("governance/policy.json grokHarness 需为对象");
+    } else {
+      for (const key of ["models", "efforts", "requiredFlags", "forbiddenFlags", "forbidLoginCommands", "forbidDirectHttpHosts"]) {
+        if (!Array.isArray(policy.grokHarness[key])) errors.push(`governance/policy.json grokHarness.${key} 必须是数组`);
+      }
+      if (!(policy.grokHarness.models || []).includes(policy.grokHarness.defaultModel)) {
+        errors.push("governance/policy.json grokHarness.defaultModel 必须属于 models");
+      }
+      if (!(policy.grokHarness.efforts || []).includes(policy.grokHarness.defaultEffort)) {
+        errors.push("governance/policy.json grokHarness.defaultEffort 必须属于 efforts");
+      }
+    }
+  }
   for (const pattern of policy.denyCommandPatterns || []) {
     try { new RegExp(pattern, "i"); } catch (e) { errors.push(`非法 denyCommandPatterns 正则: ${pattern}`); }
   }

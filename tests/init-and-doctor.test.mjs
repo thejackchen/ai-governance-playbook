@@ -406,6 +406,35 @@ test("PreToolUse blocks destructive commands and allows safe commands", () => {
   assert.equal(safe.stdout, "");
 });
 
+test("PreToolUse enforces the configured Grok harness contract", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
+  const hook = join(dir, "scripts/governance-hooks/pre-tool-use.mjs");
+  const invoke = (command) => run(process.execPath, [hook], dir, JSON.stringify({ tool_name: "Bash", tool_input: { command } }));
+
+  for (const command of [
+    "~/.grok/bin/grok -m grok-4.6 --effort high -p 'do work'",
+    "~/.grok/bin/grok -m other --effort high --verbatim --output-format plain --prompt-file /tmp/task.md",
+    "~/.grok/bin/grok -m grok-4.6 --effort max --verbatim --output-format plain --prompt-file /tmp/task.md",
+    "~/.grok/bin/grok -m grok-4.6 --effort high --output-format plain --prompt-file /tmp/task.md",
+    "~/.grok/bin/grok -m grok-4.6 --effort high --verbatim --output-format json --prompt-file /tmp/task.md",
+    "~/.grok/bin/grok login",
+    "curl https://g2api.somro.com/v1/responses",
+  ]) {
+    const result = invoke(command);
+    assert.equal(result.status, 0, command);
+    assert.equal(JSON.parse(result.stdout).decision, "block", `expected Grok harness block for: ${command}`);
+  }
+
+  const diagnostic = invoke("~/.grok/bin/grok models");
+  assert.equal(diagnostic.status, 0);
+  assert.equal(diagnostic.stdout, "");
+
+  const canonical = invoke("~/.grok/bin/grok -m grok-4.6 --effort xhigh --verbatim --output-format plain --prompt-file /tmp/task.md");
+  assert.equal(canonical.status, 0);
+  assert.equal(canonical.stdout, "");
+});
+
 test("PreToolUse command normalization catches equivalent bypass spellings", () => {
   const dir = project();
   assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);

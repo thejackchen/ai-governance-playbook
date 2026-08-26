@@ -61,6 +61,9 @@ for (const pattern of policy.denyCommandPatterns || []) {
   if (candidates.some((c) => re.test(c))) block(`命令命中治理禁止模式: ${pattern}`);
 }
 
+const grokHarnessReason = evaluateGrokHarness(candidates, policy.grokHarness);
+if (grokHarnessReason) block(grokHarnessReason);
+
 // protectedPaths 判定面最小化(3.1.2):判「改什么」只看目标路径字段,不做全输入序列化子串匹配——
 // 被保护文件名必然被合法引用(文档链接/注释/commit message),全文匹配首启即误伤(首个安装项目当场实证);
 // 误伤率决定门禁存活率(高误伤门禁终被 --no-verify 或拆除,保护归零)。
@@ -152,6 +155,44 @@ function stripQuotesAndEscapes(token) {
   }
   t = t.replace(/^\\+/, "");
   return t;
+}
+
+function evaluateGrokHarness(commandCandidates, config) {
+  if (!config || typeof config !== "object") return null;
+  const models = new Set(config.models || []);
+  const efforts = new Set(config.efforts || []);
+  for (const candidate of commandCandidates) {
+    for (const host of config.forbidDirectHttpHosts || []) {
+      if (/\b(?:curl|wget|http|xh)\b/i.test(candidate) && candidate.includes(host)) {
+        return `Grok harness 拦截：禁止调用方直打 ${host}，请使用已配置的 ~/.grok/bin/grok`;
+      }
+    }
+    for (const commandName of config.forbidLoginCommands || []) {
+      const escaped = String(commandName).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      if (new RegExp(`(?:^|\\s)${escaped}\\s+login(?:\\s|$)`, "i").test(candidate)) {
+        return `Grok harness 拦截：禁止 ${commandName} login`;
+      }
+    }
+    const match = candidate.match(/(?:^|\s)(?:~\/\.grok\/bin\/|\/[^\s]*\/)?grok(?=\s|$)([\s\S]*)/i);
+    if (!match) continue;
+    const args = match[1] || "";
+    if (/^\s*(?:--version|-v|version|models|inspect|doctor|help)(?:\s|$)/i.test(args)) continue;
+    if (/(?:^|\s)(?:-p|--single|--always-approve)(?:=|\s|$)/i.test(args)) {
+      return "Grok harness 拦截：禁止 -p / --single / --always-approve，长提示必须走 --prompt-file";
+    }
+    if (!/(?:^|\s)--verbatim(?:\s|$)/i.test(args)) return "Grok harness 拦截：缺 --verbatim";
+    if (!/(?:^|\s)--output-format(?:=|\s+)plain(?:\s|$)/i.test(args)) {
+      return "Grok harness 拦截：输出必须是 --output-format plain";
+    }
+    if (!/(?:^|\s)--prompt-file(?:=|\s+)\S+/i.test(args)) {
+      return "Grok harness 拦截：长提示必须写入文件并用 --prompt-file 传入";
+    }
+    const model = args.match(/(?:^|\s)(?:-m|--model)(?:=|\s+)(\S+)/i)?.[1] || config.defaultModel;
+    if (!models.has(model)) return `Grok harness 拦截：模型只允许 ${[...models].join(" / ")}`;
+    const effort = args.match(/(?:^|\s)(?:--effort|--reasoning-effort)(?:=|\s+)(\S+)/i)?.[1] || config.defaultEffort;
+    if (!efforts.has(effort)) return `Grok harness 拦截：effort 只允许 ${[...efforts].join(" / ")}`;
+  }
+  return null;
 }
 
 async function loadClaimModule() {
