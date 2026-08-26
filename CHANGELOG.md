@@ -2,6 +2,9 @@
 
 > 只追加有意义的仓库、架构、运行状态或治理变化。只读评审、讨论和无落盘任务不写。
 
+## 2026-08-26 · v3.7.1 · 重启后复验输出补正
+- [fix] `restart_required` 后第二次开机完成项目复验时，报告明确写“适配状态恢复 pass”，不再显示空的“已修复适配载体”。行为门与 v3.7.0 相同。
+
 ## 2026-08-26 · v3.7.0 · 开机许可与项目验证闭环
 - [fix] 母版 doctor 改为两层：通用层只核对版本、kit 指纹、受管适配器和唯一接线；项目领域规则由消费仓自己的 `scripts/governance-verify.mjs --fast` 解释。项目验证失败时 SessionStart 不再签发施工许可。
 - [fix] Codex SessionStart/PreToolUse 必须各只有一条精确受管命令；额外未知 Hook 不再被首条命令遮住。许可指纹扩大到三套 Hook、共享 SessionStart/PreToolUse、policy、index、状态与验证脚本。

@@ -247,6 +247,7 @@ test("a second SessionStart finalizes restart_required only after project valida
     apply: "safe",
   });
   assert.equal(second.status, "repaired-current");
+  assert.match(formatUpdateReport(second), /重启后项目复验/);
   assert.equal(JSON.parse(readFileSync(join(dir, "governance.lock.json"), "utf8")).adaptation.deterministicStatus, "pass");
 });
 

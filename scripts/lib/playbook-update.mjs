@@ -413,7 +413,12 @@ export function formatUpdateReport({ localVersion, remoteVersion, kitVersion, st
   const remote = remoteVersion || "不可用";
   const head = `📦 治理版本: 本仓 ${localVersion || "?"} · GitHub ${remote} · kit ${kitVersion || "?"}`;
   if (status === "current") return `${head} · 已是线上版本`;
-  if (status === "repaired-current") return `${head} · 版本未变，已修复适配载体 ${[...updated, ...patched].join(", ")}`;
+  if (status === "repaired-current") {
+    const repaired = [...updated, ...patched];
+    return repaired.length
+      ? `${head} · 版本未变，已修复适配载体 ${repaired.join(", ")}`
+      : `${head} · 已完成重启后项目复验，适配状态恢复 pass`;
+  }
   if (status === "restart-required") return `${head} · 运行时治理载体已更新，本会话禁止施工；请新开一次会话完成开机自检`;
   if (status === "needs-adaptation") return `${head} · 适配冲突，未宣称可施工（${conflicts.join("；")}）`;
   if (status === "unpublished-local") return `${head} · 本机 kit 领先 GitHub（未发布，其他组还吃不到）`;
