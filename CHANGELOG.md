@@ -2,6 +2,11 @@
 
 > 只追加有意义的仓库、架构、运行状态或治理变化。只读评审、讨论和无落盘任务不写。
 
+## 2026-08-26 · v3.7.4 · 控制面终端写入认领门
+- [fix] `alwaysClaimPaths` 从直接文件工具扩到常见 Bash/terminal 写入形态；有开机许可但无 claim 时，重定向、tee、sed/perl 原地改写、复制移动删除、patch 与常见文件写 API 不能修改治理控制面。
+- [test] 新增 `echo > governance/policy.json` 无认领必须阻断、`cat governance/policy.json` 纯读保持放行的反向用例。
+- [source] v3.7.3 AIOS 实例反向攻击发现：控制面直接 Write 会拦，但同一目标经 Bash 重定向可绕过 claim。
+
 ## 2026-08-26 · v3.7.3 · 三运行时统一施工许可
 - [fix] Codex、Claude Code、Grok 的 SessionStart/PreToolUse 统一经过 playbook 管理的 admission 薄适配器，共用一张项目级短期许可；任一运行时接线不唯一、票据缺失/过期或关键载体变化都会阻断写入。
 - [fix] 治理控制面加入 `alwaysClaimPaths`，根宪法、lock、policy、三套 Hook 与 git hooks 不再因 Markdown 或目录豁免绕过认领门。

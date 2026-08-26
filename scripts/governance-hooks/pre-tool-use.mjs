@@ -230,12 +230,15 @@ async function evaluateClaimGate({ input: hookInput, toolName: currentToolName, 
 
   const effectiveClaimGate = { ...claimModule.DEFAULT_CLAIM_GATE, ...(policy.claimGate || {}) };
   const isWriteTool = /^(?:apply_patch|Edit|Write)$/i.test(currentToolName);
+  const isShellTool = /^(?:Bash|run_terminal_command)$/i.test(currentToolName);
   const targetPath = String(currentToolInput.file_path || currentToolInput.notebook_path || currentToolInput.path || "");
-  const isClaimCommand = /Bash/i.test(currentToolName) && (effectiveClaimGate.bashClaimPatterns || []).some((pattern) => {
+  const isClaimCommand = isShellTool && (effectiveClaimGate.bashClaimPatterns || []).some((pattern) => {
     const re = new RegExp(pattern, "i");
     return commandCandidates.some((candidate) => re.test(candidate));
   });
-  if (!isWriteTool && !isClaimCommand) return null;
+  const isControlPlaneShellWrite = isShellTool
+    && shellWritesAlwaysClaimPath(commandCandidates, effectiveClaimGate.alwaysClaimPaths || []);
+  if (!isWriteTool && !isClaimCommand && !isControlPlaneShellWrite) return null;
 
   const operationCwd = hookInput.cwd || process.cwd();
   let relativeTarget = null;
@@ -294,6 +297,24 @@ async function evaluateClaimGate({ input: hookInput, toolName: currentToolName, 
 
 function normalizeRelative(path) {
   return String(path || "").replaceAll("\\", "/").replace(/^\.\//, "");
+}
+
+function shellWritesAlwaysClaimPath(commandCandidates, alwaysClaimPaths) {
+  return commandCandidates.some((candidate) => {
+    if (!isShellWriteLike(candidate)) return false;
+    return alwaysClaimPaths.some((path) => shellMentionsPath(candidate, path));
+  });
+}
+
+function isShellWriteLike(command) {
+  return /(?:^|[^<])>>?|\b(?:tee|touch|mkdir|rm|cp|mv|install|truncate|dd|patch|apply_patch|chmod|chown|ln)\b|\b(?:sed|perl)\s+-[^\n]*(?:i|p)|\bgit\s+(?:apply|checkout|restore)\b|\b(?:writeFile(?:Sync)?|appendFile(?:Sync)?|write_text|write_bytes)\b/i.test(String(command || ""));
+}
+
+function shellMentionsPath(command, path) {
+  const normalized = normalizeRelative(path).replace(/\/$/, "");
+  if (!normalized) return false;
+  const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|[\\s'\"=:/])${escaped}(?:[\\s'\"/]|$)`, "i").test(String(command || ""));
 }
 
 function realpathWithMissing(path) {
