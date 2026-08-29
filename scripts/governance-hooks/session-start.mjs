@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { formatExtraRepoFactsReport, inspectExtraRepoFacts } from "../lib/extra-repo-facts.mjs";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
+const verbose = process.argv.includes("--verbose");
 
 // 判例库保鲜:开工时静默拉一次 playbook 最新(多项目并发时,别处今天的判例本会话即可读到)。
 // 路径:环境变量优先,否则默认克隆位置;不存在或离线则静默跳过,绝不阻塞开工。
@@ -51,7 +52,7 @@ if (existsSync(frontendPolicyPath)) {
 }
 
 try {
-  console.log(formatExtraRepoFactsReport(inspectExtraRepoFacts(root)));
+  console.log(formatExtraRepoFactsReport(inspectExtraRepoFacts(root), { compact: !verbose }));
 } catch {
   console.log("📂 仓外正本: 读取失败（不阻断开工）");
 }
@@ -86,19 +87,29 @@ try {
     } else {
       const now = Date.now();
       const byLine = new Map();
-      console.log(`📋 认领公告板(${records.length} 条活跃):`);
       for (const claim of records) {
         if (claim.line) byLine.set(claim.line, (byLine.get(claim.line) || 0) + 1);
-        const ageHours = Math.max(0, Math.round((now - Date.parse(claim.updatedAt || claim.createdAt || 0)) / 3_600_000));
-        const marks = [];
-        if (claim.worktree && !existsSync(claim.worktree)) marks.push("orphan:worktree已消失");
-        else if (ageHours > 24) marks.push(`stale:${ageHours}h无更新`);
-        const task = (claim.task || claim.incidentRef || "").slice(0, 30);
-        const worktreeTail = (claim.worktree || "").split("/").pop() || "?";
-        console.log(`- ${claim.claimId} · ${claim.line || "emergency"} · ${task} · ${ageHours}h前 · ${worktreeTail}${marks.length ? ` [${marks.join(",")}]` : ""}`);
       }
-      for (const [line, count] of byLine) {
-        if (count >= 2) console.log(`⚠ 同线并发: ${line} 上有 ${count} 条活跃认领——开工前先看对方在做什么`);
+      if (!verbose) {
+        const crowded = [...byLine.entries()]
+          .filter(([, count]) => count >= 2)
+          .sort((left, right) => right[1] - left[1])
+          .map(([line, count]) => `${line}=${count}`);
+        console.log(`📋 认领: ${records.length} 条活跃${crowded.length ? ` · 同线并发 ${crowded.join(" · ")}` : ""} · 用 --verbose 看明细`);
+      } else {
+        console.log(`📋 认领公告板(${records.length} 条活跃):`);
+        for (const claim of records) {
+          const ageHours = Math.max(0, Math.round((now - Date.parse(claim.updatedAt || claim.createdAt || 0)) / 3_600_000));
+          const marks = [];
+          if (claim.worktree && !existsSync(claim.worktree)) marks.push("orphan:worktree已消失");
+          else if (ageHours > 24) marks.push(`stale:${ageHours}h无更新`);
+          const task = (claim.task || claim.incidentRef || "").slice(0, 30);
+          const worktreeTail = (claim.worktree || "").split("/").pop() || "?";
+          console.log(`- ${claim.claimId} · ${claim.line || "emergency"} · ${task} · ${ageHours}h前 · ${worktreeTail}${marks.length ? ` [${marks.join(",")}]` : ""}`);
+        }
+        for (const [line, count] of byLine) {
+          if (count >= 2) console.log(`⚠ 同线并发: ${line} 上有 ${count} 条活跃认领——开工前先看对方在做什么`);
+        }
       }
     }
   }

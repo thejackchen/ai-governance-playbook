@@ -67,6 +67,19 @@ test("loaded path is reported without file contents", () => {
   assert.doesNotMatch(report, /CANARY_PERSON/);
 });
 
+test("compact report keeps the summary line and hides loaded details", () => {
+  const home = mkdtempSync(join(tmpdir(), "extra-repo-home-"));
+  mkdirSync(join(home, ".config", "example"), { recursive: true });
+  writeFileSync(join(home, ".config", "example", "demo.md"), "password=super-secret\n");
+  const root = fixture({ schemaVersion: 1, facts: [validFact] });
+  mkdirSync(join(root, "scripts"), { recursive: true });
+  writeFileSync(join(root, "scripts", "tenants.json"), '{"_doc":"不是人名对照表"}\n');
+  const report = formatExtraRepoFactsReport(inspectExtraRepoFacts(root, { home }), { compact: true });
+  assert.match(report, /📂 仓外正本: 1 条登记 · 已装载 1 · 正本未装载 0/);
+  assert.doesNotMatch(report, /已装载 ~\/\.config\/example\/demo\.md/);
+  assert.doesNotMatch(report, /易混替身:/);
+});
+
 test("pointer secrets are blocked", () => {
   const hits = scanPointerSecrets('{"key":"g2a_liveexample"}');
   assert.ok(hits.some((item) => item.includes("g2a key")));

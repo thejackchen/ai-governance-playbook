@@ -856,6 +856,61 @@ test("Claude Code Standard installs shared gates and passes doctor", () => {
   assert.equal(doctor.status, 0, doctor.stderr);
 });
 
+test("SessionStart defaults to compact claim output and expands with --verbose", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "standard", "--write"]).status, 0);
+  mkdirSync(join(dir, ".git", "governance-claims"), { recursive: true });
+  const now = new Date().toISOString();
+  for (const claim of [
+    {
+      claimId: "a1b2c3d4",
+      line: "wechat-cs",
+      docRef: null,
+      docBaseline: null,
+      task: "session-start compact output",
+      acceptance: "n/a",
+      nonGoals: "",
+      scope: ["scripts/"],
+      worktree: dir,
+      session: null,
+      agent: "test",
+      status: "active",
+      mode: "emergency",
+      incidentRef: "fixture",
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      claimId: "b2c3d4e5",
+      line: "cross",
+      docRef: null,
+      docBaseline: null,
+      task: "session-start verbose output",
+      acceptance: "n/a",
+      nonGoals: "",
+      scope: ["docs/"],
+      worktree: dir,
+      session: null,
+      agent: "test",
+      status: "active",
+      mode: "emergency",
+      incidentRef: "fixture",
+      createdAt: now,
+      updatedAt: now,
+    },
+  ]) {
+    writeFileSync(join(dir, ".git", "governance-claims", `${claim.claimId}.json`), `${JSON.stringify(claim, null, 2)}\n`);
+  }
+  const compact = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start.mjs")], dir);
+  assert.equal(compact.status, 0, compact.stderr);
+  assert.match(compact.stdout, /📋 认领: 2 条活跃/);
+  assert.match(compact.stdout, /用 --verbose 看明细/);
+  assert.doesNotMatch(compact.stdout, /认领公告板/);
+  const expanded = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start.mjs"), "--verbose"], dir);
+  assert.equal(expanded.status, 0, expanded.stderr);
+  assert.match(expanded.stdout, /📋 认领公告板\(2 条活跃\)/);
+});
+
 test("Standard profile carries no Codex/OpenAI CI stowaway outside Codex runtime", () => {
   // scripts/governance-lint.mjs 对每个runtime都相同地包含 `lock.runtime === "codex"` 分支——
   // 这是共享的跨runtime校验逻辑（本身在Lite也会安装，与Standard的CI夹带问题无关），不算作item 3要清除的

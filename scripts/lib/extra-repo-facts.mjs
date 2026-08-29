@@ -129,7 +129,8 @@ export function inspectExtraRepoFacts(root, options = {}) {
   return { ...loaded, inspected };
 }
 
-export function formatExtraRepoFactsReport(inspectedResult) {
+export function formatExtraRepoFactsReport(inspectedResult, options = {}) {
+  const compact = options.compact === true;
   if (inspectedResult.missing) {
     return "📂 仓外正本: 索引未安装 docs/ops/extra-repo-facts.json";
   }
@@ -140,6 +141,14 @@ export function formatExtraRepoFactsReport(inspectedResult) {
   const loaded = items.filter((fact) => fact.status === "loaded").length;
   const unloaded = items.filter((fact) => fact.status === "unloaded").length;
   const lines = [`📂 仓外正本: ${items.length} 条登记 · 已装载 ${loaded} · 正本未装载 ${unloaded}`];
+  if (compact) {
+    for (const fact of items.filter((item) => item.status === "unloaded")) {
+      const shown = fact.paths.map((path) => path.raw).join(" | ");
+      lines.push(`- ${fact.class}: 正本未装载 ${shown}`);
+      if (fact.missing) lines.push(`  缺失时: ${oneLine(fact.missing)}`);
+    }
+    return lines.join("\n");
+  }
   for (const fact of items) {
     const shown = fact.paths.map((path) => path.raw).join(" | ");
     if (fact.status === "loaded") {
