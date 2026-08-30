@@ -1,6 +1,6 @@
 {
   "name": "ai-governance-playbook",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "type": "module",
   "bin": {
     "gov-bootstrap": "scripts/bootstrap.mjs"
