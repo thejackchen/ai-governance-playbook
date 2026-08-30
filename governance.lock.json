@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "playbookVersion": "3.7.7",
-  "kitFingerprint": "sha256:049276bf9e0644efd27f994804a76a90cd04ee847543a5e1d95168b70f6ac0ba",
+  "playbookVersion": "4.0.0",
+  "kitFingerprint": "sha256:516bd3ea39f693bba39878a0d40c425276e204af001455bbe7225a6bc055de0a",
   "runtime": "codex",
   "profile": "standard",
   "ruleBudget": 24,

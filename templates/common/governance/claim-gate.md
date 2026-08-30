@@ -40,7 +40,7 @@ $(git rev-parse --git-common-dir)/governance-claims/<claimId>.json
 | `scope` | 至少一个路径前缀组成的数组。 |
 | `worktree` | `git rev-parse --show-toplevel` 后再 `realpath` 归一化的 worktree 根。 |
 | `session` | `--session` 优先，其次 `GOVERNANCE_SESSION_ID`、工具厂商 session 变量；都没有时为 `null`。 |
-| `agent` | `claude`、`codex` 或 `unknown`。 |
+| `agent` | `claude`、`codex`、`grok`、`cursor` 或 `unknown`。显式 `--agent` 优先；否则按各工具环境指纹判定（Cursor=`CURSOR_AGENT`/`CURSOR_CONVERSATION_ID`，v4.0.0 补——此前 Cursor 会话记 unknown 且不触发认领门）。 |
 | `status` | 初始为 `active`；收口时为 `closed`、`continued` 或 `abandoned`。当前有效状态是 `active` 和 `continued`。 |
 | `mode` | `normal` 或 `emergency`。 |
 | `incidentRef` | 救火原因或事故引用；普通模式为 `null`。 |
