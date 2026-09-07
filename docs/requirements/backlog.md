@@ -14,8 +14,8 @@
 - [ ] REQ-GOV-004 | owner: maintainer | priority: P0 | title: 将项目发现能力发布到通用母版并安全采用
   - source_refs: 负责人授权与 REQ-GOV-004 规格；ROADMAP 当前游标；VERSION/CHANGELOG 发布锚点
   - spec_refs: specs/REQ-GOV-004-project-discovery-release.md
-  - acceptance: 通用实现不含 AIOS/Mini 业务坐标；母版 check/test/governance-verify 与新项目及已有项目的无上下文发现验收通过；候选发布版本可回读；消费项目逐项记录实际采用文件、验证与同步状态，未采用明确记录缺口。
-  - evidence: 远端已发布 v4.0.1（CHANGELOG.md 2026-08-31 有记录）；本地 VERSION/package.json/governance.lock.json 已锚到 v4.2.0 候选，尚未发布。已识别范围阶段证据为源码覆盖 127/127、文档覆盖 22/22；五个规范消费仓盘点及边界见 REQ-GOV-004 阶段验收记录：AIOS 已完成旧项目版但未采用本母版，微信客服/新产品中心/clearance-center 有 WIP，aios-extend 为独立协作 owner、不可自动适配；worktree/build/旧 clone 排除，仅登记 repo 身份与仓内相对正本指针，不写凭据。母版最终测试、无历史新会话/冷启动验收、远端发布与回读及各消费端采用仍待主代理最终回填，不能以版本号冒充采用。
+  - acceptance: 通用实现不含 AIOS/Mini 业务坐标；母版 check/test/governance-verify 与新项目及已有项目的无上下文发现验收通过；母版发布版本可回读；消费项目逐项记录实际采用文件、验证与同步状态，未采用明确记录缺口。
+  - evidence: 母版 v4.2.0 发布、回读与母版验收见 [ROADMAP.md](../../ROADMAP.md)；五消费者盘点、clearance 独立治理分支回执及跨仓边界见 [REQ-GOV-004 阶段验收与发布回读记录](specs/REQ-GOV-004-project-discovery-release.md)。母版发布部分已完成，跨仓采用仍未完成，待范围、owner 与基线确认。
 
 ## 已完成需求
 

@@ -12,8 +12,12 @@ https://github.com/thejackchen/ai-governance-playbook
 消费仓的 `governance.lock.json` 记录实际采用的版本、kit 指纹和适配回执。版本号相同
 也不等于接线有效，能力回执也不等于全量采用。
 
-- SessionStart 或人工诊断可以只读比较本地 lock 与线上 `VERSION`，但默认不拉取、不写
-  工作树、不改 lock，也不触发迁移；网络不可用时只报告本地可见事实。
+- 母版升级/来源准入只读取本地已抓取的 `refs/remotes/origin/main`（必要时比较其中的
+  `VERSION`）；默认不拉取、不写工作树、不改 lock，也不触发迁移。需要刷新母版来源时由用户
+  正常显式执行 `git fetch`，再重跑只读计划；来源未抓取或无法证明时只报告本地事实。
+- 以上默认仅约束母版升级与来源准入；项目公共线（如 `integrationLine`）同步仍按项目合同
+  执行，合同允许时可联网 fetch。SessionStart 的实际接线与行为以项目自身证据为准，本页不
+  宣称它已实现 `origin/main` 的 `VERSION` 比较。
 - `node <mother>/scripts/upgrade.mjs --target .` 是只读计划，输出能力、来源版本/SHA、
   文件动作和冲突，不安装任何文件。
 - 没有 `--capability` 的旧式 `--write` 请求必须拒绝并保持工作树不变；`full` 能力目前
@@ -21,9 +25,11 @@ https://github.com/thejackchen/ai-governance-playbook
 
 ## 开机流程
 
-SessionStart 只做一次只读核对，不在每轮对话或每次工具调用时打网：
+开机行为按项目现有 SessionStart 合同执行；母版来源核对不在每轮对话或每次工具调用时强制打网，
+本页不把 SessionStart 宣称为 `origin/main` 的 `VERSION` 比较器：
 
-1. 读取项目 `governance.lock.json`，必要时只读比较远端 `VERSION`。
+1. 项目按自身合同读取 `governance.lock.json`；显式升级计划需要来源证明时，检查本地已抓取的
+   `refs/remotes/origin/main:VERSION`。
 2. 确认项目自己的宪法、游标、业务文档、policy、catalog 和仓外事实索引仍由项目持有。
 3. 运行项目自己的 `scripts/governance-verify.mjs --fast`（若存在），报告接线与能力状态；
    失败只允许查看和诊断。
@@ -106,5 +112,5 @@ node scripts/environment-check.mjs --url https://<目标路径>
 | 真实 CLI/环境调用回执 | 指定机器、目标和时间的一次只读结果 | 其它机器、用户、生产或持续可用 |
 | Codex、Claude Code、Grok 分别通过 | 每个被测试客户端的事实 | “所有客户端”或跨项目统一采用 |
 
-候选母版 `4.2.0` 尚未发布；发布前不写入 `VERSION`、消费仓 lock 或完成声明。跨项目
-采用必须另有项目清单、提交和验收证据；本页不替任何项目宣称完成。
+发布状态与当前游标见 [ROADMAP.md](../ROADMAP.md)；跨项目采用必须另有项目清单、提交和
+验收证据；本页不替任何项目宣称完成。

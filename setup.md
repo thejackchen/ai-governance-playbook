@@ -71,12 +71,15 @@ node scripts/init.mjs \
 ## 1.2 存量版本升级（治理编译）
 
 `governance.lock.json` 记录项目实际采用的 kit 版本、指纹和适配结果。版本核对与能力升级
-分开：SessionStart/doctor 默认只读，不拉取、不写 lock、不迁移。显式升级也必须按能力
-运行，不得把版本号或下载结果当作全量采用；项目宪法、游标、业务文档、policy、catalog
-和仓外事实始终保留在项目。
+分开：母版升级/来源准入默认只读、不拉取、不写 lock、不迁移。显式升级也必须按能力运行，
+不得把版本号或下载结果当作全量采用；项目宪法、游标、业务文档、policy、catalog 和仓外事实
+始终保留在项目。
 
-线上正本是 GitHub 默认分支，不是某台电脑上的脏工作树。开机（SessionStart）最多只读查
-一次；不要每轮对话打网。
+线上正本是 GitHub 默认分支，不是某台电脑上的脏工作树。来源准入只信本地已抓取的
+`refs/remotes/origin/main`；母版升级计划不自动联网或 fetch，需要刷新母版时由负责人正常显式
+执行 `git fetch` 后再重跑只读计划。项目公共线（如 `integrationLine`）同步仍按项目合同执行，
+合同允许时可联网 fetch；SessionStart 的实际接线和行为以项目证据为准，本页不宣称它已比较
+`origin/main` 的 `VERSION`。
 
 ```bash
 node scripts/upgrade.mjs --target /path/to/project
@@ -96,8 +99,8 @@ node scripts/upgrade.mjs --target /path/to/project --capability discovery --writ
 提供。
 
 `doctor` 发现 lock 版本或指纹与当前 kit 不一致时会阻断完成声明。那是体检，不是让人
-`--force` 覆盖项目事实。本机 kit 领先 GitHub 时（未发布）不把版本写进消费仓 lock；候选
-母版 `4.2.0` 未发布，不能在此处或消费仓写成完成。
+`--force` 覆盖项目事实。发布状态与当前游标见 [ROADMAP.md](ROADMAP.md)；来源 ref 未抓取、
+版本或指纹无法证明时只报告，不把版本写入消费仓 lock，也不写成完成。
 
 ## 1.3 项目发现能力（按需、项目自有事实）
 
