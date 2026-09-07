@@ -315,8 +315,8 @@ export function readLock(projectRoot) {
 export function readUpdatePolicy(projectRoot) {
   const defaults = {
     channel: DEFAULT_CHANNEL,
-    check: "session-start",
-    apply: "safe",
+    check: "manual",
+    apply: "notify",
     cacheSeconds: DEFAULT_CACHE_SECONDS,
   };
   try {
@@ -503,7 +503,7 @@ export function formatUpdateReport({ localVersion, remoteVersion, kitVersion, st
     const sockets = patched?.length ? `；已迁移接线 ${patched.join(", ")}` : "";
     return `${head} · 已完成治理适配并升级 lock（${extra}；项目事实未覆盖${managed}${sockets}）`;
   }
-  if (status === "available") return `${head} · 可升级：node $GOVERNANCE_PLAYBOOK_DIR/scripts/upgrade.mjs --target . --write`;
+  if (status === "available") return `${head} · 可采用 discovery：先运行 node $GOVERNANCE_PLAYBOOK_DIR/scripts/upgrade.mjs --target . --capability discovery（只读计划），确认后再加 --write`;
   if (status === "offline") return `${head} · 线上版本查询失败，未改 lock（${error || "offline"}）`;
   return head;
 }

@@ -6,6 +6,7 @@
 | 事件流水 | `CHANGELOG.md` | append-only |
 | 架构当前真相 | [{{ARCHITECTURE_SOURCE}}](../{{ARCHITECTURE_SOURCE}}) | 当前投影 |
 | 仓库目录与所有权 | `docs/architecture/repository-layout.md` | 新顶层目录先ADR |
+| 项目发现能力与资产范围 | [目录与所有权](architecture/repository-layout.md) | 项目按需维护 `docs/architecture/project-catalog.json`；缺少 catalog/资产时报告未配置，不制造占位对象 |
 | 需求 | [需求]({{REQUIREMENTS_LINK}}) | 单一入口：本地活文档/外部指针之一 |
 | 发布治理 | 项目本地 release runbook（存在发布面时建立） | 按[上游发布治理合同](https://github.com/thejackchen/ai-governance-playbook/blob/main/docs/release-governance.md)实例化目标、制品、入口、阶段、证据与回滚；无发布面不建空模板 |
 | 决策 | `docs/decisions/` | ADR append-only |

@@ -70,17 +70,63 @@ node scripts/init.mjs \
 
 ## 1.2 存量版本升级（治理编译）
 
-`governance.lock.json` 记录项目实际采用的 kit 版本、指纹和适配结果。升级不是“补文件+改版本号”，而是把通用母版按项目事实编译成项目实例：项目宪法、游标、业务文档和 policy 保留；playbook 管理的薄适配器可更新；已知旧接线做窄迁移；未知定制停手并返回 `needs_human_decision`。
+`governance.lock.json` 记录项目实际采用的 kit 版本、指纹和适配结果。版本核对与能力升级
+分开：SessionStart/doctor 默认只读，不拉取、不写 lock、不迁移。显式升级也必须按能力
+运行，不得把版本号或下载结果当作全量采用；项目宪法、游标、业务文档、policy、catalog
+和仓外事实始终保留在项目。
 
-线上正本是 GitHub 默认分支，不是某台电脑上的脏工作树。开机（SessionStart）查一次；不要每轮对话打网。
+线上正本是 GitHub 默认分支，不是某台电脑上的脏工作树。开机（SessionStart）最多只读查
+一次；不要每轮对话打网。
 
 ```bash
-node scripts/upgrade.mjs --target /path/to/project --write
+node scripts/upgrade.mjs --target /path/to/project
 ```
 
-默认 `safe`：只做上述可证明安全的分类动作并输出结构化适配报告；不会用模板原样重装项目。`init --force` 仍然禁止。本机 kit 领先 GitHub 时（未 push）不会把未发布版本写入消费仓 lock；版本号相同也会检查关键接线。
+上述命令是只读计划。当前唯一可显式写入的能力是 discovery，且必须由负责人确认计划后
+同时带 `--write`：
 
-`doctor` 发现 lock 版本或指纹与当前 kit 不一致时会阻断完成声明。那是体检，不是让人 `--force` 覆盖项目事实。
+```bash
+node scripts/upgrade.mjs --target /path/to/project --capability discovery --write
+```
+
+它只安装 8 个发现能力 CLI/库，并在 lock 的 `capabilities.discovery` 写入
+`status=file-install-only` 回执；不改变 `playbookVersion`、`kitFingerprint`、admission、
+任何 Hook、policy、项目事实或基础接线。目标脏、来源未提交、已有未登记定制或验证失败
+均不覆盖；写入失败整批回滚。未带 `--capability` 的旧式 `--write` 必须拒绝，`full` 暂不
+提供。
+
+`doctor` 发现 lock 版本或指纹与当前 kit 不一致时会阻断完成声明。那是体检，不是让人
+`--force` 覆盖项目事实。本机 kit 领先 GitHub 时（未发布）不把版本写进消费仓 lock；候选
+母版 `4.2.0` 未发布，不能在此处或消费仓写成完成。
+
+## 1.3 项目发现能力（按需、项目自有事实）
+
+发现能力的 schema、八个任务域、检索、地图预算与离线诊断合同见
+[`docs/project-discovery.md`](docs/project-discovery.md)。安装能力文件不自动生成资产，也
+不自动接入任何运行时；项目只有在完成真实事实适配和对应客户端 fixture 后才能声称采用。
+
+项目按需维护 `docs/architecture/project-catalog.json`：
+
+- `schemaVersion` 固定为 `1`；`assets` 可为空；没有 catalog 时目录 CLI 报告“未配置”，
+  地图在缺少/为空的 `discoveryIds` 时报告未装载，不填示例主机、服务、团队或 100% 覆盖率；
+- 可选声明 `sourceRoots`、`sourceCollections`、`workstreamDirectory`；省略即为未知范围，
+  不能把全仓当作已检查；
+- 每个资产使用稳定 `id`、多 `aliases`/`tags`、一跳 `links`、入口与边界；凭据仅引用
+  `docs/ops/extra-repo-facts.json` 的 ID，正文不进 catalog、地图或 CLI 输出；
+- 所有资产正文、源码根、工作线、外部路径和凭据索引留在项目本地，母版不代填。
+
+能力安装后，项目可在本地离线运行：
+
+```bash
+node scripts/project-catalog.mjs --check --json
+node scripts/discovery-map.mjs
+node scripts/project-catalog.mjs --query <名称或别名>
+node scripts/project-catalog.mjs --category '<任务域>'
+node scripts/environment-check.mjs --url https://<目标路径>
+```
+
+`environment-check` 仅按需对单个 HTTPS URL 做无凭据、单次、有界 HEAD，不跟随跳转、不
+重试；一次 HTTP 回执不证明真实业务、其它机器或所有客户端可用。
 
 ## 2. 填项目事实
 
@@ -90,6 +136,7 @@ node scripts/upgrade.mjs --target /path/to/project --write
 - `ROADMAP.md`写真实游标、战线和硬约束；
 - `docs/architecture/repository-layout.md`分类现有顶层目录；
 - `docs/index.md`指向真实架构、需求、决策和运行文档；架构/需求指针是markdown链接、已进死链检测射程，指针必须指向真实存在的文件，不能留安装器默认占位路径（`docs/architecture.md`、`docs/requirements/backlog.md`）。全新项目的正确动作是把安装器已经建好的这两个权威文件内容填成真实架构/需求正文；只有当项目确实希望架构或需求文档存放在别的路径时，才需要同时改指针和搬文件，不要在双方都不需要改路径的情况下产生“是不是要挪地方”的误判；
+- 若采用发现能力，`docs/index.md` 另以真实相对 Markdown 链接指向项目实际的 catalog/架构入口；没有 catalog 或资产时保留“未配置”状态，不为索引覆盖率制造虚假文件；
 - `governance/policy.json`登记真实验证命令和项目特定危险操作；
 - `.gitignore`至少含`.env.local`/`node_modules`（安装器提供最小样例，已有的合并而不是覆盖）——「真实凭据不进git」红线的day-1结构前提；
 - Standard/High Assurance逐条审计`registry`，删除不适用的示例规则；
@@ -165,6 +212,18 @@ node scripts/governance-verify.mjs --ci
 ```
 
 逐项完成[setup.md 附B](setup.md)。有warn可以交付，但必须说明风险、负责人和升级条件；有error不能宣称安装完成。
+
+若安装了 discovery 能力，附加运行：
+
+```bash
+node scripts/project-catalog.mjs --check --json
+node scripts/discovery-map.mjs
+```
+
+这两条命令只验证项目显式声明的 metadata；catalog 缺失时报告未配置，地图在
+`discoveryIds` 缺失/为空时报告未装载，不凑 100% 覆盖。catalog/schema 通过不代表
+SessionStart/PreToolUse 已接线，单次 CLI 或环境回执也
+不代表生产、其它机器或所有客户端可用。
 
 安装器不自动提交。未获提交授权时保留工作树并报告未跟踪/未提交状态；多人或多AI项目在获授权后应由任务分支形成范围清楚的提交并push/MR，经共享门禁后再合并默认分支，默认不直接写`main`。只有形成可识别的Git基线后，才能宣称迁移可回退、Hook哈希已稳定或治理基线已落地。
 
@@ -288,6 +347,18 @@ Hooks、lint和CI先以warn或非required方式运行一轮，确认误报率和
 - [ ] 无远端仓库时按降级路径执行：pre-commit已真实承载同等检查，「CI就绪未激活」已如实登记，接入远端后用空提交补验；
 - [ ] 心跳定时器已挂（workflow schedule或等效定时器），或降级形态（本地cron/负责人自设提醒）已如实登记进安装报告（Standard及以上）；
 - [ ] AI review只读且不是唯一硬门禁。
+
+## 项目发现能力（若安装）
+
+- [ ] `docs/architecture/project-catalog.json` 是项目本地唯一 metadata 正本；`schemaVersion=1`，
+  `assets` 可为空，目录 CLI 对缺失 catalog 报告未配置，地图对缺少/为空 `discoveryIds` 报告未装载；
+- [ ] 八个任务域、稳定 ID、别名/标签、一跳关联、入口和边界均来自真实项目材料；没有
+  为覆盖率或地图预算制造示例资产；
+- [ ] `sourceRoots`/`workstreamDirectory` 未声明时覆盖宇宙仍标为 unknown，不将全仓当成 100%；
+- [ ] 凭据只以 `docs/ops/extra-repo-facts.json` 中的 ID 引用，地图/CLI/日志无正文；
+- [ ] 地图 <=60 行且 <=6 KiB；环境诊断只读、离线默认、按需单目标 HEAD；
+- [ ] 能力文件安装、项目 catalog/schema、运行时接线、真实 CLI/环境调用、各客户端证据分开
+  记录，未通过的层级不向上宣称。
 
 ## 内容审计
 
