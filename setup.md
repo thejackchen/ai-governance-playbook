@@ -70,23 +70,42 @@ node scripts/init.mjs \
 
 ## 1.2 存量版本升级（治理编译）
 
-`governance.lock.json` 记录项目实际采用的 kit 版本、指纹和适配结果。版本核对与能力升级
-分开：母版升级/来源准入默认只读、不拉取、不写 lock、不迁移。显式升级也必须按能力运行，
-不得把版本号或下载结果当作全量采用；项目宪法、游标、业务文档、policy、catalog 和仓外事实
-始终保留在项目。
+`governance.lock.json` 记录项目实际采用的 kit 版本、指纹和适配结果。版本发现、语义适配与
+能力文件安装分开：版本发现默认只读；发现新版后由消费项目 AI 理解母版建议并适配本项目
+治理文件，不要求负责人逐仓或逐能力指定。不得把版本号、下载结果或模板复制当作采用；项目
+宪法、游标、业务文档、policy 和 catalog 是适配输入与权威，不由模板原样覆盖；适配可改造
+治理表述，但必须保留项目事实、有效定制和 WIP。
 
-线上正本是 GitHub 默认分支，不是某台电脑上的脏工作树。来源准入只信本地已抓取的
-`refs/remotes/origin/main`；母版升级计划不自动联网或 fetch，需要刷新母版时由负责人正常显式
-执行 `git fetch` 后再重跑只读计划。项目公共线（如 `integrationLine`）同步仍按项目合同执行，
+线上正本是 GitHub 默认分支，不是某台电脑上的脏工作树。旧 `upgrade.mjs` 安装器的来源准入只信本地已抓取的
+`refs/remotes/origin/main`；该安装器适配计划和任何写入不自动 fetch，需要刷新母版来源时由项目 AI
+按已有权限正常执行 `git fetch` 后再重跑只读计划，不追加人工批准。项目公共线（如 `integrationLine`）同步仍按项目合同执行，
 合同允许时可联网 fetch；SessionStart 的实际接线和行为以项目证据为准，本页不宣称它已比较
 `origin/main` 的 `VERSION`。
 
+先运行默认的有界版本发现入口：
+
 ```bash
-node scripts/upgrade.mjs --target /path/to/project
+node scripts/governance-update.mjs --target /path/to/project
 ```
 
-上述命令是只读计划。当前唯一可显式写入的能力是 discovery，且必须由负责人确认计划后
-同时带 `--write`：
+它只检查线上 `VERSION` 并输出语义适配任务，不写治理文件或 `governance.lock.json`。线上
+检查失败或需要手动兜底时，明确使用离线模式：
+
+```bash
+node scripts/governance-update.mjs --target /path/to/project --offline
+```
+
+离线模式只报告本地已知版本与线上状态 `unknown`，不猜测线上内容，也不承诺生成新版适配
+任务。发现新版后，AI 逐条读取任务并映射项目事实：项目自己的宪法、游标、业务文档和
+policy 是适配输入与权威，不由模板原样覆盖；允许在映射与验证支撑下改造治理表述，同时保留
+项目事实、有效定制和 WIP。对本次版本新增/变更且与项目相关的建议（可按主题分组），选择
+“采用”“等价实现”或“不适用”并写项目映射、理由；已有且仍有效的语义无需反复复制记账；
+首次对齐缺少基线时再做全量梳理；已知差异不自动问人，只有无法解决的真实语义冲突或负责人意图歧义才
+进入 `governance/questions.md`。先通过项目确定性验证，再通过独立无上下文语义评分，最后
+才前移版本、指纹和适配回执；复制模板或只改版本号均不算完成。
+
+旧 `scripts/upgrade.mjs` 仍可作为可选的发现能力文件安装器。它默认是只读计划；当前唯一
+可写能力是 discovery，且只有同时带 `--write` 才安装 8 个发现文件：
 
 ```bash
 node scripts/upgrade.mjs --target /path/to/project --capability discovery --write
@@ -106,7 +125,8 @@ node scripts/upgrade.mjs --target /path/to/project --capability discovery --writ
 
 发现能力的 schema、八个任务域、检索、地图预算与离线诊断合同见
 [`docs/project-discovery.md`](docs/project-discovery.md)。安装能力文件不自动生成资产，也
-不自动接入任何运行时；项目只有在完成真实事实适配和对应客户端 fixture 后才能声称采用。
+不自动接入任何运行时，也不是语义适配的必需步骤；项目只有在完成真实事实适配、项目确定性
+验证、独立无上下文评分和对应客户端 fixture 后才能声称采用。
 
 项目按需维护 `docs/architecture/project-catalog.json`：
 
@@ -353,6 +373,13 @@ Hooks、lint和CI先以warn或非required方式运行一轮，确认误报率和
 
 ## 项目发现能力（若安装）
 
+- [ ] 新版发现由 `governance-update.mjs`（默认有界在线检查，失败时显式 `--offline`）完成，
+  只输出语义适配任务，不直接改治理文件或 lock；
+- [ ] 项目 AI 对本次版本新增/变更且与项目相关的建议（可按主题分组），记录“采用”“等价实现”
+  或“不适用”及项目映射、理由；已有且仍有效的语义无需反复复制记账；首次对齐缺少基线时再做
+  全量梳理；保留事实、有效定制和 WIP；已知差异不自动问人，只有真实语义冲突或负责人意图歧义才进入问题队列；
+- [ ] 项目确定性验证与独立无上下文语义评分均通过后才前移版本、指纹和适配回执；不以复制
+  模板或只改版本号冒充采用；
 - [ ] `docs/architecture/project-catalog.json` 是项目本地唯一 metadata 正本；`schemaVersion=1`，
   `assets` 可为空，目录 CLI 对缺失 catalog 报告未配置，地图对缺少/为空 `discoveryIds` 报告未装载；
 - [ ] 八个任务域、稳定 ID、别名/标签、一跳关联、入口和边界均来自真实项目材料；没有

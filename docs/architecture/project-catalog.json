@@ -22,7 +22,8 @@
   "discoveryIds": [
     "project-discovery-catalog",
     "project-discovery-map",
-    "project-discovery-search"
+    "project-discovery-search",
+    "semantic-governance-update"
   ],
   "assets": [
     {
@@ -69,12 +70,30 @@
       "category": "Git与CI/CD/显式能力升级",
       "aliases": ["discovery upgrade", "能力升级计划器"],
       "tags": ["plan", "apply", "receipt", "rollback"],
-      "purpose": "在明确点名 discovery 能力时规划并安全写入受管发现文件，保留冲突与验收回执。",
+      "purpose": "作为可选文件安装器，在明确点名 discovery 能力时规划并安全写入受管发现文件，保留冲突与验收回执；不承担默认版本发现或语义适配。",
       "entry": "scripts/lib/discovery-upgrade.mjs",
       "owner": "playbook-maintainers",
-      "boundaries": "仅处理 discovery 能力文件；不恢复自动升级、不覆盖未知定制、不改 admission、policy 或项目业务文件。",
+      "boundaries": "仅处理 discovery 能力文件的可选 file-install-only 安装；不恢复自动升级、不覆盖未知定制、不改 admission、policy 或项目业务文件。",
       "sourcePaths": ["scripts/lib/discovery-upgrade.mjs"],
       "links": ["project-discovery-catalog", "governance-orchestration", "project-discovery-cli"]
+    },
+    {
+      "id": "semantic-governance-update",
+      "kind": "component",
+      "category": "运行维护/治理升级",
+      "aliases": ["治理升级", "语义适配", "版本发现", "governance-update"],
+      "tags": ["version-discovery", "semantic-adaptation", "bounded", "read-only"],
+      "purpose": "默认以有界版本发现输出项目可执行的语义适配任务；保留项目事实、有效定制与 WIP，不自动写入治理文件或版本。",
+      "entry": "scripts/governance-update.mjs",
+      "owner": "playbook-maintainers",
+      "boundaries": "只做有界版本检查与只读任务输出；不替项目解释真实业务意图、不覆盖未知定制、不把候选或独立验收状态当作采用，不授予运行或发布权限。",
+      "sourcePaths": [
+        "scripts/governance-update.mjs",
+        "scripts/lib/governance-update.mjs",
+        "templates/common/scripts/governance-update.mjs",
+        "templates/common/scripts/lib/governance-update.mjs"
+      ],
+      "links": ["governance-hooks", "discovery-upgrade-engine"]
     },
     {
       "id": "project-discovery-cli",
@@ -270,7 +289,10 @@
         "tests/pre-compact.test.mjs",
         "tests/project-discovery.test.mjs",
         "tests/discovery-wiring.test.mjs",
-        "tests/discovery-docs-contract.test.mjs"
+        "tests/discovery-docs-contract.test.mjs",
+        "tests/semantic-governance-update.test.mjs",
+        "tests/semantic-adaptation-fixtures.test.mjs",
+        "tests/fixtures/semantic-adaptation/"
       ],
       "links": ["project-discovery-catalog", "governance-orchestration"]
     },

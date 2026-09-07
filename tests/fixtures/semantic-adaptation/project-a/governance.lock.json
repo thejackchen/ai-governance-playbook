@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "playbookVersion": "4.1.0",
+  "kitFingerprint": "sha256:synthetic-project-a-candidate",
+  "runtime": "generic",
+  "profile": "lite",
+  "adaptation": {
+    "schemaVersion": 1,
+    "sourceVersion": "4.1.0",
+    "source": {
+      "status": "candidate",
+      "verification": "unverified",
+      "published": false
+    },
+    "deterministicStatus": "pass",
+    "projectFacts": "preserved"
+  },
+  "installedFiles": [
+    "AGENTS.md",
+    "INDEX.md",
+    "knowledge/INDEX.md",
+    "knowledge/specs/release-posture.md",
+    "governance/policy.json",
+    "governance.lock.json",
+    "scripts/verify-facts.mjs",
+    "src/workbench/wip-sentinel.txt"
+  ]
+}

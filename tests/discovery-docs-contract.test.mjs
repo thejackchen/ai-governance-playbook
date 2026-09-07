@@ -12,33 +12,111 @@ const between = (text, start, end) => {
   return text.slice(from, to === -1 ? text.length : to);
 };
 
-test("CORE 7.2 makes version checks read-only and capability-scoped", () => {
+test("CORE 7.2 separates bounded discovery from autonomous semantic adaptation", () => {
   const section = between(read("CORE.md"), "### 7.2 ", "### 7.3 ");
   assert.match(section, /SessionStart.*只读|只读.*SessionStart/);
   assert.match(section, /不拉取/);
   assert.match(section, /不写入项目|不.*写入/);
+  assert.match(section, /不.*自动迁移/);
+  assert.match(section, /governance-update\.mjs/);
+  assert.match(section, /有界.*VERSION|VERSION.*有界/);
+  assert.match(section, /不要求负责人逐仓|不要求.*逐能力/);
+  assert.match(section, /采用.*等价实现|等价实现.*不适用/);
+  assert.match(section, /本次版本新增\/变更且与项目相关的建议/);
+  assert.match(section, /可按主题分组/);
+  assert.match(section, /已有且仍有效的\s*语义无需反复复制\s*记账/);
+  assert.match(section, /首次对齐缺少基线\s*时再做全量梳理/);
+  assert.match(section, /真实语义冲突/);
+  assert.match(section, /独立无上下文/);
+  assert.match(section, /只改版本号/);
+  assert.match(section, /存量项目已有足够的真实业务意图与适配授权/);
+  assert.match(section, /候选未发布或独立验收待完成只是证据门/);
+  assert.match(section, /不冻结与升级无关的已授权工作/);
+  assert.match(section, /首次 `init` 的 `TODO\(owner\)` 仅[\s\S]{0,50}新装项目[\s\S]{0,30}不套用于存量适配/);
   assert.match(section, /--capability discovery/);
   assert.match(section, /full.*暂不提供|暂不提供.*full/);
   assert.doesNotMatch(section, /git\s+pull/);
+  assert.doesNotMatch(section, /施工前必须由负责人显式选择升级能力/);
+  assert.doesNotMatch(section, /存量项目[^。\n]*必须[^。\n]*(?:确认|审批)[^。\n]*治理升级/);
 });
 
-test("upgrade documentation defines the explicit discovery-only write contract", () => {
+test("upgrade documentation separates autonomous semantic adaptation from optional discovery install", () => {
   const update = read("docs/playbook-update.md");
   const setup = read("setup.md");
   for (const command of [
+    "node <mother>/scripts/governance-update.mjs --target .",
+    "node <mother>/scripts/governance-update.mjs --target . --offline",
     "node <mother>/scripts/upgrade.mjs --target . --capability discovery",
     "node <mother>/scripts/upgrade.mjs --target . --capability discovery --write",
   ]) assert.match(update, new RegExp(command.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-  assert.match(update, /默认不拉取、不写[\s\S]{0,30}不触发迁移/);
+  assert.match(update, /有界.*VERSION|VERSION.*有界/);
+  assert.match(update, /不做 git pull\/fetch[\s\S]{0,80}不写入治理文件/);
+  assert.match(update, /不自动迁移|不触发迁移/);
+  assert.match(update, /线上状态 `unknown`/);
+  assert.match(update, /固定 SHA/);
+  assert.match(update, /不要求负责人逐仓|不要求.*逐能力/);
+  assert.match(update, /等价实现/);
+  assert.match(update, /不适用/);
+  assert.match(update, /本次版本新增\/变更且与项目\s*相关的建议/);
+  assert.match(update, /可按主题分组/);
+  assert.match(update, /已有且仍有效的\s*语义无需反复复制\s*记账/);
+  assert.match(update, /首次对齐缺少基线\s*时再做全量梳理/);
+  assert.match(update, /真实语义冲突/);
+  assert.match(update, /独立无上下文语义评分/);
+  assert.match(update, /只改版本号/);
+  assert.match(update, /存量项目已有足够的真实业务意图与适配授权[\s\S]{0,100}不重新要求负责人[\s\S]{0,30}要不要治理升级/);
+  assert.match(update, /候选未发布或独立验收待完成只是证据门/);
+  assert.match(update, /不冻结[\s\S]{0,30}升级无关的已授权工作/);
+  assert.match(update, /首次 `init`[\s\S]{0,80}`TODO\(owner\)`[\s\S]{0,80}不套用于存量适配/);
+  assert.match(update, /不覆盖/);
   assert.match(update, /status=file-install-only/);
   assert.match(update, /失败.*回滚|回滚.*失败/);
   assert.match(update, /`full` 能力目前[\s\S]{0,30}不提供/);
   assert.match(update, /接线/);
   assert.match(update, /真实 CLI|真实.*回执/);
   assert.match(update, /所有客户端/);
+  assert.match(setup, /governance-update\.mjs/);
+  assert.match(setup, /--offline/);
+  assert.match(setup, /线上状态 `unknown`/);
+  assert.match(setup, /等价实现/);
+  assert.match(setup, /不适用/);
+  assert.match(setup, /本次版本新增\/变更且与项目\s*相关的建议/);
+  assert.match(setup, /可按主题分组/);
+  assert.match(setup, /已有且仍有效的\s*语义无需反复复制\s*记账/);
+  assert.match(setup, /首次对齐缺少基线\s*时再做全量梳理/);
+  assert.match(setup, /真实语义冲突/);
+  assert.match(setup, /独立无上下文语义评分/);
   assert.match(setup, /--capability discovery --write/);
+  assert.match(setup, /file-install-only/);
+  assert.match(setup, /失败.*回滚|回滚.*失败/);
   assert.match(setup, /未带 `--capability` 的旧式 `--write` 必须拒绝/);
   assert.doesNotMatch(setup, /scripts\/upgrade\.mjs --target \/path\/to\/project --write/);
+});
+
+test("README and project template explain semantic adaptation without blind copying", () => {
+  const readme = read("README.md");
+  const template = read("templates/common/INSTRUCTIONS.md");
+  for (const text of [readme, template]) {
+    assert.match(text, /governance-update\.mjs/);
+    assert.match(text, /--offline/);
+    assert.match(text, /线上状态 `unknown`/);
+    assert.match(text, /采用/);
+    assert.match(text, /等价实现/);
+    assert.match(text, /不适用/);
+    assert.match(text, /本次版本新增\/变更且与项目\s*相关的建议/);
+    assert.match(text, /可按主题分组/);
+    assert.match(text, /已有且仍有效的\s*语义无需反复复制\s*记账/);
+    assert.match(text, /首次对齐缺少基线\s*时再做全量梳理/);
+    assert.match(text, /理由/);
+    assert.match(text, /真实\s*语义冲突/);
+    assert.match(text, /独立无上下文语义评分/);
+    assert.match(text, /只改版本号/);
+    assert.doesNotMatch(text, /v4\.2\.0/);
+  }
+  assert.match(template, /存量项目[\s\S]{0,180}(?:不重新要求人工确认|不重新要求负责人确认|直接按本合同执行)/);
+  assert.match(template, /候选\s*未发布或独立验收待完成只是证据门/);
+  assert.match(template, /不冻结\s*与升级无关的已授权工作/);
+  assert.match(template, /首次 `init`[\s\S]{0,100}`TODO\(owner\)`[\s\S]{0,100}不套用于存量适配/);
 });
 
 test("discovery contract documents local facts, eight task domains, and bounded diagnostics", () => {

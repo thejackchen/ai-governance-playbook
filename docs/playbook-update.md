@@ -12,25 +12,69 @@ https://github.com/thejackchen/ai-governance-playbook
 消费仓的 `governance.lock.json` 记录实际采用的版本、kit 指纹和适配回执。版本号相同
 也不等于接线有效，能力回执也不等于全量采用。
 
-- 母版升级/来源准入只读取本地已抓取的 `refs/remotes/origin/main`（必要时比较其中的
-  `VERSION`）；默认不拉取、不写工作树、不改 lock，也不触发迁移。需要刷新母版来源时由用户
-  正常显式执行 `git fetch`，再重跑只读计划；来源未抓取或无法证明时只报告本地事实。
+- 兼容 `upgrade.mjs` 安装器的来源准入只读取本地已抓取的 `refs/remotes/origin/main`（必要时
+  比较其中的 `VERSION`）；写入前若需刷新来源，按该安装器合同显式执行 `git fetch`，再重跑
+  只读计划。来源未抓取或无法证明时只报告本地事实。语义适配的版本发现入口另见下节：
+  它可以做一次有界在线检查，并允许项目 AI 按已发布固定 SHA 读取母版正本，不把在线回执
+  本身当作文件写入授权。
 - 以上默认仅约束母版升级与来源准入；项目公共线（如 `integrationLine`）同步仍按项目合同
   执行，合同允许时可联网 fetch。SessionStart 的实际接线与行为以项目自身证据为准，本页不
   宣称它已实现 `origin/main` 的 `VERSION` 比较。
-- `node <mother>/scripts/upgrade.mjs --target .` 是只读计划，输出能力、来源版本/SHA、
-  文件动作和冲突，不安装任何文件。
-- 没有 `--capability` 的旧式 `--write` 请求必须拒绝并保持工作树不变；`full` 能力目前
-  不提供。不要把一次版本检查或下载结果写成“项目已升级”。
+- 旧 `node <mother>/scripts/upgrade.mjs --target .` 是只读计划，输出能力、来源版本/SHA、
+  文件动作和冲突，不安装任何文件。没有 `--capability` 的旧式 `--write` 请求必须拒绝并
+  保持工作树不变；`full` 能力目前不提供。不要把一次版本检查或下载结果写成“项目已升级”。
+
+## 新版发现与语义适配（默认入口）
+
+消费项目在启动或手动兜底时运行：
+
+```bash
+node <mother>/scripts/governance-update.mjs --target .
+```
+
+该入口默认最多发起一次有界在线 `VERSION` 检查，并只输出版本事实和可执行的语义适配任务
+提示；它不做 git pull/fetch 或来源同步，不写入治理文件、不改 `governance.lock.json`，也不自动迁移。
+线上检查
+失败或环境不便联网时，AI 明确使用离线兜底：
+
+```bash
+node <mother>/scripts/governance-update.mjs --target . --offline
+```
+
+`--offline` 只报告本地已知版本与线上状态 `unknown`，不猜测线上内容，也不承诺生成新版
+适配任务。线上发现新版后，消费项目 AI 可按已发布固定 SHA 读取母版建议并理解、映射到
+本项目治理文件，不要求负责人逐仓或逐能力指定。模板是语义建议，不是待复制的项目正文；
+项目 AI 必须：
+
+1. 以项目自己的宪法、游标、业务文档和 policy 作为适配输入与权威，不由模板原样覆盖；允许
+   在映射与验证支撑下改造治理表述，同时保留项目事实、有效定制和 WIP；
+2. 对本次版本新增/变更且与项目相关的建议（可按主题分组），选择“采用”“等价实现”或
+   “不适用”，写清项目映射与理由；已有且仍有效的语义无需反复复制记账；首次对齐缺少基线
+   时再做全量梳理；已知差异不自动升级为人工裁决；
+3. 只有无法解决的真实语义冲突或无法判断负责人意图时，才在项目问题队列提问；
+4. 先通过项目确定性验证，再通过独立无上下文语义评分，最后才把 `playbookVersion`、
+   指纹和适配回执前移。复制模板或只改版本号均不构成采用。
+
+存量项目已有足够的真实业务意图与适配授权时，AI 直接按上述合同完成适配，不重新要求负责人
+确认“要不要治理升级”。候选未发布或独立验收待完成只是证据门，不是新增负责人审批，也不冻结
+与升级无关的已授权工作；首次 `init` 的 `TODO(owner)` 规则只适用于缺少意图基线的新装项目，
+不套用于存量适配。
+
+语义适配由项目 AI 完成，`governance-update.mjs` 只负责有界发现和任务注入，不签发新的
+许可、不建立新的审批体系、不自动 push/deploy。已有项目的 admission、Hook、认领门和
+两次开机合同继续按项目自身规则执行。
 
 ## 开机流程
 
-开机行为按项目现有 SessionStart 合同执行；母版来源核对不在每轮对话或每次工具调用时强制打网，
-本页不把 SessionStart 宣称为 `origin/main` 的 `VERSION` 比较器：
+开机行为按项目现有 SessionStart 合同执行；若项目已接入 `governance-update.mjs`，只在启动
+阶段做一次有界版本发现，不在每轮对话或每次工具调用时强制打网。本页不把 SessionStart
+宣称为 `origin/main` 的 `VERSION` 比较器：
 
-1. 项目按自身合同读取 `governance.lock.json`；显式升级计划需要来源证明时，检查本地已抓取的
-   `refs/remotes/origin/main:VERSION`。
-2. 确认项目自己的宪法、游标、业务文档、policy、catalog 和仓外事实索引仍由项目持有。
+1. 项目按自身合同读取 `governance.lock.json`；旧 `upgrade.mjs` 安装器的适配计划需要来源
+   证明时，检查本地已抓取的 `refs/remotes/origin/main:VERSION`；语义适配则使用已发布固定
+   SHA 的母版正本；线上发现失败时改用 `--offline` 手动兜底（仅报告本地版本与线上 unknown）。
+2. 确认项目自己的宪法、游标、业务文档、policy、catalog 和仓外事实索引仍由项目持有并
+   作为适配输入与权威；允许 AI 改造治理表述，但不覆盖项目事实、有效定制或 WIP。
 3. 运行项目自己的 `scripts/governance-verify.mjs --fast`（若存在），报告接线与能力状态；
    失败只允许查看和诊断。
 4. 运行时 admission、SessionStart、PreToolUse、Stop 和 PreCompact 的接线仍按各项目既有
@@ -40,7 +84,7 @@ https://github.com/thejackchen/ai-governance-playbook
 写行为文件前，运行时的 PreToolUse 仍验证同一张项目级许可；许可缺失、过期或关键接线
 变化时 fail-closed，查看和诊断继续可用。这里的能力安装不能绕过认领门或已有安全门。
 
-## 显式能力升级（当前仅 discovery）
+## 可选能力文件安装（当前仅 discovery）
 
 先看计划：
 
@@ -48,13 +92,14 @@ https://github.com/thejackchen/ai-governance-playbook
 node <mother>/scripts/upgrade.mjs --target . --capability discovery
 ```
 
-确认计划、目标工作树和来源 kit 均无冲突后，才可以按负责人授权写入：
+若语义任务显示项目缺少发现能力载体，可在只读计划、目标工作树和来源 kit 均无冲突后，
+按项目现有写入权限选择安装；这一步不是语义采用的前置条件：
 
 ```bash
 node <mother>/scripts/upgrade.mjs --target . --capability discovery --write
 ```
 
-`discovery --write` 仅安装以下 8 个通用能力文件：
+`discovery --write` 仅安装以下 8 个通用能力文件，仍是可选的 `file-install-only` 安装器：
 
 ```text
 scripts/lib/docs-index.mjs
@@ -110,6 +155,7 @@ node scripts/environment-check.mjs --url https://<目标路径>
 | catalog/schema 与 `--fast` 通过 | 项目声明的入口、范围、ID 和边界可验证 | 真实服务可达、凭据可用、全仓覆盖 |
 | SessionStart/PreToolUse 接线 fixture 通过 | 指定运行时的接线和安全门活着 | 其它客户端已接线 |
 | 真实 CLI/环境调用回执 | 指定机器、目标和时间的一次只读结果 | 其它机器、用户、生产或持续可用 |
+| 语义适配记录 + 项目确定性验证 + 独立无上下文评分 | 项目 AI 已按建议完成映射并证明含义保持 | 其它项目、客户端或生产行为已采用 |
 | Codex、Claude Code、Grok 分别通过 | 每个被测试客户端的事实 | “所有客户端”或跨项目统一采用 |
 
 发布状态与当前游标见 [ROADMAP.md](../ROADMAP.md)；跨项目采用必须另有项目清单、提交和
