@@ -11,13 +11,15 @@
 
 ## 进行中需求
 
-- [ ] REQ-GOV-004 | owner: maintainer | priority: P0 | title: 将项目发现能力发布到通用母版并安全采用
+> 当前无已受理需求。
+
+## 已完成需求
+
+- [x] REQ-GOV-004 | owner: maintainer | priority: P0 | title: 发布通用项目发现与自主语义适配升级合同
   - source_refs: 负责人授权与 REQ-GOV-004 规格；ROADMAP 当前游标；VERSION/CHANGELOG 发布锚点
   - spec_refs: specs/REQ-GOV-004-project-discovery-release.md
   - acceptance: 通用发现不含项目业务坐标；按负责人纠偏，项目发现新版后由项目 AI 自主语义适配而非逐仓人工指定或脚本覆盖；保留事实和有效定制，项目验证及无上下文独立评分通过后才更新采用版本；母版 check/test/governance-verify、正反测试及发布回读通过。
-  - evidence: 已发布基线及候选发布状态见 [ROADMAP.md](../../ROADMAP.md)；当前授权与历史交付边界见 [REQ-GOV-004](specs/REQ-GOV-004-project-discovery-release.md)。v4.3.0 语义升级主代理复验 162/162、无上下文 A 复测与 B 各 96/100，见 [无上下文验收](../evals/semantic-upgrade-forward-tests.md)；发布回读完成前不宣称发布或所有项目已采用。
-
-## 已完成需求
+  - evidence: v4.3.0 经 PR #6 发布，SHA 6cf12a59d8826e37132e2a6f31e31671cf061ec2；API 与 git fetch 回读 VERSION=4.3.0，CI run 34107998818 成功；主代理复验 162/162、无上下文 A 复测与 B 各 96/100。见 [ROADMAP.md](../../ROADMAP.md)、[无上下文验收](../evals/semantic-upgrade-forward-tests.md)。按负责人纠偏，本次完成母版发布与自主适配机制，不代表所有消费项目已采用；各项目按自身证据执行升级。
 
 - [x] REQ-GOV-003 | owner: maintainer | priority: P0 | title: 把文件升级器改造成治理编译器，并增加开机自检与施工许可
   - source_refs: 负责人任务 2026-08-26；AIOS v3.5.0 lock 已新但 Codex SessionStart 仍接旧入口
