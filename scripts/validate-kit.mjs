@@ -63,6 +63,30 @@ for (const extra of [
   }
 }
 
+// 发现能力与项目验证器是发布面的一部分；root 自托管和 templates/common
+// 缺任一侧都必须报错，不能因双方都存在才比较而静默漏掉缺件。
+for (const required of [
+  "scripts/lib/catalog-search.mjs",
+  "scripts/lib/discovery-map.mjs",
+  "scripts/lib/docs-index.mjs",
+  "scripts/lib/environment-check.mjs",
+  "scripts/lib/project-catalog.mjs",
+  "scripts/project-catalog.mjs",
+  "scripts/discovery-map.mjs",
+  "scripts/environment-check.mjs",
+  "scripts/governance-verify.mjs",
+]) {
+  const rootFile = join(KIT_ROOT, required);
+  const templateFile = join(KIT_ROOT, "templates/common", required);
+  const rootExists = existsSync(rootFile);
+  const templateExists = existsSync(templateFile);
+  if (!rootExists) errors.push(`缺少root自托管文件: ${required}`);
+  if (!templateExists) errors.push(`缺少templates/common文件: ${required}`);
+  if (rootExists && templateExists && readFileSync(rootFile, "utf8") !== readFileSync(templateFile, "utf8")) {
+    errors.push(`root 与 templates/common 的 ${required} 已漂移(必须字节一致)`);
+  }
+}
+
 for (const error of errors) console.error(`[kit] ERROR ${error}`);
 console.log(`[kit] ${errors.length} error`);
 process.exit(errors.length ? 1 : 0);

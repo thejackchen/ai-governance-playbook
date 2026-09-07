@@ -24,6 +24,12 @@
 - 仓库结构权威：`docs/architecture/repository-layout.md`；新增顶层目录或跨层依赖先写ADR。
 - 同一事实只有一个正文权威；其它位置用链接或可验证生成物。
 - 文档与现实冲突时，以现实为准，修正文档；影响过真实执行时记`governance/incidents.md`。
+- 可选项目发现能力的唯一元数据入口是项目自有的 `docs/architecture/project-catalog.json`；
+  它只登记稳定资产 ID、任务域、别名/标签、入口、边界和显式范围，不承载业务正文或凭据。
+  catalog 缺失时目录 CLI 报告“未配置”，地图在 `discoveryIds` 缺失/为空时报告未装载，
+  不补示例对象或 100% 覆盖率；凭据只能引用
+  `docs/ops/extra-repo-facts.json` 的 ID。八个任务域、schema 与边界见母版
+  `docs/project-discovery.md`（项目未安装该文件时仍以本条和自身 docs/index 为准）。
 {{FRONTEND_DESIGN_SYSTEM_ROUTE}}
 
 ## 红线
@@ -56,6 +62,11 @@
 6. 需求是活文档：唯一入口为[需求]({{REQUIREMENTS_SOURCE}})；外部来源不得保留第二套本地状态正文。
 7. SessionStart 必须显示 `✅ 开机自检` 后才允许施工；Codex、Claude Code、Grok 共用同一张项目级许可。若 `governance/claim-gate.md` 存在，写行为代码、修改治理控制面或派发实现代理前，还必须按其中说明开一条范围匹配的认领。
 8. 仓内知识核心是 `docs/index.md`；仓外正本核心是 `docs/ops/extra-repo-facts.md`（机器表 JSON）。未装载报「正本未装载」，禁止用仓内替身文件凑答案。共享秘密走 `~/.config/<域>/`，不进 `~/.claude/` / `~/.grok/`。SessionStart 只注入路径与在/缺。
+9. 若项目已显式安装 discovery 能力，先按 `docs/index.md` 定位 catalog，再离线运行
+   `node scripts/project-catalog.mjs --check --json`、`node scripts/discovery-map.mjs` 或
+   `node scripts/project-catalog.mjs --query <名称或别名>`；也可按 `--category`/`--related`
+   筛选。`environment-check` 仅在需要时对单个 `https://` URL 做无凭据、单次、有界 HEAD，
+   不跟随跳转、不重试。
 
 ## 验证与完成
 

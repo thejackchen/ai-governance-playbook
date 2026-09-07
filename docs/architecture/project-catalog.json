@@ -1,0 +1,297 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "ai-governance-playbook",
+  "description": "母版仓库自有源码与治理资产的任务发现元数据；不表示运行时状态、授权或消费项目采用状态。",
+  "sourceRoots": [
+    "scripts",
+    "templates",
+    "adapters",
+    "profiles",
+    "extensions",
+    "tests",
+    "skill"
+  ],
+  "sourceCollections": [
+    "scripts",
+    "templates",
+    "adapters",
+    "profiles",
+    "extensions",
+    "skill"
+  ],
+  "discoveryIds": [
+    "project-discovery-catalog",
+    "project-discovery-map",
+    "project-discovery-search"
+  ],
+  "assets": [
+    {
+      "id": "governance-orchestration",
+      "kind": "runtime",
+      "category": "运行维护/治理编排",
+      "aliases": ["安装与验收脚本", "治理编排"],
+      "tags": ["init", "doctor", "verify", "upgrade"],
+      "purpose": "执行母版安装、治理检查、状态投影与显式能力升级的编排入口。",
+      "entry": "scripts/init.mjs",
+      "owner": "playbook-maintainers",
+      "boundaries": "只编排仓内治理流程；不代替消费项目事实、业务发布或生产操作。",
+      "sourcePaths": [
+        "scripts/bootstrap.mjs",
+        "scripts/doctor.mjs",
+        "scripts/governance-lint.mjs",
+        "scripts/governance-status.mjs",
+        "scripts/governance-verify.mjs",
+        "scripts/init.mjs",
+        "scripts/requirements-check.mjs",
+        "scripts/requirements-check.test.mjs",
+        "scripts/upgrade.mjs",
+        "scripts/validate-kit.mjs",
+        "scripts/weekly-governance-review.mjs"
+      ],
+      "links": ["governance-hooks", "discovery-upgrade-engine", "project-discovery-cli"]
+    },
+    {
+      "id": "governance-hooks",
+      "kind": "runtime",
+      "category": "安全与凭据/确定性门禁",
+      "aliases": ["启动与动作钩子", "运行时 hooks"],
+      "tags": ["session-start", "pre-tool-use", "pre-compact", "stop"],
+      "purpose": "承载跨运行时的 SessionStart、PreToolUse、PreCompact 与 Stop 触发器。",
+      "entry": "scripts/governance-hooks/session-start.mjs",
+      "owner": "playbook-maintainers",
+      "boundaries": "只执行已登记的治理触发与门禁；不携带项目业务规则或秘密正文。",
+      "sourcePaths": ["scripts/governance-hooks/"],
+      "links": ["governance-orchestration", "runtime-adapters"]
+    },
+    {
+      "id": "discovery-upgrade-engine",
+      "kind": "component",
+      "category": "Git与CI/CD/显式能力升级",
+      "aliases": ["discovery upgrade", "能力升级计划器"],
+      "tags": ["plan", "apply", "receipt", "rollback"],
+      "purpose": "在明确点名 discovery 能力时规划并安全写入受管发现文件，保留冲突与验收回执。",
+      "entry": "scripts/lib/discovery-upgrade.mjs",
+      "owner": "playbook-maintainers",
+      "boundaries": "仅处理 discovery 能力文件；不恢复自动升级、不覆盖未知定制、不改 admission、policy 或项目业务文件。",
+      "sourcePaths": ["scripts/lib/discovery-upgrade.mjs"],
+      "links": ["project-discovery-catalog", "governance-orchestration", "project-discovery-cli"]
+    },
+    {
+      "id": "project-discovery-cli",
+      "kind": "component",
+      "category": "软件开发与范例/发现命令",
+      "aliases": ["project-catalog CLI", "discovery-map CLI", "environment-check CLI"],
+      "tags": ["cli", "project-catalog", "discovery-map", "environment-check"],
+      "purpose": "提供母版与模板中的发现命令薄入口，按项目根目录调用对应库。",
+      "entry": "scripts/project-catalog.mjs",
+      "owner": "playbook-maintainers",
+      "boundaries": "只解析命令参数并调用发现库；不扩大源码范围、不连接未声明环境、不改变项目文件。",
+      "sourcePaths": [
+        "scripts/project-catalog.mjs",
+        "scripts/discovery-map.mjs",
+        "scripts/environment-check.mjs",
+        "templates/common/scripts/project-catalog.mjs",
+        "templates/common/scripts/discovery-map.mjs",
+        "templates/common/scripts/environment-check.mjs"
+      ],
+      "links": ["project-discovery-catalog", "project-discovery-map", "project-discovery-search"]
+    },
+    {
+      "id": "project-discovery-catalog",
+      "kind": "component",
+      "category": "架构与数据/项目目录",
+      "aliases": ["project catalog", "资产目录", "源码归属检查"],
+      "tags": ["metadata", "ownership", "sourceRoots", "workstreams"],
+      "purpose": "读取并验证项目资产元数据、显式源码范围、所有权覆盖与关联关系。",
+      "entry": "templates/common/scripts/lib/project-catalog.mjs",
+      "owner": "playbook-maintainers",
+      "boundaries": "只验证仓内声明与 Git 跟踪文件；不扫描未声明范围、不读取 externalPath 指向内容、不提供授权。",
+      "sourcePaths": [
+        "scripts/lib/project-catalog.mjs",
+        "templates/common/scripts/lib/project-catalog.mjs"
+      ],
+      "links": ["project-discovery-map", "project-discovery-search"]
+    },
+    {
+      "id": "project-discovery-map",
+      "kind": "component",
+      "category": "架构与数据/开工地图",
+      "aliases": ["discovery map", "开工地图", "重点对象地图"],
+      "tags": ["discoveryIds", "bounded-output", "read-only"],
+      "purpose": "从显式 discoveryIds 投影受预算约束的开工地图，帮助无上下文执行者找到真实入口。",
+      "entry": "templates/common/scripts/lib/discovery-map.mjs",
+      "owner": "playbook-maintainers",
+      "boundaries": "只投影元数据与登记 ID；不读取仓外凭据正文、不连接主机、不表示实时状态或操作授权。",
+      "sourcePaths": [
+        "scripts/lib/discovery-map.mjs",
+        "templates/common/scripts/lib/discovery-map.mjs"
+      ],
+      "links": ["project-discovery-catalog", "project-discovery-search"]
+    },
+    {
+      "id": "project-discovery-search",
+      "kind": "component",
+      "category": "产品与业务/任务检索",
+      "aliases": ["catalog search", "任务搜索", "资产检索"],
+      "tags": ["query", "category", "related", "metadata-only"],
+      "purpose": "按名称、别名、标签、八类任务域或一跳关联检索已登记资产。",
+      "entry": "templates/common/scripts/lib/catalog-search.mjs",
+      "owner": "playbook-maintainers",
+      "boundaries": "只读 catalog 元数据并返回指针；不执行入口、不猜测未登记对象、不授予操作权限。",
+      "sourcePaths": [
+        "scripts/lib/catalog-search.mjs",
+        "templates/common/scripts/lib/catalog-search.mjs"
+      ],
+      "links": ["project-discovery-catalog"]
+    },
+    {
+      "id": "project-discovery-support-libraries",
+      "kind": "component",
+      "category": "软件开发与范例/发现支撑库",
+      "aliases": ["索引与诊断库", "discovery libraries"],
+      "tags": ["docs-index", "environment-check", "bounded-diagnostic"],
+      "purpose": "提供文档可达性检查、环境有界只读探针及母版通用运行时支撑。",
+      "entry": "templates/common/scripts/lib/docs-index.mjs",
+      "owner": "playbook-maintainers",
+      "boundaries": "检查和探针均有显式范围与时限；不把网络可达性当作业务验收，不输出响应正文或秘密。",
+      "sourcePaths": [
+        "scripts/lib.mjs",
+        "scripts/lib/boot-admission.mjs",
+        "scripts/lib/extra-repo-facts.mjs",
+        "scripts/lib/integration-line.mjs",
+        "scripts/lib/playbook-update.mjs",
+        "scripts/lib/docs-index.mjs",
+        "scripts/lib/environment-check.mjs",
+        "templates/common/scripts/lib/boot-admission.mjs",
+        "templates/common/scripts/lib/docs-index.mjs",
+        "templates/common/scripts/lib/environment-check.mjs",
+        "templates/common/scripts/lib/extra-repo-facts.mjs",
+        "templates/common/scripts/lib/integration-line.mjs"
+      ],
+      "links": ["project-discovery-catalog", "governance-orchestration"]
+    },
+    {
+      "id": "runtime-adapters",
+      "kind": "runtime",
+      "category": "环境与接入/运行时适配",
+      "aliases": ["Codex adapter", "Claude Code adapter", "Generic adapter"],
+      "tags": ["codex", "claude-code", "generic"],
+      "purpose": "为 Codex、Claude Code 与 Generic 运行时提供薄配置和载体差异。",
+      "entry": "adapters/codex/adapter.json",
+      "owner": "playbook-maintainers",
+      "boundaries": "只承载运行时配置差异；不复制 CORE 方法论、不声明具体消费项目接线已验活。",
+      "sourcePaths": [
+        "adapters/claude-code/",
+        "adapters/codex/",
+        "adapters/generic/"
+      ],
+      "links": ["governance-hooks", "template-families"]
+    },
+    {
+      "id": "template-families",
+      "kind": "guide",
+      "category": "软件开发与范例/项目模板",
+      "aliases": ["common template", "Standard template", "High Assurance template"],
+      "tags": ["common", "standard", "high-assurance", "codex-overlay"],
+      "purpose": "提供跨运行时公共模板及 Lite、Standard、High Assurance 分层项目文件。",
+      "entry": "templates/README.md",
+      "owner": "playbook-maintainers",
+      "boundaries": "模板仅供显式安装与适配；不原样覆盖消费项目宪法、游标、policy 或业务资产。",
+      "sourcePaths": [
+        "templates/README.md",
+        "templates/common/.gitignore",
+        "templates/common/.grok/hooks/",
+        "templates/common/CHANGELOG.md",
+        "templates/common/INSTRUCTIONS.md",
+        "templates/common/ROADMAP.md",
+        "templates/common/docs/",
+        "templates/common/governance/",
+        "templates/common/scripts/claim.mjs",
+        "templates/common/scripts/governance-hooks/",
+        "templates/common/scripts/governance-lint.mjs",
+        "templates/common/scripts/governance-status.mjs",
+        "templates/common/scripts/governance-verify.mjs",
+        "templates/common/scripts/requirements-check.mjs",
+        "templates/high-assurance/.github/",
+        "templates/standard-codex/.github/",
+        "templates/standard/"
+      ],
+      "links": ["runtime-adapters", "governance-profiles"]
+    },
+    {
+      "id": "governance-profiles",
+      "kind": "guide",
+      "category": "安全与凭据/Profile选择",
+      "aliases": ["Lite", "Standard", "High Assurance"],
+      "tags": ["profile", "policy", "rule-budget"],
+      "purpose": "定义治理强度与安装清单，帮助项目选择最小够用的 Profile。",
+      "entry": "profiles/README.md",
+      "owner": "playbook-maintainers",
+      "boundaries": "只描述母版 Profile 结构；不包含项目特定规则、不替项目负责人选择风险强度。",
+      "sourcePaths": [
+        "profiles/README.md",
+        "profiles/high-assurance.json",
+        "profiles/lite.json",
+        "profiles/standard.json"
+      ],
+      "links": ["template-families"]
+    },
+    {
+      "id": "frontend-design-extension",
+      "kind": "component",
+      "category": "产品设计/前端设计系统",
+      "aliases": ["frontend design system", "设计语言扩展"],
+      "tags": ["extension", "tokens", "reference-pack", "journeys"],
+      "purpose": "按需提供前端设计系统扩展的参考模板、设计 token 与治理验证器。",
+      "entry": "extensions/frontend-design-system/README.md",
+      "owner": "playbook-maintainers",
+      "boundaries": "仅在项目显式安装扩展时生效；设计正文、资产与页面事实仍由消费项目维护。",
+      "sourcePaths": ["extensions/frontend-design-system/"],
+      "links": ["template-families"]
+    },
+    {
+      "id": "contract-test-suite",
+      "kind": "component",
+      "category": "Git与CI/CD/契约测试",
+      "aliases": ["kit tests", "无上下文前向测试"],
+      "tags": ["node-test", "contract", "red-green"],
+      "purpose": "验证安装器、适配器、治理门禁与发现能力的正反合同。",
+      "entry": "tests/kit-contract.test.mjs",
+      "owner": "playbook-maintainers",
+      "boundaries": "测试是验收证据，不是生产实现；不通过删测、放宽断言或伪造环境制造全绿。",
+      "sourcePaths": [
+        "tests/explicit-upgrade.test.mjs",
+        "tests/extra-repo-facts.test.mjs",
+        "tests/governance-status.test.mjs",
+        "tests/init-and-doctor.test.mjs",
+        "tests/integration-line.test.mjs",
+        "tests/kit-contract.test.mjs",
+        "tests/playbook-update.test.mjs",
+        "tests/pre-compact.test.mjs",
+        "tests/project-discovery.test.mjs",
+        "tests/discovery-wiring.test.mjs",
+        "tests/discovery-docs-contract.test.mjs"
+      ],
+      "links": ["project-discovery-catalog", "governance-orchestration"]
+    },
+    {
+      "id": "governance-skills",
+      "kind": "guide",
+      "category": "运行维护/工作流 Skill",
+      "aliases": ["Codex skills", "治理工作流"],
+      "tags": ["bootstrap", "optimization", "handoff", "checkpoint"],
+      "purpose": "提供 Codex 可触发的治理引导、优化、协作交接与收口入口。",
+      "entry": "skill/README.md",
+      "owner": "playbook-maintainers",
+      "boundaries": "Skill 只提供薄入口与工作流说明；不复制治理核心、不替代机器门禁或项目事实。",
+      "sourcePaths": [
+        "skill/README.md",
+        "skill/governance-bootstrap/",
+        "skill/governance-optimization/",
+        "skill/pro-supervised-delivery/",
+        "skill/shoukou/"
+      ],
+      "links": ["governance-orchestration", "contract-test-suite"]
+    }
+  ]
+}

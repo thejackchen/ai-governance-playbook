@@ -4,7 +4,7 @@
 
 ## 当前游标
 
-当前发布候选为 v3.7.5：补齐 v3.7.4 通用 claim 门未识别 `MultiEdit/search_replace` 写入别名的旁路。解决什么：Codex、Claude、Grok 共用一张开机施工许可，治理控制面无许可或无认领时无论走全部登记的直接文件工具还是常见终端写入都不可修改；怎么验收：三种 Hook 的缺票/过期/接线变化负例、五种直接写入别名与终端写入无认领负例都阻断，纯读取不误拦，母版全测与两个零上下文模型复验通过；这次不碰什么：不把项目宪法、policy 或业务文本改成母版托管文件，不登录、不读取密钥、不替项目负责人解释业务事实。
+远端已发布版本为 v4.0.1（`CHANGELOG.md` 2026-08-31 已记录 governance-optimization skill v1.1 收编）；本地 `VERSION` 为 v4.2.0 候选，尚未发布；发布状态按当前游标/远端回读确认。当前工作按 [REQ-GOV-004](docs/requirements/specs/REQ-GOV-004-project-discovery-release.md) 进行：把项目发现能力提炼为通用母版，显式升级并逐项目验收；发布前须有母版准确版本/SHA、完整测试、无上下文证据和消费项目采用清单，不能用版本号冒充采用。此候选不代表母版发布或跨项目采用已完成；这次不碰什么：业务代码、生产部署、主机/服务重启、凭据正文、个人全局配置、他人 WIP、已退出的自动升级/许可/巡检机制。
 
 ## 硬约束
 
@@ -22,7 +22,7 @@
 | v3核心与内容审计 | 完成 | 旧规则逐条归并、降级或删除 | 根据前向测试修订 | - | `CORE.md`、`docs/audits/v3-content-audit.md` |
 | 运行时与Profile | 完成 | Codex/Claude Code/Generic适配器和三档Profile | 验证安装契约 | - | `CORE.md 附(运行时适配)`、`profiles/README.md` |
 | 脚手架与门禁 | 完成 | init/doctor/verify、Hooks、Rules、定时CI和契约测试可运行 | 随运行时变化持续复测 | - | `setup.md`、`setup.md 附B(验收自检)` |
-| 治理编译与开机自检 | 推进 | v3.7.5 统一运行时施工许可与治理控制面认领门施工中 | 三运行时负例、全部直接写入别名/终端写入负例、完整测试、双模型零上下文验收 | Codex 项目 Hook 仍需真实 UI trust | `docs/requirements/specs/REQ-GOV-003-governance-compilation-and-boot-self-test.md`、`docs/playbook-update.md` |
-| 前端设计系统扩展 | 推进 | 产品架构正本、设计语言章节、representativeJourneys 结构/证据生命周期门、扩展验证器和SessionStart触达已落盘 | 由消费项目选择页面族、代表链路、参考包并配置真实检查；本轮 local-only 未发布 | - | `extensions/frontend-design-system/README.md`、`docs/decisions/001-frontend-design-language-journeys.md`、`CORE.md` |
+| 治理编译与开机自检 | 推进 | 远端 v4.0.1 已发布；本地 VERSION=4.2.0 为候选；v3.6–v3.7 运行时能力以 CHANGELOG 为准 | 继续复验安装契约；不把版本号当项目采用 | Codex 项目 Hook 仍需真实 UI trust | `docs/requirements/specs/REQ-GOV-003-governance-compilation-and-boot-self-test.md`、`docs/playbook-update.md` |
+| 前端设计系统扩展 | 推进 | `frontend-design-system` 的 v3.4.x 变更已记入 CHANGELOG；消费项目采用仍推进 | 由消费项目选择页面族、代表链路、参考包并配置真实检查；采用状态按项目证据确认 | - | `extensions/frontend-design-system/README.md`、`docs/decisions/001-frontend-design-language-journeys.md`、`CORE.md` |
 | 无上下文前向测试 | 完成 | 新项目、存量迁移和红线压力通过 | 后续版本复用同类夹具 | - | `docs/evals/v3-forward-tests.md` |
-| v3发布 | 推进 | v3.7.5 发布候选施工中 | 完整测试、远端发布、AIOS 采用、双模型零上下文复验；不创建正式tag | Codex 非托管 Hook 仍需真实 UI trusted + `/hooks` 审核验收 | `CHANGELOG.md` |
+| v3发布 | 完成 | v3.0.0 及后续 v3.x 版本均有 CHANGELOG 记录；远端 v4.0.1 已发布，本地 VERSION=4.2.0 为候选 | 后续候选与跨项目采用按 REQ-GOV-004 推进 | v4.2.0 候选尚未发布 | `CHANGELOG.md` |

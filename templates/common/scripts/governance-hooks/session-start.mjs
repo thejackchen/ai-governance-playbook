@@ -4,31 +4,18 @@ import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { formatExtraRepoFactsReport, inspectExtraRepoFacts } from "../lib/extra-repo-facts.mjs";
+import { loadDiscoveryMap } from "../lib/discovery-map.mjs";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const verbose = process.argv.includes("--verbose");
 
-// 判例库保鲜:开工时静默拉一次 playbook 最新(多项目并发时,别处今天的判例本会话即可读到)。
-// 路径:环境变量优先,否则默认克隆位置;不存在或离线则静默跳过,绝不阻塞开工。
-{
-  const os = await import("node:os");
-  const fs = await import("node:fs");
-  const path = await import("node:path");
-  const pb = process.env.GOVERNANCE_PLAYBOOK_DIR || `${os.homedir()}/working/ai-governance-playbook`;
-  if (fs.existsSync(`${pb}/.git`)) {
-    spawnSync("git", ["-C", pb, "pull", "--ff-only", "-q"], { timeout: 8000, stdio: "ignore" });
-  }
-  const upgrade = path.join(pb, "scripts/upgrade.mjs");
-  if (fs.existsSync(upgrade)) {
-    const out = spawnSync(process.execPath, [upgrade, "--target", root, "--write"], {
-      timeout: 20_000,
-      encoding: "utf8",
-      env: { ...process.env, GOVERNANCE_PLAYBOOK_DIR: pb },
-    });
-    const output = `${out.stdout || ""}${out.stderr || ""}`.trim();
-    if (output) console.log(output);
-    if (out.status !== 0) console.log(`📦 治理升级器执行失败(exit=${out.status ?? "unknown"})；本会话不得施工`);
-  }
+// v4.0.0 起开工不再 pull playbook 或写入升级；显式升级仍由负责人运行 upgrade.mjs。
+// 发现地图只读取项目自己的显式元数据，缺失时明确报未配置，不推测覆盖范围。
+const discoveryCatalogPath = join(root, "docs/architecture/project-catalog.json");
+if (existsSync(discoveryCatalogPath)) {
+  console.log(loadDiscoveryMap(root));
+} else {
+  console.log("🗺 项目发现地图：未配置（docs/architecture/project-catalog.json 不存在）。不推测目录、索引或环境覆盖。");
 }
 
 const result = spawnSync(process.execPath, [fileURLToPath(new URL("../governance-status.mjs", import.meta.url))], {

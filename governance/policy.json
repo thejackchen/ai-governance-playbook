@@ -26,8 +26,8 @@
   },
   "playbookUpdate": {
     "channel": "https://raw.githubusercontent.com/thejackchen/ai-governance-playbook/main",
-    "check": "session-start",
-    "apply": "safe",
+    "check": "manual",
+    "apply": "notify",
     "cacheSeconds": 21600
   },
   "grokHarness": {

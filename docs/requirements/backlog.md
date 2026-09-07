@@ -6,12 +6,16 @@
 
 - source: local
 - owner: maintainer
-- updated: 2026-08-26
+- updated: 2026-09-07
 - mode: living
 
 ## 进行中需求
 
-> 当前无已受理需求。
+- [ ] REQ-GOV-004 | owner: maintainer | priority: P0 | title: 将项目发现能力发布到通用母版并安全采用
+  - source_refs: 负责人授权与 REQ-GOV-004 规格；ROADMAP 当前游标；VERSION/CHANGELOG 发布锚点
+  - spec_refs: specs/REQ-GOV-004-project-discovery-release.md
+  - acceptance: 通用实现不含 AIOS/Mini 业务坐标；母版 check/test/governance-verify 与新项目及已有项目的无上下文发现验收通过；候选发布版本可回读；消费项目逐项记录实际采用文件、验证与同步状态，未采用明确记录缺口。
+  - evidence: 远端已发布 v4.0.1（CHANGELOG.md 2026-08-31 有记录）；本地 VERSION/package.json/governance.lock.json 已锚到 v4.2.0 候选，尚未发布。已识别范围阶段证据为源码覆盖 127/127、文档覆盖 22/22；五个规范消费仓盘点及边界见 REQ-GOV-004 阶段验收记录：AIOS 已完成旧项目版但未采用本母版，微信客服/新产品中心/clearance-center 有 WIP，aios-extend 为独立协作 owner、不可自动适配；worktree/build/旧 clone 排除，仅登记 repo 身份与仓内相对正本指针，不写凭据。母版最终测试、无历史新会话/冷启动验收、远端发布与回读及各消费端采用仍待主代理最终回填，不能以版本号冒充采用。
 
 ## 已完成需求
 
@@ -19,7 +23,7 @@
   - source_refs: 负责人任务 2026-08-26；AIOS v3.5.0 lock 已新但 Codex SessionStart 仍接旧入口
   - spec_refs: specs/REQ-GOV-003-governance-compilation-and-boot-self-test.md
   - acceptance: 通用母版先按项目事实适配；同版本也修已知旧接线；未知定制不强覆；Codex 开机自检通过才允许写文件；确定性与语义验收分层，负责人保留最终解释权。
-  - evidence: v3.6.1 首轮 94/94 与 AIOS 许可 fixture 通过；随后零上下文验收发现“母版 doctor 17 error 但仍发证”。v3.7.0 已加入母版/项目两层验证、Hook 唯一性、扩大许可指纹和热升级 `restart_required`，最终发布证据待完整测试与第二轮零上下文验收回填。
+  - evidence: v3.6.1 发布条目已记录远端回读与 AIOS 正负开机 fixture；后续 v3.7.x 接线/别名修订及当前 v4.0.1 版本均见 CHANGELOG.md。Codex Hook trust 与消费项目现场状态仍按项目证据确认，不能由母版版本号代替。
 
 - [x] REQ-GOV-001 | owner: maintainer | priority: P1 | title: 增加本地/外部单一需求权威模式
   - source_refs: governance/cases/2026-07-29-单一需求指针与版本漂移.md
