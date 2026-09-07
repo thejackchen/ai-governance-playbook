@@ -9,7 +9,40 @@ import { loadDiscoveryMap } from "../lib/discovery-map.mjs";
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const verbose = process.argv.includes("--verbose");
 
-// v4.0.0 起开工不再 pull playbook 或写入升级；显式升级仍由负责人运行 upgrade.mjs。
+// 开工阶段只注入一次有界语义升级发现任务；脚本不拉取、不改文件、不把提示当作已适配。
+// 旧 check=off/manual 明确映射为手动 CLI，避免历史项目被悄悄联网。
+const semanticUpdatePath = join(root, "scripts/governance-update.mjs");
+let semanticUpdatePolicy = null;
+let semanticPolicyReadable = existsSync(join(root, "governance/policy.json"));
+try {
+  semanticUpdatePolicy = JSON.parse(readFileSync(join(root, "governance/policy.json"), "utf8"))?.playbookUpdate;
+} catch { semanticPolicyReadable = false; }
+if (!semanticPolicyReadable) {
+  console.log("🔎 语义升级发现：配置 unknown（governance/policy.json 缺失或无法解析）；跳过联网检查，保留本地状态；仅任务提示，未完成适配。");
+} else if (!semanticUpdatePolicy || typeof semanticUpdatePolicy !== "object" || Array.isArray(semanticUpdatePolicy)
+  || typeof semanticUpdatePolicy.check !== "string" || !semanticUpdatePolicy.check.trim()) {
+  console.log("🔎 语义升级发现：配置 unknown（playbookUpdate.check 未明确为字符串）；跳过联网检查；仅任务提示，未完成适配。");
+} else if (["off", "manual"].includes(semanticUpdatePolicy.check.trim().toLowerCase())) {
+  const semanticCheck = semanticUpdatePolicy.check.trim().toLowerCase();
+  console.log(`🔎 语义升级发现：${semanticCheck === "off" ? "未自动检查" : "手动模式"}（playbookUpdate.check=${semanticCheck}）；需要时运行 node scripts/governance-update.mjs --target .；仅任务提示，未完成适配。`);
+} else if (semanticUpdatePolicy.check.trim().toLowerCase() !== "session-start") {
+  console.log("🔎 语义升级发现：配置 unknown（不支持的 playbookUpdate.check）；跳过联网检查；仅任务提示，未完成适配。");
+} else if (!existsSync(semanticUpdatePath)) {
+  console.log("🔎 语义升级发现：载体缺失（bootstrap gap）；请从母版接入 scripts/governance-update.mjs 后再做手动发现；仅任务提示，未完成适配。");
+} else {
+  const update = spawnSync(process.execPath, [semanticUpdatePath, "--target", root], {
+    cwd: root,
+    encoding: "utf8",
+    timeout: 3500,
+    killSignal: "SIGKILL",
+    maxBuffer: 32 * 1024,
+  });
+  const updateOutput = `${update.stdout || ""}${update.stderr || ""}`.trim();
+  if (updateOutput) console.log(updateOutput);
+  else console.log("🔎 语义升级发现：unknown（发现任务未返回）；保留本地已记录版本，按本地验证状态继续；仅任务提示，未完成适配。");
+}
+
+// v4.0.0 起开工不再 pull playbook 或写入升级；发现能力文件仍由项目 AI 按现有权限选择接入。
 // 发现地图只读取项目自己的显式元数据，缺失时明确报未配置，不推测覆盖范围。
 const discoveryCatalogPath = join(root, "docs/architecture/project-catalog.json");
 if (existsSync(discoveryCatalogPath)) {

@@ -1,0 +1,7 @@
+{
+  "playbookUpdate": {
+    "check": "manual",
+    "apply": "notify",
+    "channel": "synthetic://semantic-adaptation-candidate"
+  }
+}

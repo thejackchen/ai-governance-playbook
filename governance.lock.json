@@ -1,15 +1,17 @@
 {
   "schemaVersion": 1,
-  "playbookVersion": "4.2.0",
-  "kitFingerprint": "sha256:57b13524b5643f045fbd27b85e0d928fc09e5241f75d5e23daa5cfdd87c5e7e1",
+  "playbookVersion": "4.3.0",
+  "kitFingerprint": "sha256:bc2359ac02c6729fbc1eaa3868d8862835a004b2b9c5a6980e06039e318be47a",
   "runtime": "codex",
   "profile": "standard",
   "ruleBudget": 24,
   "extensions": [],
   "adaptation": {
     "schemaVersion": 1,
-    "sourceVersion": "4.2.0",
+    "sourceVersion": "4.3.0",
     "deterministicStatus": "pass",
+    "verifiedBy": "node scripts/governance-verify.mjs --ci (162/162); independent semantic adaptation A-retest 96/100, B 96/100",
+    "verifiedAt": "2026-09-07",
     "projectFacts": "preserved",
     "managedRuntimeFiles": [
       "scripts/governance-hooks/session-start-admission.mjs",
@@ -17,9 +19,7 @@
       "scripts/governance-hooks/pre-tool-use-admission.mjs",
       "scripts/governance-hooks/pre-tool-use-codex.mjs",
       "scripts/lib/boot-admission.mjs"
-    ],
-    "verifiedBy": "node scripts/governance-verify.mjs --ci (140/140 tests)",
-    "verifiedAt": "2026-09-07T07:56:29.659Z"
+    ]
   },
   "installedAt": "2026-07-10",
   "installedFiles": [
@@ -57,6 +57,7 @@
     "scripts/governance-hooks/stop.mjs",
     "scripts/governance-lint.mjs",
     "scripts/governance-status.mjs",
+    "scripts/governance-update.mjs",
     "scripts/governance-verify.mjs",
     "scripts/lib/boot-admission.mjs",
     "scripts/lib/catalog-search.mjs",
@@ -64,6 +65,7 @@
     "scripts/lib/docs-index.mjs",
     "scripts/lib/environment-check.mjs",
     "scripts/lib/extra-repo-facts.mjs",
+    "scripts/lib/governance-update.mjs",
     "scripts/lib/integration-line.mjs",
     "scripts/lib/playbook-update.mjs",
     "scripts/lib/project-catalog.mjs",
