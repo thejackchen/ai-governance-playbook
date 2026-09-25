@@ -4,7 +4,7 @@ import {
   evaluateIntegrationLineGate,
   inspectIntegrationLine,
   isRecoveryAction,
-} from "../scripts/lib/integration-line.mjs";
+} from "../templates/common/scripts/lib/integration-line.mjs";
 
 function execFrom(map) {
   return (args) => {

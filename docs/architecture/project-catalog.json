@@ -174,8 +174,6 @@
       "boundaries": "检查和探针均有显式范围与时限；不把网络可达性当作业务验收，不输出响应正文或秘密。",
       "sourcePaths": [
         "scripts/lib.mjs",
-        "scripts/lib/extra-repo-facts.mjs",
-        "scripts/lib/integration-line.mjs",
         "scripts/lib/playbook-update.mjs",
         "scripts/lib/docs-index.mjs",
         "scripts/lib/environment-check.mjs",

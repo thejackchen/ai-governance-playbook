@@ -10,7 +10,7 @@ import {
   lintExtraRepoFacts,
   loadExtraRepoFacts,
   scanPointerSecrets,
-} from "../scripts/lib/extra-repo-facts.mjs";
+} from "../templates/common/scripts/lib/extra-repo-facts.mjs";
 
 function fixture(body) {
   const root = mkdtempSync(join(tmpdir(), "extra-repo-facts-"));

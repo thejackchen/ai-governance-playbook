@@ -26,3 +26,4 @@ bda4ce3，根 scripts 全部 .mjs（含当时放在 scripts 的测试）36 文�
 - 语义升级：母版开工不再调用 governance-update，不 fetch、不联网；保留母版显式 CLI 及离线/超时/不覆盖项目事实的原正反测试。旧自动注入只留 v4 兼容模板。
 - 需求系统：母版 lint 删除需求段，删除根 requirements-check；真实历史需求不删。9 个需求正反测试迁到 tests/requirements-v4，仍对兼容模板执行；消费项目的需求权威不再被通用模板强制改写。
 - 认领/登记/周报：停掉母版开工公告、claim/integration/Grok harness 判定与定时 heartbeat，registry 历史数据保留且停写；v4 专项正反测试继续保护兼容路径。危险命令和目标路径判断原实现保持在岗，直到下一刀合并。
+- 仓外正本/空模板/判例：本仓取消 extra-repo-facts 库与开工加载，正本路径表进入 AGENTS；历史数据与 34 篇母版判例保留，索引按实际文件重建。空 ADR/architecture、判例安装只留显式 v4 路径，新 Lite 不携带；原仓外路径与 integration 库正反测试仍执行 v4 库。

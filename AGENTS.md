@@ -53,7 +53,13 @@
 - 当前状态：`ROADMAP.md`
 - 知识路由：`docs/index.md`
 - 规则台账：`governance/registry.md`（Profile启用时）
-- 判例库：`governance/cases`（Profile启用时；负责人历次纠正的沉淀，同族场景先类比判例再动手）
+- 判例库：`governance/cases`（母版按问题检索，不要求开工通读）
 - 事故：`governance/incidents.md`
 - 待裁决问题：`governance/questions.md`
 - ADR：`docs/decisions/`
+
+## 仓外正本路径表
+
+| 类别 | 正本路径 | 使用边界 |
+|---|---|---|
+| 无已登记的仓外业务正本 | — | 需要时登记路径；未读取须说正本未装载，不用替身凑答案 |

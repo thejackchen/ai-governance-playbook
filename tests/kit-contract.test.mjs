@@ -57,7 +57,7 @@ test("Codex-only CI stowaway lives outside the shared Standard template", () => 
 });
 
 test("external authority reports missing sources instead of inventing a loaded fact", async (t) => {
-  const { inspectExtraRepoFacts } = await import("../scripts/lib/extra-repo-facts.mjs");
+  const { inspectExtraRepoFacts } = await import("../templates/common/scripts/lib/extra-repo-facts.mjs");
   const dir = mkdtempSync(join(tmpdir(), "authority-contract-"));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const result = inspectExtraRepoFacts(dir);

@@ -3,7 +3,6 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
-import { formatExtraRepoFactsReport, inspectExtraRepoFacts } from "../lib/extra-repo-facts.mjs";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const verbose = process.argv.includes("--verbose");
@@ -26,11 +25,5 @@ if (existsSync(frontendPolicyPath)) {
   } catch (cause) {
     console.log(`🎨 视觉治理: policy读取失败（${cause instanceof Error ? cause.message : String(cause)}）`);
   }
-}
-
-try {
-  console.log(formatExtraRepoFactsReport(inspectExtraRepoFacts(root), { compact: !verbose }));
-} catch {
-  console.log("📂 仓外正本: 读取失败（不阻断开工）");
 }
 

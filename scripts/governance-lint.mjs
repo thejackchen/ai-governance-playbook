@@ -2,7 +2,6 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
-import { lintExtraRepoFacts } from "./lib/extra-repo-facts.mjs";
 
 const arg = (name) => {
   const i = process.argv.indexOf(name);
@@ -219,12 +218,6 @@ try {
       }
     }
   }
-}
-
-{
-  const extra = lintExtraRepoFacts(root);
-  errors.push(...extra.errors);
-  warnings.push(...extra.warnings);
 }
 
 // 交付真实性:禁止在本地宣称“已推送”却非真实远端。不能简单用 `git push` 输出替代。
