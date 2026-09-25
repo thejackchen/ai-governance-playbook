@@ -22,3 +22,4 @@ bda4ce3，根 scripts 全部 .mjs（含当时放在 scripts 的测试）36 文�
 ## 分类拆除
 
 - 许可层：删除母版 runtime 的三份 admission 实现，v4 兼容模板保留供存量恢复；原安装/许可正反测试显式走 init-v4/doctor-v4，断言不变。母版自己不发许可。默认入口在拆除阶段暂时桥接 v4，单脚本施工提交切换到新 lite；不把中间提交称为已完成的 v5 安装器。
+- 项目发现：本仓 SessionStart 和默认 verify 停止加载 catalog/docs-index/discovery-map；母版 CLI 与库保留为按需工具，project-discovery 正反测试不删，v4 接线测试显式验证旧合同。新 Lite 不复制它们。

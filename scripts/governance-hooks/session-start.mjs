@@ -4,7 +4,6 @@ import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { formatExtraRepoFactsReport, inspectExtraRepoFacts } from "../lib/extra-repo-facts.mjs";
-import { loadDiscoveryMap } from "../lib/discovery-map.mjs";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const verbose = process.argv.includes("--verbose");
@@ -40,15 +39,6 @@ if (!semanticPolicyReadable) {
   const updateOutput = `${update.stdout || ""}${update.stderr || ""}`.trim();
   if (updateOutput) console.log(updateOutput);
   else console.log("🔎 语义升级发现：unknown（发现任务未返回）；保留本地已记录版本，按本地验证状态继续；仅任务提示，未完成适配。");
-}
-
-// v4.0.0 起开工不再 pull playbook 或写入升级；发现能力文件仍由项目 AI 按现有权限选择接入。
-// 发现地图只读取项目自己的显式元数据，缺失时明确报未配置，不推测覆盖范围。
-const discoveryCatalogPath = join(root, "docs/architecture/project-catalog.json");
-if (existsSync(discoveryCatalogPath)) {
-  console.log(loadDiscoveryMap(root));
-} else {
-  console.log("🗺 项目发现地图：未配置（docs/architecture/project-catalog.json 不存在）。不推测目录、索引或环境覆盖。");
 }
 
 const result = spawnSync(process.execPath, [fileURLToPath(new URL("../governance-status.mjs", import.meta.url))], {
