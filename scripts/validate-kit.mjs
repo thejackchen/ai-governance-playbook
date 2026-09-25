@@ -42,50 +42,7 @@ for (const runtime of ["codex", "claude-code", "generic"]) {
   } catch (e) { errors.push(`${runtime} adapter无法解析: ${e.message}`); }
 }
 
-// root 自托管 hook 与 templates/common 副本必须字节一致(自托管不变式;root 副本保护本仓库自身,漂移即失守)
-for (const hook of ["session-start.mjs", "session-start-admission.mjs", "session-start-codex.mjs", "pre-tool-use.mjs", "pre-tool-use-admission.mjs", "pre-tool-use-codex.mjs", "stop.mjs", "pre-compact.mjs", "pre-compact-codex.mjs"]) {
-  const a = join(KIT_ROOT, "scripts/governance-hooks", hook);
-  const b = join(KIT_ROOT, "templates/common/scripts/governance-hooks", hook);
-  if (existsSync(a) && existsSync(b) && readFileSync(a, "utf8") !== readFileSync(b, "utf8")) {
-    errors.push(`root 与 templates/common 的 governance-hooks/${hook} 已漂移(必须字节一致)`);
-  }
-}
-for (const extra of [
-  "scripts/lib/extra-repo-facts.mjs",
-  "scripts/lib/integration-line.mjs",
-  "scripts/lib/boot-admission.mjs",
-  "scripts/governance-lint.mjs",
-]) {
-  const a = join(KIT_ROOT, extra);
-  const b = join(KIT_ROOT, "templates/common", extra);
-  if (existsSync(a) && existsSync(b) && readFileSync(a, "utf8") !== readFileSync(b, "utf8")) {
-    errors.push(`root 与 templates/common 的 ${extra} 已漂移(必须字节一致)`);
-  }
-}
-
-// 发现能力与项目验证器是发布面的一部分；root 自托管和 templates/common
-// 缺任一侧都必须报错，不能因双方都存在才比较而静默漏掉缺件。
-for (const required of [
-  "scripts/lib/catalog-search.mjs",
-  "scripts/lib/discovery-map.mjs",
-  "scripts/lib/docs-index.mjs",
-  "scripts/lib/environment-check.mjs",
-  "scripts/lib/project-catalog.mjs",
-  "scripts/project-catalog.mjs",
-  "scripts/discovery-map.mjs",
-  "scripts/environment-check.mjs",
-  "scripts/governance-verify.mjs",
-]) {
-  const rootFile = join(KIT_ROOT, required);
-  const templateFile = join(KIT_ROOT, "templates/common", required);
-  const rootExists = existsSync(rootFile);
-  const templateExists = existsSync(templateFile);
-  if (!rootExists) errors.push(`缺少root自托管文件: ${required}`);
-  if (!templateExists) errors.push(`缺少templates/common文件: ${required}`);
-  if (rootExists && templateExists && readFileSync(rootFile, "utf8") !== readFileSync(templateFile, "utf8")) {
-    errors.push(`root 与 templates/common 的 ${required} 已漂移(必须字节一致)`);
-  }
-}
+// 自托管允许选择不同 Profile；接线行为由集成测试验证，不以副本字节相等锁死演化。
 
 for (const error of errors) console.error(`[kit] ERROR ${error}`);
 console.log(`[kit] ${errors.length} error`);

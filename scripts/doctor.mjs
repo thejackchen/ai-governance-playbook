@@ -54,7 +54,7 @@ const required = (p) => {
   if (!existsSync(join(target, p))) errors.push(`缺少文件: ${p}`);
 };
 const installedFiles = new Set(lock.installedFiles || []);
-for (const p of installedFiles) required(p);
+// 历史 installedFiles 不强制存在；下方检查实际采用能力。
 const instructionFile = lock.runtime === "claude-code" ? "CLAUDE.md" : "AGENTS.md";
 const bridgeFile = lock.runtime === "claude-code" ? "AGENTS.md" : "CLAUDE.md";
 const instructionBody = existsSync(join(target, instructionFile)) ? read(instructionFile) : "";
@@ -184,6 +184,20 @@ if (installedFiles.has(grokPath) || existsSync(join(target, grokPath))) {
     const missingAliases = missingWriteAliases(hooks);
     if (missingAliases.length) errors.push(`Grok PreToolUse matcher 漏写入工具: ${missingAliases.join(", ")}`);
   } catch (e) { errors.push(`${grokPath}无法解析: ${e.message}`); }
+}
+
+// 检查正在接线的本地命令目标，而非历史 installedFiles 清单。
+for (const carrier of [".codex/hooks.json", ".claude/settings.json", ".grok/hooks/governance.json"]) {
+  if (!existsSync(join(target, carrier))) continue;
+  try {
+    const config = JSON.parse(read(carrier));
+    for (const entries of Object.values(config.hooks || {})) {
+      for (const entry of entries) for (const hook of entry.hooks || []) {
+        const script = String(hook.command || "").match(/(?:\/|[\s"'])(scripts\/[^\s"']+\.mjs)/)?.[1];
+        if (script) required(script);
+      }
+    }
+  } catch { /* 上方报告配置错误 */ }
 }
 
 if (codexActive) {

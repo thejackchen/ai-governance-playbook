@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/session-start-admission.mjs\"",
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/session-start.mjs\"",
             "timeout": 45
           }
         ]
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-tool-use-admission.mjs\"",
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-tool-use.mjs\"",
             "timeout": 30
           }
         ]

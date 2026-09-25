@@ -2,7 +2,7 @@
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-const sessionStart = fileURLToPath(new URL("./session-start-admission.mjs", import.meta.url));
+const sessionStart = fileURLToPath(new URL("./session-start.mjs", import.meta.url));
 const childEnv = { ...process.env };
 if (childEnv.NO_COLOR && childEnv.FORCE_COLOR) delete childEnv.NO_COLOR;
 const result = spawnSync(process.execPath, [sessionStart], {

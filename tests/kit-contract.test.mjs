@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const root = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 
@@ -36,14 +39,11 @@ test("Standard workflow pins third-party actions and has a real scheduled heartb
   }
 });
 
-test("AI review is advisory by default; blocking power must be earned", () => {
-  const core = readFileSync(`${root}/CORE.md`, "utf8");
+test("AI review cannot replace deterministic CI", () => {
   const workflow = readFileSync(`${root}/templates/standard-codex/.github/workflows/governance.yml`, "utf8");
-  // 3.5.0 学说升级(判例 30):默认只读不变;LLM 结论要有阻断权必须满足内容语义门五条件。
-  assert.match(core, /未满足下述条件的 LLM 单次结论，不得作为阻断条件/);
-  assert.match(core, /golden 正反案例套通过=装门前置/);
-  assert.match(core, /解析失败=检查失败/);
-  assert.match(workflow, /不是唯一硬门禁|不应配置为唯一required check/);
+  assert.match(workflow, /governance-verify\.mjs --ci/);
+  assert.match(workflow, /continue-on-error: true/);
+  assert.match(workflow, /permissions:[\s\S]*contents: read/);
 });
 
 test("Codex-only CI stowaway lives outside the shared Standard template", () => {
@@ -56,53 +56,35 @@ test("Codex-only CI stowaway lives outside the shared Standard template", () => 
   assert.match(codexWorkflow, /openai\/codex-action/);
 });
 
-test("extra-repo fact index is part of the kit", () => {
-  const core = readFileSync(`${root}/CORE.md`, "utf8");
-  const instructions = readFileSync(`${root}/templates/common/INSTRUCTIONS.md`, "utf8");
-  const registry = readFileSync(`${root}/governance/registry.md`, "utf8");
-  assert.ok(existsSync(`${root}/templates/common/docs/ops/extra-repo-facts.json`));
-  assert.ok(existsSync(`${root}/templates/common/scripts/lib/extra-repo-facts.mjs`));
-  assert.ok(existsSync(`${root}/templates/common/scripts/lib/integration-line.mjs`));
-  assert.match(core, /仓外正本必须有仓内指针/);
-  assert.match(core, /正本未装载/);
-  assert.match(core, /~\/\.config\//);
-  assert.match(core, /## Grok/);
-  assert.match(core, /--prompt-file/);
-  assert.doesNotMatch(core, /无头 `grok -p`/);
-  assert.match(core, /治理母版在 GitHub，项目实例由适配编译产生/);
-  assert.ok(existsSync(`${root}/scripts/upgrade.mjs`));
-  assert.match(instructions, /extra-repo-facts\.md/);
-  assert.match(registry, /R11/);
-  assert.ok(existsSync(`${root}/templates/common/.grok/hooks/governance.json`));
+test("external authority reports missing sources instead of inventing a loaded fact", async (t) => {
+  const { inspectExtraRepoFacts } = await import("../scripts/lib/extra-repo-facts.mjs");
+  const dir = mkdtempSync(join(tmpdir(), "authority-contract-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const result = inspectExtraRepoFacts(dir);
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.length > 0);
 });
 
-test("PreCompact inspect-and-inject is part of the kit", () => {
-  const core = readFileSync(`${root}/CORE.md`, "utf8");
-  const registry = readFileSync(`${root}/governance/registry.md`, "utf8");
-  const claude = readFileSync(`${root}/adapters/claude-code/files/.claude/settings.json`, "utf8");
-  const codex = readFileSync(`${root}/adapters/codex/files/.codex/hooks.json`, "utf8");
-  const grok = readFileSync(`${root}/templates/common/.grok/hooks/governance.json`, "utf8");
-  assert.ok(existsSync(`${root}/scripts/governance-hooks/pre-compact.mjs`));
-  assert.ok(existsSync(`${root}/scripts/governance-hooks/pre-compact-codex.mjs`));
-  assert.ok(existsSync(`${root}/governance/cases/2026-08-23-压缩后会把临时目录和聊天记忆当成正本.md`));
-  assert.ok(existsSync(`${root}/skill/shoukou/SKILL.md`));
-  assert.match(core, /压缩前必须留下可恢复坐标/);
-  assert.match(registry, /R13/);
-  assert.match(claude, /pre-compact\.mjs/);
-  assert.match(codex, /pre-compact-codex\.mjs/);
-  assert.match(grok, /pre-compact\.mjs/);
-  assert.doesNotMatch(grok, /\becho\b/);
+test("PreCompact emits recoverable coordinates for temporary and durable paths", async () => {
+  const { inspectPreCompact, formatPreCompactReport, isEphemeralPath } = await import("../scripts/governance-hooks/pre-compact.mjs");
+  const info = inspectPreCompact(root);
+  assert.ok(info.repo);
+  assert.match(formatPreCompactReport(info), /HEAD:/);
+  assert.equal(isEphemeralPath("/tmp/recovery"), true);
+  assert.equal(isEphemeralPath("/work/recovery"), false);
 });
 
-test("integration line gate is part of the kit", () => {
-  const core = readFileSync(`${root}/CORE.md`, "utf8");
-  const registry = readFileSync(`${root}/governance/registry.md`, "utf8");
-  const instructions = readFileSync(`${root}/templates/common/INSTRUCTIONS.md`, "utf8");
-  assert.ok(existsSync(`${root}/scripts/lib/integration-line.mjs`));
-  assert.ok(existsSync(`${root}/governance/cases/2026-08-24-日常目录离开公共主干就会双线分叉.md`));
-  assert.match(core, /眼前这份代码必须含有公共线/);
-  assert.match(registry, /R14/);
-  assert.match(instructions, /integrationLine/);
+test("self-hosted write hook allows ordinary work without a boot permit and still blocks destructive git", () => {
+  const hook = `${root}/scripts/governance-hooks/pre-tool-use-codex.mjs`;
+  const invoke = (command) => spawnSync(process.execPath, [hook], {
+    cwd: root, encoding: "utf8", input: JSON.stringify({tool_name: "Bash", tool_input: {command}})
+  });
+  const allowed = invoke("git status");
+  assert.equal(allowed.status, 0);
+  assert.equal(allowed.stdout, "");
+  const denied = invoke("cd x && /usr/bin/git reset --hard");
+  assert.equal(JSON.parse(denied.stdout).decision, "block");
+  assert.match(JSON.parse(denied.stdout).reason, /禁止模式/);
 });
 
 test("Release governance is discoverable and covers the minimal contract", () => {

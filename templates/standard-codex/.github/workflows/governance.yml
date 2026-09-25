@@ -25,6 +25,7 @@ jobs:
         run: node scripts/governance-verify.mjs --ci
 
   ai-review:
+    continue-on-error: true
     if: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     permissions:

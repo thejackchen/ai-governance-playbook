@@ -1311,3 +1311,22 @@ test("High Assurance remains incomplete until CODEOWNERS is assigned", () => {
   assert.notEqual(doctor.status, 0);
   assert.match(doctor.stderr, /CODEOWNERS仍是占位owner/);
 });
+
+
+test("retired installedFiles entries do not resurrect removed capabilities", () => {
+  const dir = project();
+  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
+  const path = join(dir, "governance.lock.json");
+  const lock = JSON.parse(readFileSync(path, "utf8"));
+  lock.installedFiles.push("retired-capability.md");
+  writeFileSync(path, JSON.stringify(lock));
+  const healthy = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  assert.equal(healthy.status, 0, healthy.stderr);
+  const hooksPath = join(dir, ".codex/hooks.json");
+  const hooks = JSON.parse(readFileSync(hooksPath, "utf8"));
+  delete hooks.hooks.Stop;
+  writeFileSync(hooksPath, JSON.stringify(hooks));
+  const broken = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  assert.notEqual(broken.status, 0);
+  assert.match(broken.stderr, /Stop/);
+});
