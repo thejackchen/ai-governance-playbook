@@ -1,8 +1,9 @@
+import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 
-export const KIT_ROOT = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
+export const KIT_ROOT = fileURLToPath(new URL("..", import.meta.url)).replace(/\/$/, "");
 export const VERSION = JSON.parse(readFileSync(join(KIT_ROOT, "package.json"), "utf8")).version;
 
 export function parseArgs(argv) {

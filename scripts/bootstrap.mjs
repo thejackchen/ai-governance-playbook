@@ -20,7 +20,7 @@ if (!existsSync(initScript)) fail(`playbook checkout 缺少 scripts/init.mjs: ${
 
 const initArgs = [...forwardedArgs];
 if (!initArgs.some((argument) => argument === "--profile" || argument.startsWith("--profile="))) {
-  initArgs.push("--profile", "standard");
+  initArgs.push("--profile", "lite");
 }
 
 const result = spawnSync(process.execPath, [initScript, ...initArgs], {

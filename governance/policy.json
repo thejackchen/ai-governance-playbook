@@ -1,101 +1,10 @@
 {
-  "schemaVersion": 1,
-  "denyCommandPatterns": [
-    "(^|\\s)git(?:\\s+(?:-C\\s+\\S+|-c\\s+\\S+|--git-dir(?:=\\S+|\\s+\\S+)|--work-tree(?:=\\S+|\\s+\\S+)))*\\s+reset\\s+--hard(?:\\s|$)",
-    "(^|\\s)git(?:\\s+(?:-C\\s+\\S+|-c\\s+\\S+|--git-dir(?:=\\S+|\\s+\\S+)|--work-tree(?:=\\S+|\\s+\\S+)))*\\s+clean\\s+-[^\\n]*[fx]",
-    "(^|\\s)git(?:\\s+(?:-C\\s+\\S+|-c\\s+\\S+|--git-dir(?:=\\S+|\\s+\\S+)|--work-tree(?:=\\S+|\\s+\\S+)))*\\s+push(?:\\s+[^\\n]+)*\\s+--force(?:-with-lease)?(?:\\s|$)",
-    "(^|\\s)rm\\s+-rf\\s+/(?:\\s|$)",
-    "(^|\\s)rm\\s+-rf\\s+\\.git(?:\\s|$)"
-  ],
+  "protectedPaths": [],
   "fastChecks": [
     "npm run check"
   ],
   "ciChecks": [
     "npm run check",
     "npm test"
-  ],
-  "requirements": {
-    "mode": "local",
-    "source": "docs/requirements/backlog.md",
-    "validator": []
-  },
-  "integrationLine": {
-    "remote": "origin",
-    "branch": "main",
-    "label": "GitHub main"
-  },
-  "playbookUpdate": {
-    "channel": "https://raw.githubusercontent.com/thejackchen/ai-governance-playbook/main",
-    "check": "manual",
-    "apply": "semantic",
-    "cacheSeconds": 21600
-  },
-  "grokHarness": {
-    "models": [
-      "grok-4.6",
-      "grok-4.5"
-    ],
-    "efforts": [
-      "low",
-      "medium",
-      "high",
-      "xhigh"
-    ],
-    "defaultModel": "grok-4.6",
-    "defaultEffort": "high",
-    "requiredFlags": [
-      "--verbatim",
-      "--output-format",
-      "--prompt-file"
-    ],
-    "forbiddenFlags": [
-      "-p",
-      "--single",
-      "--always-approve"
-    ],
-    "forbidLoginCommands": [
-      "grok",
-      "codex"
-    ],
-    "forbidDirectHttpHosts": [
-      "g2api.somro.com",
-      "api.x.ai",
-      "cli-chat-proxy.grok.com"
-    ],
-    "forbidEnvironmentKeys": [
-      "XAI_API_KEY"
-    ],
-    "forbidCredentialPathFragments": [
-      ".grok/config.toml"
-    ]
-  },
-  "protectedPaths": [],
-  "allowedTopLevelEntries": [
-    ".codex",
-    ".githooks",
-    ".github",
-    ".gitignore",
-    ".grok",
-    "AGENTS.md",
-    "BOOTSTRAP.md",
-    "CHANGELOG.md",
-    "CLAUDE.md",
-    "CORE.md",
-    "LICENSE",
-    "README.md",
-    "ROADMAP.md",
-    "VERSION",
-    "adapters",
-    "docs",
-    "extensions",
-    "governance",
-    "governance.lock.json",
-    "package.json",
-    "profiles",
-    "scripts",
-    "setup.md",
-    "skill",
-    "templates",
-    "tests"
   ]
 }

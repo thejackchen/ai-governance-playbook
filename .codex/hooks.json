@@ -2,28 +2,26 @@
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "startup|resume|clear|compact",
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/session-start-codex.mjs\"",
-            "timeout": 30,
-            "statusMessage": "读取治理状态"
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance.mjs\" session-start --runtime codex",
+            "timeout": 10
           }
-        ]
+        ],
+        "matcher": "startup|resume|clear|compact"
       }
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|run_terminal_command|apply_patch|Edit|Write|MultiEdit|search_replace",
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-tool-use-codex.mjs\"",
-            "timeout": 30,
-            "statusMessage": "检查治理策略"
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance.mjs\" pre-tool --runtime codex",
+            "timeout": 10
           }
-        ]
+        ],
+        "matcher": "Bash|run_terminal_command|exec_command|apply_patch|Edit|Write|MultiEdit|search_replace"
       }
     ],
     "Stop": [
@@ -31,21 +29,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/stop.mjs\"",
-            "timeout": 120,
-            "statusMessage": "运行收尾验证"
-          }
-        ]
-      }
-    ],
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance-hooks/pre-compact-codex.mjs\"",
-            "timeout": 30,
-            "statusMessage": "压缩前检查坐标"
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/governance.mjs\" stop --runtime codex",
+            "timeout": 10
           }
         ]
       }

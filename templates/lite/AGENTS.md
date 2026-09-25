@@ -1,10 +1,10 @@
-# ai-governance-playbook · AI 执行宪法
+# {{PROJECT_NAME}} · AI 执行宪法
 
 治理铭牌见 `governance.lock.json`；唯一当前状态见 [ROADMAP.md](ROADMAP.md)。
 
 ## 意图
 
-把负责人意图和软件红线变成可触发、可判定、可留证的控制；母版自身采用 Lite，当前候选状态以 ROADMAP 为准。方法论唯一正本 CORE.md，运行时协议 adapters/README.md。
+待负责人填写：项目做什么、服务谁、当前取舍是什么。已有项目保留真实意图，不用模板重置。
 
 ## 红线
 
@@ -24,7 +24,7 @@
 
 ## 收尾四步
 
-1. 运行 `npm run check && npm test`；治理载体改动另运行 `node scripts/governance-verify.mjs --ci`。
+1. 运行项目自身检查/测试，并运行 `node scripts/governance.mjs check`。
 2. 有代码或文档变化时更新 ROADMAP 当前游标与日期，写明结果、下一步、卡点。
 3. 将新决策按 `- YYYY-MM-DD 内容` 写入 docs/SESSION.md，附验证证据和恢复坐标。
 4. 报告真实结果与未验事项；获得提交授权才提交，不以本地检查代替部署或客户验收。
@@ -33,7 +33,7 @@
 
 | 类别 | 正本路径 | 使用边界 |
 |---|---|---|
-| 无已登记仓外业务正本 | — | 未读取时明确“正本未装载”，不以仓内样例替代 |
+| 按项目事实登记 | 待填写（只写路径） | 未读取时明确“正本未装载”，不以仓内样例替代 |
 
 ## 指针
 

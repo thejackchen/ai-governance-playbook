@@ -66,7 +66,7 @@ test("external authority reports missing sources instead of inventing a loaded f
 });
 
 test("PreCompact emits recoverable coordinates for temporary and durable paths", async () => {
-  const { inspectPreCompact, formatPreCompactReport, isEphemeralPath } = await import("../scripts/governance-hooks/pre-compact.mjs");
+  const { inspectPreCompact, formatPreCompactReport, isEphemeralPath } = await import("../templates/common/scripts/governance-hooks/pre-compact.mjs");
   const info = inspectPreCompact(root);
   assert.ok(info.repo);
   assert.match(formatPreCompactReport(info), /HEAD:/);
@@ -75,16 +75,16 @@ test("PreCompact emits recoverable coordinates for temporary and durable paths",
 });
 
 test("self-hosted write hook allows ordinary work without a boot permit and still blocks destructive git", () => {
-  const hook = `${root}/scripts/governance-hooks/pre-tool-use-codex.mjs`;
-  const invoke = (command) => spawnSync(process.execPath, [hook], {
+  const hook = `${root}/scripts/governance.mjs`;
+  const invoke = (command) => spawnSync(process.execPath, [hook, "pre-tool", "--runtime", "codex"], {
     cwd: root, encoding: "utf8", input: JSON.stringify({tool_name: "Bash", tool_input: {command}})
   });
   const allowed = invoke("git status");
   assert.equal(allowed.status, 0);
   assert.equal(allowed.stdout, "");
   const denied = invoke("cd x && /usr/bin/git reset --hard");
-  assert.equal(JSON.parse(denied.stdout).decision, "block");
-  assert.match(JSON.parse(denied.stdout).reason, /禁止模式/);
+  assert.equal(JSON.parse(denied.stdout).hookSpecificOutput.permissionDecision, "deny");
+  assert.match(JSON.parse(denied.stdout).hookSpecificOutput.permissionDecisionReason, /禁止模式/);
 });
 
 test("Release governance is discoverable and covers the minimal contract", () => {

@@ -13,7 +13,7 @@ const runtime = args.runtime === "auto" || !args.runtime ? detectRuntime(target)
 if (!new Set(["codex", "claude-code", "generic"]).has(runtime)) fail(`不支持runtime: ${runtime}`);
 const profile = String(args.profile || "lite");
 if (!new Set(["lite", "standard", "high-assurance"]).has(profile)) fail(`不支持profile: ${profile}`);
-const profileInfo = JSON.parse(readFileSync(join(KIT_ROOT, "profiles", `${profile}.json`), "utf8"));
+const profileInfo = profile === "lite" ? { ruleBudget: 12 } : JSON.parse(readFileSync(join(KIT_ROOT, "profiles", `${profile}.json`), "utf8"));
 const adapter = JSON.parse(readFileSync(join(KIT_ROOT, "adapters", runtime, "adapter.json"), "utf8"));
 const policyPath = join(target, "governance/policy.json");
 const existingLockPath = join(target, "governance.lock.json");

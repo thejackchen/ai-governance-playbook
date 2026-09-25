@@ -25,3 +25,5 @@
 | 仓外正本路径索引 | [运维索引](ops/INDEX.md) · [CORE §7.1](../CORE.md#71-仓外正本必须有仓内指针) | 只写路径；SessionStart 注入在/缺；未装载禁止用替身凑答案 |
 | 治理编译、版本发现/语义适配、可选文件安装与开机自检 | [playbook-update.md](playbook-update.md) · [REQ-GOV-003](requirements/specs/REQ-GOV-003-governance-compilation-and-boot-self-test.md) · [CORE §7.2](../CORE.md#72-治理母版在-github项目实例由适配编译产生) | GitHub VERSION 为通用母版；`governance-update.mjs` 默认做有界版本发现并输出语义适配任务；`upgrade.mjs` 仅在显式选择 discovery 时作为可选 `file-install-only` 文件安装器；两者均按同一升级合同执行；项目事实经适配编译保留；已有 admission、Hook、认领与两次开机合同仅对已接入项目适用，不向所有消费仓通用强制；开机检查按项目合同执行并签发施工许可 |
 | 压缩前可恢复坐标 | [CORE §7.3](../CORE.md#73-压缩前必须留下可恢复坐标) · [R13](../governance/registry.md) | PreCompact 检查+注入目录/分支/HEAD；不自动提交 |
+
+- [最近决策与交接](SESSION.md)
