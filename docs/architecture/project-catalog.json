@@ -45,8 +45,6 @@
         "scripts/governance-verify.mjs",
         "scripts/init.mjs",
         "scripts/init-v4.mjs",
-        "scripts/requirements-check.mjs",
-        "scripts/requirements-check.test.mjs",
         "scripts/upgrade.mjs",
         "scripts/validate-kit.mjs",
         "scripts/weekly-governance-review.mjs"

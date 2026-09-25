@@ -11,108 +11,10 @@ const arg = (name) => {
 const root = resolve(arg("--root") || process.cwd());
 const errors = [];
 const warnings = [];
-const outputLimit = 32 * 1024;
-let reqCfg = null;
-const BUILT_IN_REQUIREMENTS_VALIDATOR = ["node", "scripts/requirements-check.mjs", "--root", "."];
-const LOCAL_REQUIREMENTS_SOURCE = "docs/requirements/backlog.md";
 const read = (p) => readFileSync(join(root, p), "utf8");
 const required = (p) => {
   if (!existsSync(join(root, p))) errors.push(`缺少文件: ${p}`);
 };
-function clampOutput(text) {
-  const raw = String(text || "");
-  return raw.length > outputLimit ? `${raw.slice(0, outputLimit)}…(已截断 ${raw.length - outputLimit} 字符)` : raw;
-}
-function parseRequirementsConfig(policy) {
-  const cfg = policy?.requirements;
-  if (!cfg) {
-    warnings.push("[需求系统] governance/policy.json 未声明 requirements；按兼容策略默认 local + built-in 校验");
-    return {
-      mode: "local",
-      source: LOCAL_REQUIREMENTS_SOURCE,
-      validators: [],
-    };
-  }
-  if (typeof cfg !== "object" || cfg === null || Array.isArray(cfg)) {
-    errors.push("governance/policy.json requirements 需为对象");
-    return null;
-  }
-  const mode = cfg.mode === "external" || cfg.mode === "local" ? cfg.mode : "local";
-  if (cfg.mode !== mode) errors.push(`governance/policy.json requirements.mode 必须为 local 或 external: ${cfg.mode}`);
-  const source = typeof cfg.source === "string" && cfg.source.trim() ? cfg.source.trim() : "";
-  if (!source) errors.push("governance/policy.json requirements.source 不能为空");
-  if (cfg.validator !== undefined && !Array.isArray(cfg.validator)) {
-    errors.push("governance/policy.json requirements.validator 形态非法；要求为 string[][]");
-    return null;
-  }
-  const validator = cfg.validator ?? [];
-  for (const item of validator) {
-    if (!Array.isArray(item) || !item.length || !item.every((x) => typeof x === "string")) {
-      errors.push(`governance/policy.json requirements.validator 形态非法: ${JSON.stringify(item)}；要求为 string[][]`);
-      return null;
-    }
-  }
-  if (mode === "external" && validator.length) errors.push("external 模式 requirements.validator 必须为空；外部权威只由三处同一 URL 指针承载");
-  return {
-    mode,
-    source,
-    validators: validator,
-  };
-}
-function isExternalRequirementsSource(source) {
-  return /^https?:\/\/[^\s]+$/i.test(source);
-}
-function isInsideRepoRoot(targetPath) {
-  const normalizedRoot = resolve(root);
-  const normalizedTarget = resolve(targetPath);
-  return normalizedTarget === normalizedRoot || normalizedTarget.startsWith(`${normalizedRoot}${sep}`);
-}
-function validateRequirementsConfig(cfg) {
-  if (!cfg) return;
-  const sourcePath = resolve(root, cfg.source);
-  const localBacklog = join(root, "docs/requirements/backlog.md");
-  const hasStatefulBacklog = existsSync(localBacklog)
-    ? /##\s*进行中需求/.test(read("docs/requirements/backlog.md")) || /^\s*-\s*\[\s\]\s+REQ-[A-Z0-9-]+/m.test(read("docs/requirements/backlog.md"))
-    : false;
-
-  if (cfg.mode === "external") {
-    if (!isExternalRequirementsSource(cfg.source)) {
-      errors.push(`requirements.source 必须是 https:// 或 http:// 外链: ${cfg.source}`);
-    }
-    if (hasStatefulBacklog) {
-      errors.push("external 模式检测到本地状态化 backlog，请移除状态字段；外部需求应仅保留外部指针");
-    }
-    validateExternalRequirementPointers(cfg.source);
-    return;
-  }
-
-  if (cfg.source !== LOCAL_REQUIREMENTS_SOURCE) {
-    errors.push(`local 模式 requirements.source 必须为 ${LOCAL_REQUIREMENTS_SOURCE}，以与内置 requirements-check 的唯一权威一致: ${cfg.source}`);
-    return;
-  }
-
-  if (!existsSync(sourcePath)) {
-    errors.push(`requirements.source 不存在: ${cfg.source}`);
-    return;
-  }
-  if (!isInsideRepoRoot(sourcePath)) {
-    errors.push(`requirements.source 越界: ${cfg.source}`);
-    return;
-  }
-}
-function validateExternalRequirementPointers(source) {
-  const instruction = lock?.runtime === "claude-code" ? "CLAUDE.md" : "AGENTS.md";
-  const pointers = [
-    ["governance/policy.json", source],
-    [instruction, extractLinkForLabel(read(instruction), "需求")],
-    ["docs/index.md", extractLinkForLabel(read("docs/index.md"), "需求")],
-  ];
-  for (const [file, actual] of pointers) {
-    if (actual !== source) {
-      errors.push(`external 需求指针不一致: ${file}=${actual || "缺少需求链接"}，应为 ${source}`);
-    }
-  }
-}
 function validateCredentialIgnoreRules() {
   const targets = [".env.local.bak", ".env.local.old", ".env.local.save", ".env.local~", ".env.production"];
   const results = targets.map((target) => [target, spawnSync("git", ["check-ignore", "-q", "--", target], { cwd: root, encoding: "utf8" })]);
@@ -125,84 +27,6 @@ function validateCredentialIgnoreRules() {
   if (!missing.length) return;
   errors.push(`.gitignore 未忽略凭据派生文件: ${missing.join(", ")}；补充 .env.* 或等效规则后重跑治理检查`);
 }
-function hasRecursiveRisk(argv) {
-  return argv.some((token) => {
-    const base = basename(String(token || "")).replace(/\.mjs$/i, "").toLowerCase();
-    return new Set(["governance-lint", "governance-verify", "init", "doctor"]).has(base);
-  });
-}
-function runValidator(argv) {
-  if (process.env.AIOS_REQUIREMENTS_GUARD === "1") {
-    errors.push("需求校验被要求阻断递归调用（AIOS_REQUIREMENTS_GUARD=1）");
-    return;
-  }
-  if (!Array.isArray(argv) || !argv.length) {
-    errors.push("非法 requirements.validator: 空向量");
-    return;
-  }
-  if (hasRecursiveRisk(argv)) {
-    errors.push(`需求校验器命中递归禁令: ${argv.join(" ")}`);
-    return;
-  }
-  const command = argv[0];
-  const args = argv.slice(1);
-  const started = Date.now();
-  const result = spawnSync(command, args, {
-    cwd: root,
-    env: { ...process.env, AIOS_REQUIREMENTS_GUARD: "1" },
-    encoding: "utf8",
-    timeout: 10000,
-  });
-  if (result.error) {
-    errors.push(`需求校验器执行异常: ${command} ${args.join(" ")}; ${result.error.message}`);
-    return;
-  }
-  if (result.status !== 0) {
-    const output = clampOutput([result.stdout, result.stderr].filter(Boolean).join("\n"));
-    errors.push(`需求校验器执行失败（${Date.now() - started}ms）: ${argv.join(" ")}; ${output}`);
-    return;
-  }
-}
-function isBuiltInRequirementsValidator(argv) {
-  return argv.length === BUILT_IN_REQUIREMENTS_VALIDATOR.length
-    && argv.every((part, index) => part === BUILT_IN_REQUIREMENTS_VALIDATOR[index]);
-}
-function runRequirementValidators(cfg) {
-  if (!cfg || cfg.mode !== "local") return;
-  // 内置 checker 是 local 合同的一部分，policy 只能追加，不能替换。
-  runValidator(BUILT_IN_REQUIREMENTS_VALIDATOR);
-  for (const validator of cfg.validators) {
-    if (!isBuiltInRequirementsValidator(validator)) runValidator(validator);
-  }
-}
-function resolveRequirementsSourceFromLegacy() {
-  const readInstruction = existsSync(join(root, ".codex/hooks.json"))
-    ? "AGENTS.md"
-    : existsSync(join(root, ".claude/settings.json"))
-      ? "CLAUDE.md"
-      : existsSync(join(root, "AGENTS.md"))
-        ? "AGENTS.md"
-        : "CLAUDE.md";
-  const linkFromInstruction = extractLinkForLabel(read(readInstruction), "需求");
-  if (linkFromInstruction) return linkFromInstruction;
-  return extractLinkForLabel(read("docs/index.md"), "需求") || extractLinkForLabel(read("docs/index.md"), "requirements");
-}
-const resolveRelativeLink = (fromFile, target) => {
-  const trimmed = target.trim().replace(/^<|>$/g, "").split("#")[0];
-  if (!trimmed || /^(https?:|mailto:|#)/.test(trimmed)) return null;
-  const resolved = isAbsolute(trimmed) ? trimmed : resolve(dirname(fromFile), trimmed);
-  return resolved;
-};
-const extractLinkForLabel = (body, label) => {
-  for (const m of body.matchAll(/\[([^\]]*)\]\(([^)]+)\)/g)) {
-    const text = m[1];
-    const target = m[2];
-    if (!text || !target) continue;
-    if (text.includes(label)) return target;
-  }
-  return null;
-};
-
 function escapeRegex(text) {
   return String(text).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -329,9 +153,6 @@ try {
   for (const pattern of policy.denyCommandPatterns || []) {
     try { new RegExp(pattern, "i"); } catch (e) { errors.push(`非法 denyCommandPatterns 正则: ${pattern}`); }
   }
-  reqCfg = parseRequirementsConfig(policy);
-  validateRequirementsConfig(reqCfg);
-  runRequirementValidators(reqCfg);
   if (lock.profile !== "lite" && !(policy.ciChecks || []).length) warnings.push("尚未登记项目级 ciChecks；当前CI只验证治理结构");
   if ((policy.allowedTopLevelEntries || []).length) {
     const allowed = new Set(policy.allowedTopLevelEntries);

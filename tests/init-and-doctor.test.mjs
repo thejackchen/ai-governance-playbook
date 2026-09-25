@@ -1151,7 +1151,7 @@ test("credential derived files are a git-check-ignore hard gate", () => {
   const dir = project();
   writeFileSync(join(dir, ".gitignore"), ".env.local\n");
   assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]).status, 0);
-  for (const lintScript of [join(dir, "scripts/governance-lint.mjs"), "scripts/governance-lint.mjs"]) {
+  for (const lintScript of [join(dir, "scripts/governance-lint.mjs"), "templates/common/scripts/governance-lint.mjs"]) {
     const lint = run(process.execPath, [lintScript, "--root", dir], kit);
     assert.notEqual(lint.status, 0, lintScript);
     assert.match(lint.stderr, /\.gitignore 未忽略凭据派生文件/);
@@ -1167,7 +1167,7 @@ test("external mode rejects pointer drift across policy, instruction, and docs i
     "--requirements-mode", "external", "--requirements-source", source, "--write",
   ]).status, 0);
   writeFileSync(join(dir, "AGENTS.md"), readFileSync(join(dir, "AGENTS.md"), "utf8").replace(source, "https://wrong.example.com/requirements"));
-  for (const lintScript of [join(dir, "scripts/governance-lint.mjs"), "scripts/governance-lint.mjs"]) {
+  for (const lintScript of [join(dir, "scripts/governance-lint.mjs"), "templates/common/scripts/governance-lint.mjs"]) {
     const lint = run(process.execPath, [lintScript, "--root", dir], kit);
     assert.notEqual(lint.status, 0, lintScript);
     assert.match(lint.stderr, /external 需求指针不一致: AGENTS\.md/);
@@ -1199,7 +1199,7 @@ test("local requirements source must match the built-in checker authority", () =
   const policy = JSON.parse(readFileSync(policyPath, "utf8"));
   policy.requirements.source = "docs/other-requirements.md";
   writeFileSync(policyPath, JSON.stringify(policy, null, 2) + "\n");
-  for (const lintScript of [join(dir, "scripts/governance-lint.mjs"), "scripts/governance-lint.mjs"]) {
+  for (const lintScript of [join(dir, "scripts/governance-lint.mjs"), "templates/common/scripts/governance-lint.mjs"]) {
     const lint = run(process.execPath, [lintScript, "--root", dir], kit);
     assert.notEqual(lint.status, 0, lintScript);
     assert.match(lint.stderr, /local 模式 requirements\.source 必须为 docs\/requirements\/backlog\.md/);
@@ -1213,7 +1213,7 @@ test("requirements validator rejects non-array shapes instead of silently disabl
   const policy = JSON.parse(readFileSync(policyPath, "utf8"));
   policy.requirements.validator = "true";
   writeFileSync(policyPath, JSON.stringify(policy, null, 2) + "\n");
-  for (const lintScript of [join(dir, "scripts/governance-lint.mjs"), "scripts/governance-lint.mjs"]) {
+  for (const lintScript of [join(dir, "scripts/governance-lint.mjs"), "templates/common/scripts/governance-lint.mjs"]) {
     const lint = run(process.execPath, [lintScript, "--root", dir], kit);
     assert.notEqual(lint.status, 0, lintScript);
     assert.match(lint.stderr, /requirements\.validator 形态非法/);

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
 
-import { checkRequirements } from "./requirements-check.mjs";
+import { checkRequirements } from "../templates/common/scripts/requirements-check.mjs";
 
 function makeRepo(backlog) {
   const root = mkdtempSync(join(tmpdir(), "governance-req-"));
