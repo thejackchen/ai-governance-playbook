@@ -46,8 +46,7 @@
         "scripts/init.mjs",
         "scripts/init-v4.mjs",
         "scripts/upgrade.mjs",
-        "scripts/validate-kit.mjs",
-        "scripts/weekly-governance-review.mjs"
+        "scripts/validate-kit.mjs"
       ],
       "links": ["governance-hooks", "discovery-upgrade-engine", "project-discovery-cli"]
     },

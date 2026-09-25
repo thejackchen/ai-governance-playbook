@@ -25,3 +25,4 @@ bda4ce3，根 scripts 全部 .mjs（含当时放在 scripts 的测试）36 文�
 - 项目发现：本仓 SessionStart 和默认 verify 停止加载 catalog/docs-index/discovery-map；母版 CLI 与库保留为按需工具，project-discovery 正反测试不删，v4 接线测试显式验证旧合同。新 Lite 不复制它们。
 - 语义升级：母版开工不再调用 governance-update，不 fetch、不联网；保留母版显式 CLI 及离线/超时/不覆盖项目事实的原正反测试。旧自动注入只留 v4 兼容模板。
 - 需求系统：母版 lint 删除需求段，删除根 requirements-check；真实历史需求不删。9 个需求正反测试迁到 tests/requirements-v4，仍对兼容模板执行；消费项目的需求权威不再被通用模板强制改写。
+- 认领/登记/周报：停掉母版开工公告、claim/integration/Grok harness 判定与定时 heartbeat，registry 历史数据保留且停写；v4 专项正反测试继续保护兼容路径。危险命令和目标路径判断原实现保持在岗，直到下一刀合并。

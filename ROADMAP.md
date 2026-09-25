@@ -4,7 +4,7 @@
 
 ## 当前游标
 
-2026-09-26：v5 Lite 在 feat/v5-lite 施工，负责人已批准减重判决；已解除自锁；许可层已收进 v4 兼容路径；项目发现已按需化；开工联网发现已停；当前退出需求制度默认执法。VERSION 保持 4.3.0，未发版；冷启动考试由主控组织。
+2026-09-26：v5 Lite 在 feat/v5-lite 施工，负责人已批准减重判决；已解除自锁；许可层已收进 v4 兼容路径；项目发现已按需化；开工联网发现已停；需求制度默认执法已退；当前停用认领、公共线、Grok 调用规范与周报。VERSION 保持 4.3.0，未发版；冷启动考试由主控组织。
 
 母版 v4.3.0 已发布。实现提交 `431a6cda0fed2c288d528302ed83574757580204` 经 PR #6 正常合入，实施发布基线 `6cf12a59d8826e37132e2a6f31e31671cf061ec2`；GitHub API 与 git fetch 均回读 `VERSION=4.3.0`。主代理全检 162/162、专项 27/27、无上下文 A 复测与 B 各 96/100；远端 deterministic CI run `34107998818` 成功，doctor 0 error/1 warning（真实 Codex UI Hook trust 未验，CI advisory 模型步骤未运行）。按 [REQ-GOV-004](docs/requirements/specs/REQ-GOV-004-project-discovery-release.md) 完成本次母版语义升级：模板是建议，项目发现新版后自主理解、适配、验收，只有真实无法解决的权威冲突交负责人；不再要求逐仓指定能力。具体命令、评分及范围见[无上下文验收](docs/evals/semantic-upgrade-forward-tests.md)。全消费仓采用与真实客户端现场不由母版发布代证；缺发现载体或 off/manual 策略按项目事实接入。本轮未改业务、部署、凭据、主机或用户 WIP，未新建常驻更新服务，Hook 不调用模型或覆盖治理文件；未恢复已退出的许可或巡检机制。
 

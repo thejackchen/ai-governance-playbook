@@ -124,32 +124,6 @@ try {
   for (const key of ["denyCommandPatterns", "fastChecks", "ciChecks", "protectedPaths", "allowedTopLevelEntries"]) {
     if (!Array.isArray(policy[key])) errors.push(`governance/policy.json ${key} 必须是数组`);
   }
-  if (policy.claimGate !== undefined) {
-    if (typeof policy.claimGate !== "object" || policy.claimGate === null || Array.isArray(policy.claimGate)) {
-      errors.push("governance/policy.json claimGate 需为对象");
-    } else {
-      for (const key of ["codeRoots", "alwaysClaimPaths", "exemptPatterns", "bashClaimPatterns"]) {
-        if (policy.claimGate[key] !== undefined && !Array.isArray(policy.claimGate[key])) {
-          errors.push(`governance/policy.json claimGate.${key} 必须是数组`);
-        }
-      }
-    }
-  }
-  if (policy.grokHarness !== undefined) {
-    if (typeof policy.grokHarness !== "object" || policy.grokHarness === null || Array.isArray(policy.grokHarness)) {
-      errors.push("governance/policy.json grokHarness 需为对象");
-    } else {
-      for (const key of ["models", "efforts", "requiredFlags", "forbiddenFlags", "forbidLoginCommands", "forbidDirectHttpHosts", "forbidEnvironmentKeys", "forbidCredentialPathFragments"]) {
-        if (!Array.isArray(policy.grokHarness[key])) errors.push(`governance/policy.json grokHarness.${key} 必须是数组`);
-      }
-      if (!(policy.grokHarness.models || []).includes(policy.grokHarness.defaultModel)) {
-        errors.push("governance/policy.json grokHarness.defaultModel 必须属于 models");
-      }
-      if (!(policy.grokHarness.efforts || []).includes(policy.grokHarness.defaultEffort)) {
-        errors.push("governance/policy.json grokHarness.defaultEffort 必须属于 efforts");
-      }
-    }
-  }
   for (const pattern of policy.denyCommandPatterns || []) {
     try { new RegExp(pattern, "i"); } catch (e) { errors.push(`非法 denyCommandPatterns 正则: ${pattern}`); }
   }
@@ -163,30 +137,6 @@ try {
   }
 } catch (e) {
   errors.push(`governance/policy.json 无法解析: ${e.message}`);
-}
-
-if (existsSync(join(root, "governance/registry.md"))) {
-  const count = (read("governance/registry.md").match(/^\| R\d+ \|/gm) || []).length;
-  if (count > Number(lock.ruleBudget || 0)) errors.push(`规则预算超限: ${count}/${lock.ruleBudget}`);
-}
-
-if (existsSync(join(root, "governance/registry.md"))) {
-  const registryBody = read("governance/registry.md");
-  const carriers = [];
-  const pushDir = (dir, label) => {
-    let names = [];
-    try { names = readdirSync(join(root, dir)); } catch { return; }
-    for (const name of names) {
-      try { if (!statSync(join(root, dir, name)).isFile()) continue; } catch { continue; }
-      carriers.push({ id: name, label: `${label} ${name}` });
-    }
-  };
-  pushDir(".githooks", "git hook");
-  pushDir(".github/workflows", "CI workflow");
-  const unregistered = carriers.filter((c) => !registryBody.includes(c.id));
-  for (const c of unregistered) {
-    warnings.push(`载体在跑但未登记进 registry.md: ${c.label}——登记它，或说明为何不算治理载体`);
-  }
 }
 
 // ── hook 载体实效检查:文件存在 ≠ 守卫在岗 ──

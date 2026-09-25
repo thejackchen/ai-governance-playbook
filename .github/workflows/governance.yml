@@ -5,8 +5,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-  schedule:
-    - cron: "17 1 * * 1"
 
 permissions:
   contents: read
@@ -46,16 +44,3 @@ jobs:
           sandbox: read-only
           output-file: codex-governance-review.md
 
-  heartbeat:
-    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: 22
-      - name: Weekly governance reconciliation
-        run: node scripts/weekly-governance-review.mjs >> "$GITHUB_STEP_SUMMARY"
-
-# ai-review是建议层，不应配置为唯一required check。
-# deterministic job配合branch protection后才是共享阻断门禁。
