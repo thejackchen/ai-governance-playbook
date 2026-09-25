@@ -1,4 +1,7 @@
-# 项目发现能力（母版合同）
+# 母版按需项目发现
+
+> 本套 CLI 仅按需调用，不默认安装到 Lite、不在开工时运行。旧 v4 模板保留历史接线，本文的项目字段与诊断合同仍供显式调用使用。
+
 
 > 本页定义可移植的索引、分类检索、开工地图和有界环境诊断。它不登记任何项目的
 > 主机、服务、团队、客户或凭据正文。母版版本、当前游标与发布回读见
@@ -101,5 +104,5 @@ policy、项目 catalog 或仓外事实；lock 中的 `capabilities.discovery.st
 只表示能力文件回执，不是全量升级。项目若要接线或进行真实调用，必须依照自己的事实、
 权限和 runbook 另行验收。
 
-相关安装/升级合同见 [`docs/playbook-update.md`](playbook-update.md) 与 [`setup.md`](../setup.md)；
+相关安装/升级合同见 [`docs/playbook-update.md`](playbook-update.md) 与 [`BOOTSTRAP.md`](../BOOTSTRAP.md)；
 项目的目录与资产入口应从项目自己的 [`docs/index.md`](index.md) 继续导航。

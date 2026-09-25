@@ -35,16 +35,16 @@ try { lock = JSON.parse(readFileSync(lockPath, "utf8")); } catch (e) { fail(`loc
 
 const lockVersion = String(lock.playbookVersion || "").trim();
 if (!lockVersion) {
-  errors.push("governance.lock.json 缺少 playbookVersion；无法确认与kit版本一致性。按 setup.md 的存量版本升级流程审查差异并取得验证证据后再更新 lock；普通 init 不会覆盖旧文件，禁止直接 --force");
+  errors.push("governance.lock.json 缺少 playbookVersion；无法确认与kit版本一致性。按 BOOTSTRAP.md 的存量版本升级流程审查差异并取得验证证据后再更新 lock；普通 init 不会覆盖旧文件，禁止直接 --force");
 } else if (lockVersion !== VERSION) {
-  errors.push(`governance.lock.json playbookVersion 漂移: lock=${lockVersion}, kit=${VERSION}；按 setup.md 的存量版本升级流程审查差异并取得验证证据后再更新 lock；普通 init 不会覆盖旧文件，禁止直接 --force`);
+  errors.push(`governance.lock.json playbookVersion 漂移: lock=${lockVersion}, kit=${VERSION}；按 BOOTSTRAP.md 的存量版本升级流程审查差异并取得验证证据后再更新 lock；普通 init 不会覆盖旧文件，禁止直接 --force`);
 }
 if (lock.adaptation?.deterministicStatus !== "pass" || lock.adaptation?.sourceVersion !== lockVersion) {
   errors.push("governance.lock.json 缺少与当前版本一致的确定性适配验收；版本号不能替代项目适配结果");
 }
 const currentFingerprint = fingerprintKit();
 if (!lock.kitFingerprint) {
-  errors.push("governance.lock.json 缺少 kitFingerprint；无法区分同版本的不同或 dirty kit 内容。按 setup.md 的存量版本升级流程审查差异后重新安装或显式迁移。");
+  errors.push("governance.lock.json 缺少 kitFingerprint；无法区分同版本的不同或 dirty kit 内容。按 BOOTSTRAP.md 的存量版本升级流程审查差异后重新安装或显式迁移。");
 } else if (lock.kitFingerprint !== currentFingerprint) {
   errors.push(`governance.lock.json kitFingerprint 漂移: lock=${lock.kitFingerprint}, kit=${currentFingerprint}；当前 kit 内容与安装时不同，审查差异后显式迁移，不能只更新版本字符串。`);
 }

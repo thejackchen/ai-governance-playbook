@@ -1,11 +1,6 @@
-# 模板目录
+# 模板边界
 
-`common/`是唯一公共模板来源；`adapters/`只提供运行时配置，不能复制公共治理正文。
+- `lite/`：默认项目文档与最小 policy；单脚本直接从 scripts/governance.mjs 复制，接线由 init 按 --tools 生成。
+- `common/`、`standard/`、`standard-codex/`、`high-assurance/`：显式 v4 兼容源；保留旧安装行为和测试，不装入新 Lite。
 
-不要手工把整个目录复制进项目。使用：
-
-```bash
-node scripts/init.mjs --target /path/to/project --runtime codex --profile standard --project-name demo --write
-```
-
-安装器会把`common/INSTRUCTIONS.md`渲染为运行时正文，并将同一份字节复制到`AGENTS.md`与`CLAUDE.md`；Standard及以上另装认领门，Lite 的共享 hook 会动态跳过缺失的认领脚本。
+模板不是第二套方法论；唯一正本为 [CORE](../CORE.md)。安装见 [BOOTSTRAP](../BOOTSTRAP.md)。

@@ -6,7 +6,7 @@ import { KIT_ROOT, walkFiles } from "./lib.mjs";
 
 const errors = [];
 for (const p of [
-  "CORE.md", "setup.md", "VERSION",
+  "CORE.md", "BOOTSTRAP.md", "VERSION",
   "profiles/lite.json", "profiles/standard.json", "profiles/high-assurance.json",
   "adapters/codex/adapter.json", "adapters/claude-code/adapter.json", "adapters/generic/adapter.json"
 ]) if (!existsSync(join(KIT_ROOT, p))) errors.push(`缺少kit文件: ${p}`);
@@ -17,7 +17,7 @@ if (existsSync(join(KIT_ROOT, "VERSION"))) {
   const pkg = JSON.parse(readFileSync(join(KIT_ROOT, "package.json"), "utf8"));
   if (pkg.version !== anchor) errors.push(`版本漂移: VERSION锚点=${anchor}，package.json version=${pkg.version}`);
 
-  // 本仓库自托管v3安装产物，governance.lock.json.playbookVersion同样必须追平VERSION锚点，
+  // 本仓库自托管铭牌，governance.lock.json.playbookVersion同样必须追平VERSION锚点，
   // 否则下游对账（events/上游比对）会用一个过期版本号误判基版
   if (existsSync(join(KIT_ROOT, "governance.lock.json"))) {
     const lock = JSON.parse(readFileSync(join(KIT_ROOT, "governance.lock.json"), "utf8"));
@@ -43,6 +43,15 @@ for (const runtime of ["codex", "claude-code", "generic"]) {
 }
 
 // 自托管允许选择不同 Profile；接线行为由集成测试验证，不以副本字节相等锁死演化。
+
+for (const [file, limit] of [["CORE.md",150],["BOOTSTRAP.md",120],["templates/lite/AGENTS.md",80]]) {
+  if (readFileSync(join(KIT_ROOT,file),"utf8").trimEnd().split("\n").length > limit) errors.push(`${file} 超过 ${limit} 行`);
+}
+const version = readFileSync(join(KIT_ROOT,"VERSION"),"utf8").trim();
+const readme = readFileSync(join(KIT_ROOT,"README.md"),"utf8");
+// 已发布条目使用日期 · v版本 · 标题；Unreleased 和“候选”标题不冒充已发布版本。
+const release = readFileSync(join(KIT_ROOT,"CHANGELOG.md"),"utf8").match(/^## \d{4}-\d{2}-\d{2} · v(\d+\.\d+\.\d+) ·/m)?.[1];
+if (!readme.includes(`**${version}**`) || release !== version) errors.push("发布版本与 README/CHANGELOG 漂移（Unreleased 不算发布）");
 
 for (const error of errors) console.error(`[kit] ERROR ${error}`);
 console.log(`[kit] ${errors.length} error`);

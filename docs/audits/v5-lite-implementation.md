@@ -39,3 +39,16 @@ bda4ce3，根 scripts 全部 .mjs（含当时放在 scripts 的测试）36 文�
 - 时区回归：本地 2026-09-26 / UTC 2026-09-25 的真实验证抓到日期误拦；安装日期改用本地日历，游标未来日期仅允许跨时区一天容差，过旧和远未来仍失败。
 
 - 三条复核回归先实际失败再修复：同日追加决策取最新五条；Stop 放行后为下一轮变更更新基线；Codex features 之外的 hooks=true 不能掩盖禁用。这些没有依赖 mock 或放宽断言。
+
+## 文句合同替代明细
+
+| 原 discovery-docs-contract 测试防什么 | 新行为覆盖 |
+|---|---|
+| CORE 7.2 固定句式防联网发现误当已采用 | 显式母版 --offline 返回 unknown，项目 intent/WIP/铭牌与文件集合不变；原语义发现错误/超时正反测试继续执行 |
+| setup 升级措辞防无范围写入、无回滚 | 实际 --write 缺 capability 必须非零、目标不变；原 explicit-upgrade 测试继续验证脏树、定制、回滚与验收 |
+| README/模板长句防盲复制事实 | 实际 Lite 安装保留 knowledge/requirements 原文，且不预造需求/catalog/registry |
+| discovery 合同八域文字防猜覆盖 | 实际未配置 catalog 明确报未配置，配置不存在的源码根必须失败；原检索/范围负例保留 |
+| 模板发现链接断言防死链 | 当前六份入口文档的真实相对链接必须存在，setup 必须已合并退出；v4 模板安装用旧集成测试继续覆盖 |
+| registry R16/R17 文句防投影变成新正本 | registry 已退休；母版判例索引与实际案例文件逐一对应，避免手写旧数字；投影/只读/回滚实测仍留在 project-discovery 与 explicit-upgrade 套件 |
+
+以上六项均替换成可观察行为或实际导航检查；没有删除旧功能实现的正反回归来求绿。
