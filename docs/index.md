@@ -23,3 +23,5 @@
 | 母版判例 | [cases](../governance/cases/README.md) | 按问题检索，不默认安装 |
 
 仓外正本路径表位于 [AGENTS](../AGENTS.md)；只写路径，未读取明确标记正本未装载。
+
+验效复跑：`node scripts/evaluate-lite.mjs`；原始计量见 [v5 Lite metrics](audits/v5-lite-metrics.json)。

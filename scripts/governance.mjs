@@ -283,7 +283,7 @@ export function check(root) {
             (e) =>
               !e.matcher ||
               e.matcher === '*' ||
-              ['Bash', 'apply_patch', 'Edit', 'Write', 'MultiEdit', 'search_replace', 'run_terminal_command'].every(
+              ['Bash', 'exec_command', 'apply_patch', 'Edit', 'Write', 'MultiEdit', 'search_replace', 'run_terminal_command'].every(
                 (t) => {
                   try {
                     return new RegExp(e.matcher).test(t);

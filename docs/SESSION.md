@@ -6,4 +6,6 @@
 - 2026-09-26 不 push、不改 main、不写消费仓、不改 VERSION；冷启动考试由主控另行组织，未验不发版。
 
 恢复：工作目录为本仓 git worktree，分支 feat/v5-lite；HEAD 以 git rev-parse 为准。
-验证与替代断言：[施工审计](audits/v5-lite-implementation.md)。下一步更新文档并完成试装/事故重放。
+验证与替代断言：[施工审计](audits/v5-lite-implementation.md)。下一步由主控组织独立冷启动考试和真实客户端验活。
+
+- 2026-09-26 本地验效 8/8；双工具 Lite 12 文件 / 618 行，运行时代码 449 行；保留 v4 兼容测试，交接证据见施工审计与原始计量。

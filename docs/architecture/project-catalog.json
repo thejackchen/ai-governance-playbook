@@ -55,7 +55,8 @@
         "scripts/init-v4.mjs",
         "scripts/upgrade.mjs",
         "scripts/validate-kit.mjs",
-        "scripts/governance.mjs"
+        "scripts/governance.mjs",
+        "scripts/evaluate-lite.mjs"
       ],
       "links": [
         "governance-hooks",
@@ -77,10 +78,10 @@
         "pre-compact",
         "stop"
       ],
-      "purpose": "承载跨运行时的 SessionStart、PreToolUse、PreCompact 与 Stop 触发器。",
+      "purpose": "承载 Lite SessionStart（含 compact）、PreToolUse 与一次 Stop 提醒。",
       "entry": "scripts/governance.mjs",
       "owner": "playbook-maintainers",
-      "boundaries": "只执行已登记的治理触发与门禁；不携带项目业务规则或秘密正文。",
+      "boundaries": "只执行单脚本本地防线；不发施工许可、不要求认领或 registry 登记，不携带项目业务规则或秘密正文。",
       "sourcePaths": [],
       "links": [
         "governance-orchestration",
@@ -130,7 +131,7 @@
         "bounded",
         "read-only"
       ],
-      "purpose": "默认以有界版本发现输出项目可执行的语义适配任务；保留项目事实、有效定制与 WIP，不自动写入治理文件或版本。",
+      "purpose": "作为母版按需命令，以有界版本发现输出语义适配建议；不进入 Lite 开工，不改变项目事实、有效定制、WIP 或采用版本。",
       "entry": "scripts/governance-update.mjs",
       "owner": "playbook-maintainers",
       "boundaries": "只做有界版本检查与只读任务输出；不替项目解释真实业务意图、不覆盖未知定制、不把候选或独立验收状态当作采用，不授予运行或发布权限。",
@@ -314,7 +315,8 @@
       "sourcePaths": [
         "adapters/claude-code/",
         "adapters/codex/",
-        "adapters/generic/"
+        "adapters/generic/",
+        "adapters/README.md"
       ],
       "links": [
         "governance-hooks",
@@ -357,7 +359,8 @@
         "templates/common/scripts/requirements-check.mjs",
         "templates/high-assurance/.github/",
         "templates/standard-codex/.github/",
-        "templates/standard/"
+        "templates/standard/",
+        "templates/lite/"
       ],
       "links": [
         "runtime-adapters",
@@ -378,7 +381,7 @@
         "policy",
         "rule-budget"
       ],
-      "purpose": "定义治理强度与安装清单，帮助项目选择最小够用的 Profile。",
+      "purpose": "默认 Lite 按实际工具安装；Standard/High Assurance 为显式 v4 兼容安装路径。",
       "entry": "profiles/README.md",
       "owner": "playbook-maintainers",
       "boundaries": "只描述母版 Profile 结构；不包含项目特定规则、不替项目负责人选择风险强度。",
@@ -448,7 +451,9 @@
         "tests/discovery-docs-contract.test.mjs",
         "tests/semantic-governance-update.test.mjs",
         "tests/semantic-adaptation-fixtures.test.mjs",
-        "tests/fixtures/semantic-adaptation/"
+        "tests/fixtures/semantic-adaptation/",
+        "tests/lite-runtime.test.mjs",
+        "tests/requirements-v4.test.mjs"
       ],
       "links": [
         "project-discovery-catalog",

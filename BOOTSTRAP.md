@@ -4,7 +4,7 @@
 
 ## 新项目：Lite 默认
 
-前提：Node ≥20、Git、真实 `gitleaks` 可执行文件。无需 npm 依赖；若需 npm，使用 `https://registry.npmmirror.com`。
+前提：目标必须为 Git 仓库根目录；Node ≥20、Git、真实 `gitleaks` 可执行文件。无需 npm 依赖；若需 npm，使用 `https://registry.npmmirror.com`。
 只选择项目实际使用的工具；纯手动检查使用 `--tools generic`。
 
 ```sh

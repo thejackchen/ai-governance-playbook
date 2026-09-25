@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, readFileSync, writeFileSync, lstatSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, lstatSync, realpathSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join, dirname, resolve, basename } from 'node:path';
 import { KIT_ROOT, VERSION, parseArgs, render } from './lib.mjs';
@@ -20,6 +20,9 @@ for (const key of Object.keys(args))
     fail(`Lite 不支持 --${key}；存量迁移请按 BOOTSTRAP.md 保留事实并审查差异`);
 if (!args.target || !existsSync(String(args.target))) fail('需要已存在的 --target');
 const target = resolve(String(args.target));
+const repository = spawnSync('git', ['rev-parse', '--show-toplevel'], { cwd: target, encoding: 'utf8' });
+if (repository.status !== 0 || realpathSync(repository.stdout.trim()) !== realpathSync(target))
+  fail('--target 必须是 Git 仓库根目录；不会向非仓库或仓库子目录写入接线');
 let tools = String(args.tools || args.runtime || '')
   .split(',')
   .map((s) => s.trim())

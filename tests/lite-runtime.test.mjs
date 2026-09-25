@@ -444,3 +444,27 @@ test('hooks=true outside the features table cannot hide disabled Codex hooks', t
   writeFileSync(join(root,'.codex/config.toml'),'[features]\nhooks = false\n[unrelated]\nhooks = true\n');
   const result=hook(root,'check');assert.notEqual(result.status,0);assert.match(result.stderr,/hooks 未启用/);
 });
+
+test('installer rejects non-repository and nested targets before creating governance files', (t) => {
+  const root = mkdtempSync('/tmp/gov-lite-root-boundary-');
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const plain = run(kit, ['scripts/init.mjs', '--target', root, '--tools', 'codex', '--write']);
+  assert.notEqual(plain.status, 0);
+  assert.deepEqual(readdirSync(root), [], 'failed installation must not leave a partial tree outside Git');
+  git(root, 'init', '-q');
+  const nested = join(root, 'nested');
+  mkdirSync(nested);
+  const child = run(kit, ['scripts/init.mjs', '--target', nested, '--tools', 'codex', '--write']);
+  assert.notEqual(child.status, 0, 'hook command resolves the Git root, so a child cannot be a valid installation');
+  assert.deepEqual(readdirSync(nested), []);
+});
+
+test('check detects missing Codex exec_command matcher even if other write tools remain', (t) => {
+  const root = project(t, 'codex');
+  const path = join(root, '.codex/hooks.json'), config = readJson(path);
+  config.hooks.PreToolUse[0].matcher = config.hooks.PreToolUse[0].matcher.replace('|exec_command', '');
+  putJson(path, config);
+  const result = hook(root, 'check');
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /matcher 漏写入工具/);
+});

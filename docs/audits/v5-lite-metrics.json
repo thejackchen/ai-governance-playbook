@@ -1,0 +1,285 @@
+{
+  "date": "2026-09-26",
+  "baselineCommit": "bda4ce3",
+  "candidateVersionStatus": "Unreleased; VERSION remains 4.3.0",
+  "coldStartExam": "not performed; reserved for controller",
+  "clientHookTrust": "not verified",
+  "gitleaks": "8.30.1",
+  "v4_lite": {
+    "files": 49,
+    "lines": 4345,
+    "codeFiles": 26,
+    "codeLines": 3526,
+    "startMs": [
+      801.07,
+      813.34,
+      775.14
+    ],
+    "startMedianMs": 801.07,
+    "injectionBytes": [
+      911,
+      911,
+      911
+    ],
+    "target": "/tmp/gov-v4-lite-8rqx119l",
+    "wiredStartMs": [
+      4143.31,
+      1507.66,
+      1616.51,
+      1355.33,
+      2767.59
+    ],
+    "wiredStartMedianMs": 1616.51,
+    "wiredInjectionBytes": [
+      1107,
+      1005,
+      1005,
+      1005,
+      1005
+    ],
+    "literalCheckFunctions": 4
+  },
+  "v4_standard": {
+    "files": 57,
+    "lines": 5259,
+    "codeFiles": 28,
+    "codeLines": 4202,
+    "startMs": [
+      768.18,
+      776.44,
+      1165.44
+    ],
+    "startMedianMs": 776.44,
+    "injectionBytes": [
+      1034,
+      1034,
+      1034
+    ],
+    "target": "/tmp/gov-v4-standard-bovuuo8z",
+    "wiredStartMs": [
+      1350.56,
+      1342.57,
+      1524.03,
+      2126.82,
+      1416.64
+    ],
+    "wiredStartMedianMs": 1416.64,
+    "wiredInjectionBytes": [
+      1128,
+      1128,
+      1128,
+      1128,
+      1128
+    ],
+    "literalCheckFunctions": 4
+  },
+  "v5": {
+    "gitleaks": "8.30.1",
+    "scope": "local script/static wiring only; no client trust or independent cold-start exam",
+    "twoTools": {
+      "installedFiles": [
+        {
+          "file": ".claude/settings.json",
+          "lines": 39
+        },
+        {
+          "file": ".codex/config.toml",
+          "lines": 2
+        },
+        {
+          "file": ".codex/hooks.json",
+          "lines": 39
+        },
+        {
+          "file": ".gitignore",
+          "lines": 6
+        },
+        {
+          "file": "AGENTS.md",
+          "lines": 43
+        },
+        {
+          "file": "CLAUDE.md",
+          "lines": 3
+        },
+        {
+          "file": "ROADMAP.md",
+          "lines": 9
+        },
+        {
+          "file": "docs/SESSION.md",
+          "lines": 7
+        },
+        {
+          "file": "docs/index.md",
+          "lines": 8
+        },
+        {
+          "file": "governance/policy.json",
+          "lines": 3
+        },
+        {
+          "file": "governance.lock.json",
+          "lines": 10
+        },
+        {
+          "file": "scripts/governance.mjs",
+          "lines": 449
+        }
+      ],
+      "files": 12,
+      "lines": 618,
+      "codeFiles": 1,
+      "codeLines": 449,
+      "startMs": [
+        131.74,
+        128.63,
+        127.82,
+        128.6,
+        127.88
+      ],
+      "startMedianMs": 128.6,
+      "injectionBytes": 374,
+      "checkFunctions": 1
+    },
+    "threeTools": {
+      "installedFiles": [
+        {
+          "file": ".claude/settings.json",
+          "lines": 39
+        },
+        {
+          "file": ".codex/config.toml",
+          "lines": 2
+        },
+        {
+          "file": ".codex/hooks.json",
+          "lines": 39
+        },
+        {
+          "file": ".gitignore",
+          "lines": 6
+        },
+        {
+          "file": ".grok/hooks/governance.json",
+          "lines": 39
+        },
+        {
+          "file": "AGENTS.md",
+          "lines": 43
+        },
+        {
+          "file": "CLAUDE.md",
+          "lines": 3
+        },
+        {
+          "file": "ROADMAP.md",
+          "lines": 9
+        },
+        {
+          "file": "docs/SESSION.md",
+          "lines": 7
+        },
+        {
+          "file": "docs/index.md",
+          "lines": 8
+        },
+        {
+          "file": "governance/policy.json",
+          "lines": 3
+        },
+        {
+          "file": "governance.lock.json",
+          "lines": 11
+        },
+        {
+          "file": "scripts/governance.mjs",
+          "lines": 449
+        }
+      ],
+      "files": 13,
+      "lines": 658,
+      "codeFiles": 1,
+      "codeLines": 449,
+      "startMs": [
+        128.95,
+        130.8,
+        127.54,
+        126.37,
+        128.93
+      ],
+      "startMedianMs": 128.93,
+      "injectionBytes": 374,
+      "checkFunctions": 1
+    },
+    "probes": [
+      {
+        "name": "remove Stop wiring",
+        "pass": true,
+        "detail": "exit=1; [governance] ERROR codex Stop 接线缺失或无效"
+      },
+      {
+        "name": "stale cursor date",
+        "pass": true,
+        "detail": "exit=1; [governance] ERROR ROADMAP 当前游标日期缺失、过旧或超出时区一天容差"
+      },
+      {
+        "name": "compact in /tmp",
+        "pass": true,
+        "detail": "coordinates + temporary directory warning"
+      },
+      {
+        "name": "cd x && /usr/bin/git reset --hard",
+        "pass": true,
+        "detail": "permissionDecision=deny; command not executed"
+      },
+      {
+        "name": "real gitleaks rejects synthetic staged credential",
+        "pass": true,
+        "detail": "exit=1; [governance] ERROR gitleaks dir 失败：发现凭据或扫描失败，请本地用 --redact 复核 | [governance] ERROR gitleaks git 失败：发现凭据或扫描失败，请本地用 --redact 复核"
+      },
+      {
+        "name": "missing gitleaks fails closed",
+        "pass": true,
+        "detail": "exit=1; [governance] ERROR gitleaks dir 失败：缺少 gitleaks（fail-closed） | [governance] ERROR gitleaks git 失败：缺少 gitleaks（fail-closed）"
+      },
+      {
+        "name": "staged external absolute symlink",
+        "pass": true,
+        "detail": "exit=1; [governance] ERROR 仓外绝对路径软链接禁止提交: outside-link"
+      },
+      {
+        "name": "Stop prompts once for changes without cursor update",
+        "pass": true,
+        "detail": "first block, second allow"
+      }
+    ],
+    "repositories": [
+      "/tmp/governance-lite-eval-bDsMev",
+      "/tmp/governance-lite-eval-E40EBj"
+    ]
+  },
+  "mother": {
+    "before": {
+      "scriptFiles": 36,
+      "scriptLines": 5788,
+      "scriptNonTestLines": 5689,
+      "literalCheckFunctions": 5,
+      "constitutionLines": 59,
+      "coreLines": 408,
+      "installationEntryLines": 561,
+      "historicalRegistryRows": 17
+    },
+    "after": {
+      "scriptFiles": 25,
+      "scriptLines": 4231,
+      "scriptNonTestLines": 4231,
+      "literalCheckFunctions": 3,
+      "constitutionLines": 43,
+      "coreLines": 64,
+      "installationEntryLines": 64,
+      "historicalRegistryRows": 17
+    }
+  },
+  "measurementMethod": "Installed files exclude .git; newline counts include blanks. Startup uses each actual Codex hook CLI after installation, before first commit; five runs, median, semantic context bytes exclude JSON envelope. v4 network discovery retained; v5 has no network. function check is a lexical proxy, not number of actual safety obligations."
+}

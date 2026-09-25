@@ -52,3 +52,64 @@ bda4ce3，根 scripts 全部 .mjs（含当时放在 scripts 的测试）36 文�
 | registry R16/R17 文句防投影变成新正本 | registry 已退休；母版判例索引与实际案例文件逐一对应，避免手写旧数字；投影/只读/回滚实测仍留在 project-discovery 与 explicit-upgrade 套件 |
 
 以上六项均替换成可观察行为或实际导航检查；没有删除旧功能实现的正反回归来求绿。
+
+## 验效复核修正
+
+- CORE 保留负责人原定的“真相在文本、行动跟文本、底线在机器”；压缩段落不更换核心原则。
+- 新增两条先红后绿的回归：非 Git/仓库子目录安装必须在写文件前拒绝；Codex PreToolUse 缺 exec_command 覆盖必须失败。实际安装、真实客户端识别与检查必须指向同一个仓库根。
+
+## 最终本地验效
+
+可复跑入口：`node scripts/evaluate-lite.mjs`，仅在它新建的 `/tmp/governance-lite-eval-*` 仓库内制造和清理负例；不写消费项目。真实 gitleaks 版本 8.30.1。机器原始记录见 [v5-lite-metrics.json](v5-lite-metrics.json)，包括每个安装文件行数、全部采样和临时仓坐标。
+
+| 指标 | bda4ce3 v4 Lite | bda4ce3 v4 Standard | v5 Lite 双工具 | v5 Lite 三工具 |
+|---|---:|---:|---:|---:|
+| 实际安装文件 | 49 | 57 | 12 | 13 |
+| 安装总行数（含空行） | 4345 | 5259 | 618 | 658 |
+| 项目治理代码文件 | 26 | 28 | 1 | 1 |
+| 项目治理代码行数 | 3526 | 4202 | 449 | 449 |
+| 门数代理指标：`function check` 声明 | 4 | 4 | 1 | 1 |
+| 实际接线开工中位数 ms（5 次） | 1616.51 | 1416.64 | 128.6 | 128.93 |
+| 开工上下文字节（末次） | 1005 | 1128 | 374 | 374 |
+
+双工具=claude-code,codex；三工具额外 grok。v4 即使只选 Codex 也默认装三工具；两份旧档均由 bda4ce3 导出母版实装。计数排除 .git；计时均在首次提交前调用实际接线指向的 Codex 入口，不绕开 v4 许可包装，不禁用其线上发现。v4 首次联网存在波动，故保存所有样本并用中位数；此结果是本机 CLI 耗时，不是客户端 UI 耗时。
+
+初始基线里的 801.07/776.44 ms 是 v4 共享内层 session-start 的三次中位数；原始 JSON 仍保留。最终表改用外层实际接线口径，避免省略原有许可层成本。新开工无网络，原许可、地图、fetch 和认领建议不再强制注入。
+
+| 母版与文档指标 | 前 | 后 |
+|---|---:|---:|
+| 根 scripts 下全部 .mjs 文件 / 行数 | 36 / 5788 | 25 / 4231 |
+| 同路径排除测试的代码行数 | 5689 | 4231 |
+| 同路径 `function check` 声明 | 5 | 3 |
+| 根 AGENTS 行数 | 59 | 43 |
+| CORE 行数 | 408 | 64 |
+| 安装入口总行数 | 561（两个入口） | 64（一个入口） |
+| 母版 registry 历史数据行 | 17 | 17（停写保留） |
+| 默认强制 registry / claim 登记 | 是 | 否 |
+| 本轮启动采样 literal WARN 行 | 0 | 0 |
+
+母版代码含按需发现/升级、v4 兼容安装器和验效脚本，不能冒充项目安装负担；原来放在 scripts 的 99 行需求测试只是迁入 tests，故另列排除测试口径。函数名计数仅是 SKILL 要求的门数代理指标；不能把合并函数宣称为实际安全义务减少。保留防线是否有效由下面的真实负例判断。历史 registry 增加停写说明但 17 条数据均保留；根仓没有独立 claims 账本，未虚构未收口数。母版本身就是治理产品，没有独立业务代码可作分母。
+
+### 事故重放原始输出
+
+```text
+PASS remove Stop wiring: exit=1; [governance] ERROR codex Stop 接线缺失或无效
+PASS stale cursor date: exit=1; [governance] ERROR ROADMAP 当前游标日期缺失、过旧或超出时区一天容差
+PASS compact in /tmp: coordinates + temporary directory warning
+PASS cd x && /usr/bin/git reset --hard: permissionDecision=deny; command not executed
+PASS real gitleaks rejects synthetic staged credential: exit=1; [governance] ERROR gitleaks dir 失败：发现凭据或扫描失败，请本地用 --redact 复核 | [governance] ERROR gitleaks git 失败：发现凭据或扫描失败，请本地用 --redact 复核
+PASS missing gitleaks fails closed: exit=1; [governance] ERROR gitleaks dir 失败：缺少 gitleaks（fail-closed） | [governance] ERROR gitleaks git 失败：缺少 gitleaks（fail-closed）
+PASS staged external absolute symlink: exit=1; [governance] ERROR 仓外绝对路径软链接禁止提交: outside-link
+PASS Stop prompts once for changes without cursor update: first block, second allow
+RESULT 8/8; report=/tmp/governance-lite-evaluation.json
+```
+
+这些负例使用真实脚本、真实 Git 暂存区和真实扫描器。危险命令只输入判定器，不实际执行；凭据为随机合成测试值，无真实凭据。软链先暂存仓外绝对目标，再把工作树替换为安全相对目标，证明检查依据是待提交 blob。首次验效脚本在清理这条故意不一致的暂存记录时失败；修复仅对自建临时仓该记录使用 `git rm --cached -f`，未改门禁或断言，重跑 8/8。
+
+母版按需 catalog 也已补齐新文件归属，实际源码覆盖 149/149、0 error；没有把它重新接回 Lite 的启动或 check。
+
+### 验证边界与交接
+
+文档提交 21fe88d 之前已实跑 `npm run check`（0 error）、`npm test`（186 pass / 0 fail / 0 skip）和 `node scripts/governance-verify.mjs --ci`（通过）。验效提交仍按同一三项门全部通过后才提交；最终原始尾部随交付答复提供。
+
+独立无上下文前向考试按负责人要求留给主控；真实客户端 trust/Hook 生命周期、消费项目采用和远端 CI 本轮未验。不能据本地计时与脚本探针宣称这些层已完成。VERSION/package/铭牌版本保持 4.3.0，CHANGELOG 仅列 Unreleased v5.0.0，不 push、不改 main、不写消费仓。
