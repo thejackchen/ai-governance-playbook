@@ -2,7 +2,7 @@
 
 让 AI 找对意图、守住可执行红线，并把结果交接给下一位执行者。
 
-当前已发布版本：**4.3.0**。v5.0.0 为 **Unreleased** 候选，状态与下一步只看 [ROADMAP](ROADMAP.md)；未通过独立冷启动考试前不发布。
+当前版本：**5.0.0**（本分支已备齐发版内容，尚未 push 或合入 main）。状态与下一步只看 [ROADMAP](ROADMAP.md)。
 
 ## 从这里开始
 
@@ -16,6 +16,8 @@ node <mother>/scripts/init.mjs --target /path/to/project --tools claude-code,cod
 Lite 的治理代码只有一个 `scripts/governance.mjs`，双工具约 12 文件、800 行以内。启动只注入本地游标、最近五条带日期决策和 Git 坐标；不联网或发施工许可。Stop 在有改动但游标未更新时提醒一次。
 
 `check` 检查实际接线、游标、凭据防护及暂存软链；真实 gitleaks 缺失即失败，指向仓库外的绝对路径软链接不能提交。建议接入项目已有 pre-commit，同时保留项目自身检查与测试。
+
+误报可在对应行添加 `gitleaks:allow`，或把 gitleaks 报告中的项目相对路径指纹（`路径:规则:行号`）登记到项目根 `.gitleaksignore`。检查会扫描可提交的工作树文件和暂存内容，并对两次扫描显式使用项目根豁免文件；未登记的发现仍会阻断。
 
 ## 从 v4 迁移
 
@@ -36,7 +38,7 @@ Lite 的治理代码只有一个 `scripts/governance.mjs`，双工具约 12 文�
 | 交接 | 无上下文能找到意图/游标/红线/验收，引用文件与行号；平均 ≥80、最低 ≥60 |
 | 项目结果 | 项目测试、部署回读和真实业务验收分别说明，不混成“全绿” |
 
-本轮本地数字与事故重放见 [v5 实现审计](docs/audits/v5-lite-implementation.md)。独立冷启动由主控组织。
+本轮本地数字与事故重放见 [v5 实现审计](docs/audits/v5-lite-implementation.md)；项目实装与独立考试证据见 [发版审计](docs/audits/v5-release.md)。
 
 ## 路由
 

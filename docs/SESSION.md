@@ -9,3 +9,5 @@
 验证与替代断言：[施工审计](audits/v5-lite-implementation.md)。下一步由主控组织独立冷启动考试和真实客户端验活。
 
 - 2026-09-26 本地验效 8/8；双工具 Lite 12 文件 / 618 行，运行时代码 449 行；保留 v4 兼容测试，交接证据见施工审计与原始计量。
+- 2026-09-26 负责人提供 wechat-ai@ccf2079 首装与三名零上下文考生 99/100/99 前向考试结果；错题归因项目文档漂移。母版据此修复路线图正本复用与 `.gitleaksignore` 指纹路径，反测试见 tests/lite-runtime.test.mjs，来源和未验边界见 docs/audits/v5-release.md。
+- 2026-09-26 v5.0.0 本地发版文件与自托管 kit 指纹同步到 feat/v5-lite；`npm run check` 0 error、`npm test` 191 pass / 0 fail，`node scripts/governance-verify.mjs --ci` 再次 191/191 并通过编排。不 push、不改 main、不写消费仓；远端发布与真实客户端验活待主控。

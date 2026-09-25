@@ -2,7 +2,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { KIT_ROOT, walkFiles } from "./lib.mjs";
+import { KIT_ROOT, walkFiles, fingerprintKit } from "./lib.mjs";
 
 const errors = [];
 for (const p of [
@@ -22,6 +22,7 @@ if (existsSync(join(KIT_ROOT, "VERSION"))) {
   if (existsSync(join(KIT_ROOT, "governance.lock.json"))) {
     const lock = JSON.parse(readFileSync(join(KIT_ROOT, "governance.lock.json"), "utf8"));
     if (lock.playbookVersion !== anchor) errors.push(`自托管governance.lock.json版本漂移: VERSION锚点=${anchor}，playbookVersion=${lock.playbookVersion}`);
+    if (lock.kitFingerprint !== fingerprintKit()) errors.push("自托管governance.lock.json kitFingerprint 漂移");
   }
 }
 

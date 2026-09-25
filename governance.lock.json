@@ -1,6 +1,7 @@
 {
   "schemaVersion": 2,
-  "playbookVersion": "4.3.0",
+  "playbookVersion": "5.0.0",
+  "kitFingerprint": "sha256:753e2c397493a07af773c426f72c035f5609a334c6af5549e2d8d67aad86b2b1",
   "profile": "lite",
   "installedAt": "2026-09-26",
   "tools": [

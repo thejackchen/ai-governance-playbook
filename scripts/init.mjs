@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, readFileSync, writeFileSync, lstatSync, realpathSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { join, dirname, resolve, basename } from 'node:path';
+import { join, dirname, resolve, basename, relative } from 'node:path';
 import { KIT_ROOT, VERSION, parseArgs, render } from './lib.mjs';
-import { TOOL_PATHS, localDate } from './governance.mjs';
+import { TOOL_PATHS, localDate, roadmapPath, cursor } from './governance.mjs';
 
 const args = parseArgs(process.argv.slice(2));
 const profile = String(args.profile || 'lite');
@@ -47,12 +47,18 @@ if (existsSync(lockPath)) {
     fail('已有 Lite 工具集合不同：先审查并合并接线，再更新铭牌');
 }
 const today = localDate();
-const values = { PROJECT_NAME: String(args['project-name'] || basename(target)), TODAY: today };
+const roadmap = roadmapPath(target);
+const existingRoadmap = existsSync(join(target, roadmap));
+const values = {
+  PROJECT_NAME: String(args['project-name'] || basename(target)),
+  TODAY: today,
+  ROADMAP_PATH: roadmap,
+  ROADMAP_FROM_DOCS: relative('docs', roadmap),
+};
 const plan = new Map();
 for (const file of [
   'AGENTS.md',
   'CLAUDE.md',
-  'ROADMAP.md',
   'docs/index.md',
   'docs/SESSION.md',
   'governance/policy.json',
@@ -60,6 +66,7 @@ for (const file of [
 ]) {
   plan.set(file, render(readFileSync(join(KIT_ROOT, 'templates/lite', file), 'utf8'), values));
 }
+plan.set(roadmap, render(readFileSync(join(KIT_ROOT, 'templates/lite/ROADMAP.md'), 'utf8'), values));
 plan.set('scripts/governance.mjs', readFileSync(join(KIT_ROOT, 'scripts/governance.mjs'), 'utf8'));
 for (const tool of tools) {
   if (!TOOL_PATHS[tool]) continue;
@@ -105,6 +112,8 @@ for (const [file] of plan) {
   }
   console.log(`${existsSync(join(target, file)) ? 'KEEP' : 'WRITE'} ${file}`);
 }
+if (existingRoadmap && !/\b20\d{2}-\d{2}-\d{2}\b/.test(cursor(readFileSync(join(target, roadmap), 'utf8'))))
+  console.log(`[init] 需在现有路线图加当前游标段（带日期）：${roadmap}；项目文件保持原样。`);
 if (!args.write) {
   console.log('dry-run完成；加入 --write 才写文件。');
   process.exit(0);

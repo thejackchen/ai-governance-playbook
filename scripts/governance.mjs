@@ -45,8 +45,17 @@ const inside = (root, p) => {
   const r = relative(root, p);
   return !isAbsolute(r) && r !== '..' && !r.startsWith('../');
 };
-const roadmapPath = (root) => ['ROADMAP.md', 'docs/ROADMAP.md'].find((p) => existsSync(join(root, p))) || 'ROADMAP.md';
-const cursor = (body) => body.match(/^## 当前游标[^\n]*\n([\s\S]*?)(?=^## |$(?![\s\S]))/m)?.[1]?.trim() || '';
+export function roadmapPath(root) {
+  const index = read(join(root, 'docs/index.md'));
+  const registered = index.split('\n')
+    .filter((line) => /当前状态|路线图|ROADMAP/i.test(line))
+    .flatMap((line) => [...line.matchAll(/\]\(([^)#]+)(?:#[^)]*)?\)/g)].map((match) => match[1]))
+    .map((link) => relative(root, resolve(root, 'docs', link)))
+    .find((path) => path.endsWith('.md') && inside(root, resolve(root, path)) && existsSync(join(root, path)));
+  return [registered && registered !== 'ROADMAP.md' && registered, 'docs/ROADMAP.md', registered, 'ROADMAP.md']
+    .find((path) => path && existsSync(join(root, path))) || 'ROADMAP.md';
+}
+export const cursor = (body) => body.match(/^## 当前游标[^\n]*\n([\s\S]*?)(?=^## |$(?![\s\S]))/m)?.[1]?.trim() || '';
 const json = (p) => JSON.parse(readFileSync(p, 'utf8'));
 
 // Segment BEFORE matching: `git push && tool --force` must never become force-push.
@@ -360,12 +369,14 @@ function scanSecrets(root, errors) {
       mkdirSync(dirname(target), { recursive: true });
       cpSync(source, target);
     }
-    for (const args of [
-      ['dir', scratch],
-      ['git', '--pre-commit', '--staged', root],
+    const ignorePath = join(root, '.gitleaksignore');
+    const ignoreArgs = existsSync(ignorePath) ? ['--gitleaks-ignore-path', ignorePath] : [];
+    for (const [args, cwd] of [
+      [['dir', '.'], scratch],
+      [['git', '--pre-commit', '--staged', root], root],
     ]) {
-      const scan = spawnSync('gitleaks', [...args, '--redact', '--no-banner', '--log-level', 'error'], {
-        cwd: root,
+      const scan = spawnSync('gitleaks', [...args, ...ignoreArgs, '--redact', '--no-banner', '--log-level', 'error'], {
+        cwd,
         encoding: 'utf8',
         timeout: 60000,
       });

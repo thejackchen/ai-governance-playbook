@@ -14,6 +14,7 @@ node <mother>/scripts/init.mjs --target /path/to/project --tools claude-code,cod
 
 首条是只读计划；第二条安装并执行自检。第三工具按需追加为 `--tools claude-code,codex,grok`。
 已有文件保持不变；安装遇到旧 v4 lock、工具集合改变或目标路径软链接会停止，保留事实供审查。
+已有 `docs/ROADMAP.md` 或 `docs/index.md` 登记的其他路线图时，计划显示 `KEEP`，不会另建根目录路线图；若原文缺少带日期的 `## 当前游标`，dry-run 与安装都会提示补写，安装自检保持失败直到项目自行更新正本。
 默认两工具共约 12 个文件；无项目库依赖，治理代码只有 `scripts/governance.mjs`。
 `--runtime` 可作为单工具兼容写法；不再由某个 runtime 偷带全部工具。
 
@@ -21,6 +22,7 @@ node <mother>/scripts/init.mjs --target /path/to/project --tools claude-code,cod
 
 1. 填写 AGENTS 项目意图、仓外正本路径表、ROADMAP 当前游标（含日期）、docs/index 的已有正本指针。
 2. 执行 `node scripts/governance.mjs check`。缺 gitleaks 或发现凭据必须失败，不能把跳过扫描当通过。
+   已确认误报可在对应行添加 `gitleaks:allow`，或将 gitleaks 报告的项目相对路径指纹（`路径:规则:行号`）写入项目根 `.gitleaksignore`；扫描器同时检查工作树和暂存区，未登记的发现仍须失败。
 3. 将同一 `check` 命令接入已有 pre-commit，再接项目自身 lint/typecheck/test。保留原项目门，不用治理检查替换业务测试。
 4. 在真实客户端开始新会话，验证启动坐标；Codex 在 `/hooks` 审核并信任定义。先运行安全命令，再发送危险命令负例，确认工具被拒绝（不得实际执行）。
 5. 测试有改动但未更新游标时 Stop 提醒一次，游标更新后放行；压缩恢复应重新获得坐标。

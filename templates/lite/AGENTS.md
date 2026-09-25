@@ -1,6 +1,6 @@
 # {{PROJECT_NAME}} · AI 执行宪法
 
-治理铭牌见 `governance.lock.json`；唯一当前状态见 [ROADMAP.md](ROADMAP.md)。
+治理铭牌见 `governance.lock.json`；唯一当前状态见 [{{ROADMAP_PATH}}]({{ROADMAP_PATH}})。
 
 ## 意图
 
@@ -18,7 +18,7 @@
 
 ## 开工三步
 
-1. 读 [ROADMAP.md](ROADMAP.md) 当前游标与 [docs/SESSION.md](docs/SESSION.md) 最近决策。
+1. 读 [{{ROADMAP_PATH}}]({{ROADMAP_PATH}}) 当前游标与 [docs/SESSION.md](docs/SESSION.md) 最近决策。
 2. 检查 cwd、分支、HEAD 和工作树；保留别人的变更。
 3. 按 [docs/index.md](docs/index.md) 找本任务正本；明确目标、边界与可证伪验收。
 
@@ -37,7 +37,7 @@
 
 ## 指针
 
-- 当前状态：[ROADMAP.md](ROADMAP.md)
+- 当前状态：[{{ROADMAP_PATH}}]({{ROADMAP_PATH}})
 - 最近决策与交接：[docs/SESSION.md](docs/SESSION.md)
 - 知识路由：[docs/index.md](docs/index.md)
 - 机器检查：`scripts/governance.mjs check`；gitleaks 缺失即失败。建议接入已有 pre-commit。

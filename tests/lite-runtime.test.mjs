@@ -14,7 +14,7 @@ import {
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { preTool, DANGERS } from '../scripts/governance.mjs';
+import { preTool, DANGERS, localDate } from '../scripts/governance.mjs';
 const kit = fileURLToPath(new URL('..', import.meta.url));
 const run = (cwd, args, input, env = {}) =>
   spawnSync(process.execPath, args, {
@@ -99,6 +99,54 @@ test('fresh dry run and rerun preserve project facts, WIP and unrelated hooks', 
   git(blank, 'init', '-q');
   assert.equal(run(kit, ['scripts/init.mjs', '--target', blank, '--tools', 'codex']).status, 0);
   assert.deepEqual(readdirSync(blank), ['.git']);
+});
+
+test('Lite keeps the existing roadmap and points generated links and runtime at its actual path', (t) => {
+  for (const [roadmap, index] of [
+    ['docs/ROADMAP.md', ''],
+    ['docs/execution/plan.md', '# Index\n- 当前状态：[项目路线图](execution/plan.md)\n'],
+  ]) {
+    const root = mkdtempSync('/tmp/gov-lite-roadmap-');
+    t.after(() => rmSync(root, { recursive: true, force: true }));
+    git(root, 'init', '-q');
+    mkdirSync(join(root, roadmap, '..'), { recursive: true });
+    const original = '# Project roadmap\n\n## 当前游标\n\n' + localDate() + '：项目真实状态。\n';
+    writeFileSync(join(root, roadmap), original);
+    if (index) writeFileSync(join(root, 'docs/index.md'), index);
+    const dry = run(kit, ['scripts/init.mjs', '--target', root, '--tools', 'generic']);
+    assert.equal(dry.status, 0, dry.stderr);
+    assert.match(dry.stdout, new RegExp(`KEEP ${roadmap.replaceAll('/', '\\/')}`));
+    assert.doesNotMatch(dry.stdout, /WRITE ROADMAP\.md/);
+    const installed = run(kit, ['scripts/init.mjs', '--target', root, '--tools', 'generic', '--write']);
+    assert.equal(installed.status, 0, installed.stderr);
+    assert.equal(readFileSync(join(root, roadmap), 'utf8'), original);
+    assert.equal(existsSync(join(root, 'ROADMAP.md')), false);
+    assert.ok(readFileSync(join(root, 'AGENTS.md'), 'utf8').includes(`](${roadmap})`));
+    if (!index) assert.match(readFileSync(join(root, 'docs/index.md'), 'utf8'), /\]\(ROADMAP\.md\)/);
+    const session = hook(root, 'session-start');
+    assert.match(JSON.parse(session.stdout).hookSpecificOutput.additionalContext, /项目真实状态/);
+    assert.equal(hook(root, 'check').status, 0);
+  }
+});
+
+test('existing roadmap without a dated cursor is reported in dry run and install, never rewritten', (t) => {
+  const root = mkdtempSync('/tmp/gov-lite-cursor-');
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  git(root, 'init', '-q');
+  mkdirSync(join(root, 'docs'));
+  const roadmap = '# Project roadmap\n\nProject truth stays here.\n';
+  writeFileSync(join(root, 'docs/ROADMAP.md'), roadmap);
+  const args = ['scripts/init.mjs', '--target', root, '--tools', 'generic'];
+  const dry = run(kit, args);
+  assert.equal(dry.status, 0, dry.stderr);
+  assert.match(dry.stdout, /KEEP docs\/ROADMAP\.md/);
+  assert.match(dry.stdout, /需在现有路线图加当前游标段（带日期）/);
+  const installed = run(kit, [...args, '--write']);
+  assert.notEqual(installed.status, 0);
+  assert.match(installed.stdout, /需在现有路线图加当前游标段（带日期）/);
+  assert.match(installed.stderr, /游标日期/);
+  assert.equal(readFileSync(join(root, 'docs/ROADMAP.md'), 'utf8'), roadmap);
+  assert.equal(existsSync(join(root, 'ROADMAP.md')), false);
 });
 
 test('existing v4 installation and symlink installation targets are refused without writes', (t) => {
@@ -307,6 +355,26 @@ test('real gitleaks blocks a synthetic credential; missing binary is failure, ne
   r = hook(root, 'check', {}, 'generic', { PATH: bin });
   assert.notEqual(r.status, 0);
   assert.match(r.stderr, /缺少 gitleaks.*fail-closed/);
+});
+
+test('gitleaksignore fingerprint exempts only its recorded project-relative finding', (t) => {
+  const root = project(t);
+  const fake = () => ['gh', 'p_', randomBytes(18).toString('hex')].join('');
+  writeFileSync(join(root, 'allowed.txt'), `github_token=${fake()}\n`);
+  const report = spawnSync('gitleaks', ['dir', '.', '--no-banner', '--report-format', 'json', '--report-path', '-', '--log-level', 'error'], {
+    cwd: root, encoding: 'utf8',
+  });
+  const findings = JSON.parse(report.stdout);
+  assert.equal(findings.length, 1);
+  assert.match(findings[0].Fingerprint, /^allowed\.txt:github-pat:1$/);
+  writeFileSync(join(root, '.gitleaksignore'), `${findings[0].Fingerprint}\n`);
+  git(root, 'add', 'allowed.txt', '.gitleaksignore');
+  const allowed = hook(root, 'check');
+  assert.equal(allowed.status, 0, allowed.stderr);
+  writeFileSync(join(root, 'blocked.txt'), `github_token=${fake()}\n`);
+  const blocked = hook(root, 'check');
+  assert.notEqual(blocked.status, 0);
+  assert.match(blocked.stderr, /gitleaks dir 失败/);
 });
 
 test('symlink gate reads staged blob even if working tree points somewhere safe', (t) => {
