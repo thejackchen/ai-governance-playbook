@@ -23,7 +23,7 @@ function project() {
 
 function install(root) {
   const result = run(process.execPath, [
-    "scripts/init.mjs", "--target", root, "--runtime", "generic", "--profile", "lite", "--write",
+    "scripts/init-v4.mjs", "--target", root, "--runtime", "generic", "--profile", "lite", "--write",
   ], kit);
   assert.equal(result.status, 0, result.stderr);
 }

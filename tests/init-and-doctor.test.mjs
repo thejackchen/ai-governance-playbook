@@ -4,7 +4,7 @@ import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, unlinkSy
 import { join, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
-import { admissionPath } from "../scripts/lib/boot-admission.mjs";
+import { admissionPath } from "../templates/common/scripts/lib/boot-admission.mjs";
 
 const kit = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 const playbookVersion = readFileSync(join(kit, "VERSION"), "utf8").trim();
@@ -30,7 +30,7 @@ const commitAll = (dir, message = "baseline") => {
 
 test("dry-run does not write files", () => {
   const dir = project();
-  const result = run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--project-name", "demo"]);
+  const result = run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--project-name", "demo"]);
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /dry-run完成/);
   assert.deepEqual(readdirSync(dir).filter((x) => x !== ".git"), []);
@@ -39,7 +39,7 @@ test("dry-run does not write files", () => {
 test("auto runtime detection prefers target markers over the caller environment", () => {
   const dir = project();
   writeFileSync(join(dir, "CLAUDE.md"), "# existing Claude project\n");
-  const result = spawnSync(process.execPath, ["scripts/init.mjs", "--target", dir, "--profile", "lite"], {
+  const result = spawnSync(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--profile", "lite"], {
     cwd: kit,
     encoding: "utf8",
     env: { ...process.env, CODEX_HOME: "/tmp/eval-codex-home" }
@@ -51,7 +51,7 @@ test("auto runtime detection prefers target markers over the caller environment"
 test("Codex Lite installs shared instruction files, hooks and frontend extension", () => {
   const dir = project();
   const init = run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite",
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite",
     "--project-name", "demo", "--with", "frontend-design-system", "--write"
   ]);
   assert.equal(init.status, 0, init.stderr);
@@ -93,7 +93,7 @@ test("Codex Lite installs shared instruction files, hooks and frontend extension
   assert.match(referencePack, /项目语义层/);
   assert.match(referencePack, /行业\/电商页面模式/);
   assert.match(referencePack, /项目色彩、资产和信息角色/);
-  const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  const doctor = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", dir]);
   assert.equal(doctor.status, 0, doctor.stderr);
   assert.match(doctor.stdout + doctor.stderr, /0 error/);
 });
@@ -101,7 +101,7 @@ test("Codex Lite installs shared instruction files, hooks and frontend extension
 test("SessionStart reaches frontend lifecycle and authority paths when the extension is installed", () => {
   const dir = project();
   assert.equal(run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
     "--with", "frontend-design-system", "--write"
   ]).status, 0);
   const session = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start.mjs")], join(dir, "docs"));
@@ -119,7 +119,7 @@ test("SessionStart reaches frontend lifecycle and authority paths when the exten
 test("SessionStart names representative journeys when policy records them", () => {
   const dir = project();
   assert.equal(run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
     "--with", "frontend-design-system", "--write"
   ]).status, 0);
   const policyPath = join(dir, "governance/frontend-policy.json");
@@ -139,7 +139,7 @@ test("SessionStart names representative journeys when policy records them", () =
 test("shared governance verify invokes the installed frontend verifier with the selected mode", () => {
   const dir = project();
   assert.equal(run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
     "--with", "frontend-design-system", "--write"
   ]).status, 0);
   const verify = run(process.execPath, [join(kit, "scripts/governance-verify.mjs"), "--fast"], dir);
@@ -152,7 +152,7 @@ test("shared governance verify invokes the installed frontend verifier with the 
 test("frontend governance verifier separates structural errors from lifecycle enforcement", () => {
   const dir = project();
   assert.equal(run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
     "--with", "frontend-design-system", "--write"
   ]).status, 0);
   const script = join(dir, "scripts/frontend-governance-verify.mjs");
@@ -236,7 +236,7 @@ test("frontend governance verifier separates structural errors from lifecycle en
 test("frontend governance verifier validates design language headings and representative journey lifecycle", () => {
   const dir = project();
   assert.equal(run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
     "--with", "frontend-design-system", "--write"
   ]).status, 0);
   const script = join(dir, "scripts/frontend-governance-verify.mjs");
@@ -319,7 +319,7 @@ test("every new runtime/profile install carries both hook schemas", () => {
     for (const profile of ["lite", "standard", "high-assurance"]) {
       const dir = project();
       const init = run(process.execPath, [
-        "scripts/init.mjs", "--target", dir, "--runtime", runtime, "--profile", profile, "--write"
+        "scripts/init-v4.mjs", "--target", dir, "--runtime", runtime, "--profile", profile, "--write"
       ]);
       assert.equal(init.status, 0, `${runtime}+${profile}: ${init.stderr}`);
 
@@ -362,27 +362,27 @@ test("every new runtime/profile install carries both hook schemas", () => {
 test("doctor keeps legacy single-runtime installs compatible", () => {
   const codexDir = project();
   assert.equal(run(process.execPath, [
-    "scripts/init.mjs", "--target", codexDir, "--runtime", "codex", "--profile", "lite", "--write"
+    "scripts/init-v4.mjs", "--target", codexDir, "--runtime", "codex", "--profile", "lite", "--write"
   ]).status, 0);
   const codexLockPath = join(codexDir, "governance.lock.json");
   const codexLock = JSON.parse(readFileSync(codexLockPath, "utf8"));
   unlinkSync(join(codexDir, ".claude/settings.json"));
   codexLock.installedFiles = codexLock.installedFiles.filter((p) => p !== ".claude/settings.json");
   writeFileSync(codexLockPath, JSON.stringify(codexLock, null, 2) + "\n");
-  const codexDoctor = run(process.execPath, ["scripts/doctor.mjs", "--target", codexDir]);
+  const codexDoctor = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", codexDir]);
   assert.equal(codexDoctor.status, 0, codexDoctor.stderr);
   assert.doesNotMatch(codexDoctor.stderr, /Claude Code缺少|缺少文件: \.claude/);
 
   const claudeDir = project();
   assert.equal(run(process.execPath, [
-    "scripts/init.mjs", "--target", claudeDir, "--runtime", "claude-code", "--profile", "standard", "--write"
+    "scripts/init-v4.mjs", "--target", claudeDir, "--runtime", "claude-code", "--profile", "standard", "--write"
   ]).status, 0);
   const claudeLockPath = join(claudeDir, "governance.lock.json");
   const claudeLock = JSON.parse(readFileSync(claudeLockPath, "utf8"));
   for (const p of [".codex/hooks.json", ".codex/config.toml", ".codex/rules/default.rules"]) unlinkSync(join(claudeDir, p));
   claudeLock.installedFiles = claudeLock.installedFiles.filter((p) => !p.startsWith(".codex/"));
   writeFileSync(claudeLockPath, JSON.stringify(claudeLock, null, 2) + "\n");
-  const claudeDoctor = run(process.execPath, ["scripts/doctor.mjs", "--target", claudeDir]);
+  const claudeDoctor = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", claudeDir]);
   assert.equal(claudeDoctor.status, 0, claudeDoctor.stderr);
   assert.doesNotMatch(claudeDoctor.stderr, /Codex缺少|Codex hooks|Codex rules|缺少文件: \.codex/);
 });
@@ -390,11 +390,11 @@ test("doctor keeps legacy single-runtime installs compatible", () => {
 test("doctor validates both installed carriers regardless of lock runtime", () => {
   const dir = project();
   assert.equal(run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"
   ]).status, 0);
   writeFileSync(join(dir, ".claude/settings.json"), "{}\n");
   writeFileSync(join(dir, ".codex/config.toml"), "[features]\nhooks = false\n");
-  const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  const doctor = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", dir]);
   assert.notEqual(doctor.status, 0);
   assert.match(doctor.stderr, /Claude Code缺少SessionStart Hook/);
   assert.match(doctor.stderr, /Codex hooks功能未启用/);
@@ -402,7 +402,7 @@ test("doctor validates both installed carriers regardless of lock runtime", () =
 
 test("PreToolUse blocks destructive commands and allows safe commands", () => {
   const dir = project();
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
   const hook = join(dir, "scripts/governance-hooks/pre-tool-use.mjs");
   const blocked = run(process.execPath, [hook], dir, JSON.stringify({ tool_name: "Bash", tool_input: { command: "git reset --hard" } }));
   assert.equal(blocked.status, 0);
@@ -417,7 +417,7 @@ test("PreToolUse blocks destructive commands and allows safe commands", () => {
 
 test("PreToolUse enforces the configured Grok harness contract", () => {
   const dir = project();
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
   const hook = join(dir, "scripts/governance-hooks/pre-tool-use.mjs");
   const invoke = (command) => run(process.execPath, [hook], dir, JSON.stringify({ tool_name: "Bash", tool_input: { command } }));
 
@@ -450,7 +450,7 @@ test("PreToolUse enforces the configured Grok harness contract", () => {
 
 test("PreToolUse command normalization catches equivalent bypass spellings", () => {
   const dir = project();
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
   const hook = join(dir, "scripts/governance-hooks/pre-tool-use.mjs");
   for (const command of [
     "/usr/bin/git reset --hard",
@@ -485,7 +485,7 @@ test("PreToolUse command normalization catches equivalent bypass spellings", () 
 
 test("PreToolUse matches deny patterns per command segment, not across connectors", () => {
   const dir = project();
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
   const hook = join(dir, "scripts/governance-hooks/pre-tool-use.mjs");
   for (const command of [
     "git reset --hard",
@@ -515,7 +515,7 @@ test("PreToolUse matches deny patterns per command segment, not across connector
 
 test("SessionStart gives all runtimes the same admitted human text and wraps Codex as JSON", () => {
   const dir = project();
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
   const nested = join(dir, "docs");
   const human = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start-admission.mjs")], nested);
   assert.equal(human.status, 0, human.stderr);
@@ -541,7 +541,7 @@ test("SessionStart gives all runtimes the same admitted human text and wraps Cod
 
 test("Claude and Grok shared write adapter require the same current boot admission", () => {
   const dir = project();
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "standard", "--write"]).status, 0);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "standard", "--write"]).status, 0);
   const hook = join(dir, "scripts/governance-hooks/pre-tool-use-admission.mjs");
   const writeInput = JSON.stringify({ tool_name: "Write", tool_input: { file_path: join(dir, "scratch.txt") } });
 
@@ -565,7 +565,7 @@ test("Claude and Grok shared write adapter require the same current boot admissi
 
 test("governance control plane always requires a claim while ordinary docs remain exempt", () => {
   const dir = project();
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "standard", "--write"]).status, 0);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "standard", "--write"]).status, 0);
   const session = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start-admission.mjs")], dir);
   assert.match(session.stdout, /已签发施工许可/);
   const hook = join(dir, "scripts/governance-hooks/pre-tool-use-admission.mjs");
@@ -603,7 +603,7 @@ test("governance control plane always requires a claim while ordinary docs remai
 
 test("Codex hooks resolve governance state from a nested working directory", () => {
   const dir = project();
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
   commitAll(dir);
   const nested = join(dir, "docs");
   const session = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start-codex.mjs")], nested);
@@ -620,7 +620,7 @@ test("Codex hooks resolve governance state from a nested working directory", () 
 
 test("Codex write adapter requires a current boot admission", () => {
   const dir = project();
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
   const hook = join(dir, "scripts/governance-hooks/pre-tool-use-codex.mjs");
   const writeInput = JSON.stringify({ tool_name: "apply_patch", tool_input: { file_path: join(dir, "scratch.txt") } });
 
@@ -661,7 +661,7 @@ test("Codex write adapter requires a current boot admission", () => {
 
 test("Codex write admission is revoked when critical wiring changes", () => {
   const dir = project();
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
   const session = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start-codex.mjs")], dir);
   assert.equal(session.status, 0, session.stderr);
   assert.match(JSON.parse(session.stdout).systemMessage, /已签发施工许可/);
@@ -684,7 +684,7 @@ test("Codex write admission is revoked when critical wiring changes", () => {
 test("Stop success always emits governance badge for clean and dirty worktrees", () => {
   const dir = project();
   assert.equal(run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
   ]).status, 0);
   commitAll(dir);
   const hook = join(dir, "scripts/governance-hooks/stop.mjs");
@@ -710,10 +710,10 @@ test("Stop success always emits governance badge for clean and dirty worktrees",
 test("doctor fails when the Codex SessionStart adapter carrier is missing", () => {
   const dir = project();
   assert.equal(run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
   ]).status, 0);
   unlinkSync(join(dir, "scripts/governance-hooks/session-start-codex.mjs"));
-  const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  const doctor = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", dir]);
   assert.notEqual(doctor.status, 0);
   assert.match(doctor.stderr, /缺少文件: scripts\/governance-hooks\/session-start-codex\.mjs/);
 });
@@ -721,13 +721,13 @@ test("doctor fails when the Codex SessionStart adapter carrier is missing", () =
 test("doctor rejects Codex hooks top-level fields outside description/hooks", () => {
   const dir = project();
   assert.equal(run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
   ]).status, 0);
   const hooksPath = join(dir, ".codex/hooks.json");
   const hooks = JSON.parse(readFileSync(hooksPath, "utf8"));
   hooks.$comment = "legacy field";
   writeFileSync(hooksPath, JSON.stringify(hooks, null, 2) + "\n");
-  const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  const doctor = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", dir]);
   assert.notEqual(doctor.status, 0);
   assert.match(doctor.stderr, /\.codex\/hooks\.json 顶层字段非法: \$comment/);
 });
@@ -735,14 +735,14 @@ test("doctor rejects Codex hooks top-level fields outside description/hooks", ()
 test("doctor rejects legacy Codex SessionStart and PreToolUse wiring", () => {
   const dir = project();
   assert.equal(run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
   ]).status, 0);
   const hooksPath = join(dir, ".codex/hooks.json");
   const hooks = JSON.parse(readFileSync(hooksPath, "utf8"));
   hooks.hooks.SessionStart[0].hooks[0].command = "node scripts/governance-hooks/session-start.mjs";
   hooks.hooks.PreToolUse[0].hooks[0].command = "node scripts/governance-hooks/pre-tool-use.mjs";
   writeFileSync(hooksPath, `${JSON.stringify(hooks, null, 2)}\n`);
-  const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  const doctor = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", dir]);
   assert.notEqual(doctor.status, 0);
   assert.match(doctor.stderr, /Codex SessionStart 必须且只能接一条受管 JSON 开机适配器/);
   assert.match(doctor.stderr, /Codex PreToolUse 必须且只能接一条受管施工许可适配器/);
@@ -751,7 +751,7 @@ test("doctor rejects legacy Codex SessionStart and PreToolUse wiring", () => {
 test("Boot and doctor reject extra unknown SessionStart or PreToolUse hooks", () => {
   const dir = project();
   assert.equal(run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
   ]).status, 0);
   const hooksPath = join(dir, ".codex/hooks.json");
   const hooks = JSON.parse(readFileSync(hooksPath, "utf8"));
@@ -764,7 +764,7 @@ test("Boot and doctor reject extra unknown SessionStart or PreToolUse hooks", ()
   assert.match(JSON.parse(session.stdout).systemMessage, /开机自检失败/);
   assert.doesNotMatch(JSON.parse(session.stdout).systemMessage, /已签发施工许可$/);
 
-  const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  const doctor = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", dir]);
   assert.notEqual(doctor.status, 0);
   assert.match(doctor.stderr, /SessionStart 必须且只能接一条/);
   assert.match(doctor.stderr, /PreToolUse 必须且只能接一条/);
@@ -773,7 +773,7 @@ test("Boot and doctor reject extra unknown SessionStart or PreToolUse hooks", ()
 test("Boot refuses an admission when the project instance verifier fails", () => {
   const dir = project();
   assert.equal(run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
   ]).status, 0);
   writeFileSync(join(dir, "scripts/governance-verify.mjs"), "#!/usr/bin/env node\nconsole.error('fixture project gate failed');\nprocess.exit(9);\n");
   const session = run(process.execPath, [join(dir, "scripts/governance-hooks/session-start-codex.mjs")], dir);
@@ -786,7 +786,7 @@ test("Boot refuses an admission when the project instance verifier fails", () =>
 test("Stop falls back to a visible report hint instead of looping forever on repeated failure", () => {
   const dir = project();
   assert.equal(run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
   ]).status, 0);
   writeFileSync(join(dir, "governance/policy.json"), "{\n", "utf8");
   const hook = join(dir, "scripts/governance-hooks/stop.mjs");
@@ -811,9 +811,9 @@ test("Stop falls back to a visible report hint instead of looping forever on rep
 test("doctor warns about Codex trust for claude-code runtime because v3.4 installs Codex hooks too", () => {
   const dir = project();
   assert.equal(run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "claude-code", "--profile", "lite", "--write"
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "claude-code", "--profile", "lite", "--write"
   ]).status, 0);
-  const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  const doctor = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", dir]);
   assert.equal(doctor.status, 0, doctor.stderr);
   assert.match(doctor.stderr, /Codex项目Hook写入后必须在新会话用 \/hooks 审核并信任当前哈希/);
 });
@@ -821,7 +821,7 @@ test("doctor warns about Codex trust for claude-code runtime because v3.4 instal
 test("doctor/lint do not leak ambiguous origin branch noise when a remote exists without fetched refs", () => {
   const dir = project();
   assert.equal(run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"
   ]).status, 0);
   assert.equal(run("git", ["remote", "add", "origin", "https://example.invalid/demo.git"], dir).status, 0);
 
@@ -829,14 +829,14 @@ test("doctor/lint do not leak ambiguous origin branch noise when a remote exists
   assert.equal(lint.status, 0, lint.stderr);
   assert.doesNotMatch(lint.stdout + lint.stderr, /ambiguous argument|unknown revision/);
 
-  const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  const doctor = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", dir]);
   assert.equal(doctor.status, 0, doctor.stderr);
   assert.doesNotMatch(doctor.stdout + doctor.stderr, /ambiguous argument|unknown revision/);
 });
 
 test("Claude Code Standard installs shared gates and passes doctor", () => {
   const dir = project();
-  const init = run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "claude-code", "--profile", "standard", "--write"]);
+  const init = run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "claude-code", "--profile", "standard", "--write"]);
   assert.equal(init.status, 0, init.stderr);
   assert.match(readFileSync(join(dir, "CLAUDE.md"), "utf8"), /governance\.lock\.json/);
   assert.equal(readFileSync(join(dir, "AGENTS.md"), "utf8"), readFileSync(join(dir, "CLAUDE.md"), "utf8"));
@@ -852,13 +852,13 @@ test("Claude Code Standard installs shared gates and passes doctor", () => {
   const lint = run(process.execPath, [join(dir, "scripts/governance-lint.mjs"), "--root", dir], dir);
   assert.equal(lint.status, 0, lint.stderr);
   assert.doesNotMatch(lint.stdout + lint.stderr, /死链/);
-  const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  const doctor = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", dir]);
   assert.equal(doctor.status, 0, doctor.stderr);
 });
 
 test("SessionStart defaults to compact claim output and expands with --verbose", () => {
   const dir = project();
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "standard", "--write"]).status, 0);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "standard", "--write"]).status, 0);
   mkdirSync(join(dir, ".git", "governance-claims"), { recursive: true });
   const now = new Date().toISOString();
   for (const claim of [
@@ -953,12 +953,12 @@ test("Standard profile carries no Codex/OpenAI CI stowaway outside Codex runtime
 
   for (const runtime of ["claude-code", "generic"]) {
     const dir = project();
-    assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", runtime, "--profile", "standard", "--write"]).status, 0);
+    assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", runtime, "--profile", "standard", "--write"]).status, 0);
     assert.deepEqual(findLeaks(dir), [], `${runtime}+standard 不应残留 codex/openai 引用`);
   }
 
   const codexDir = project();
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", codexDir, "--runtime", "codex", "--profile", "standard", "--write"]).status, 0);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", codexDir, "--runtime", "codex", "--profile", "standard", "--write"]).status, 0);
   assert.ok(existsSync(join(codexDir, ".github/codex/prompts/governance-review.md")));
   assert.match(readFileSync(join(codexDir, ".github/workflows/governance.yml"), "utf8"), /ai-review:/);
 });
@@ -966,20 +966,20 @@ test("Standard profile carries no Codex/OpenAI CI stowaway outside Codex runtime
 test("doctor rejects an old instruction file that init skipped", () => {
   const dir = project();
   writeFileSync(join(dir, "AGENTS.md"), "# old instructions\n");
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
-  const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
+  const doctor = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", dir]);
   assert.notEqual(doctor.status, 0);
   assert.match(doctor.stderr, /仍未对齐v3执行宪法/);
 });
 
 test("doctor reports lock version drift when playbookVersion不匹配", () => {
   const dir = project();
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
   const lockPath = join(dir, "governance.lock.json");
   const lock = JSON.parse(readFileSync(lockPath, "utf8"));
   lock.playbookVersion = "0.0.0";
   writeFileSync(lockPath, JSON.stringify(lock, null, 2) + "\n");
-  const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  const doctor = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", dir]);
   assert.notEqual(doctor.status, 0);
   assert.match(doctor.stderr, /playbookVersion.*漂移/);
   assert.match(doctor.stderr, /普通 init 不会覆盖旧文件，禁止直接 --force/);
@@ -987,25 +987,25 @@ test("doctor reports lock version drift when playbookVersion不匹配", () => {
 
 test("doctor rejects a mismatched kit fingerprint", () => {
   const dir = project();
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
   const lockPath = join(dir, "governance.lock.json");
   const lock = JSON.parse(readFileSync(lockPath, "utf8"));
   lock.kitFingerprint = "sha256:not-the-installed-kit";
   writeFileSync(lockPath, JSON.stringify(lock, null, 2) + "\n");
-  const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  const doctor = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", dir]);
   assert.notEqual(doctor.status, 0);
   assert.match(doctor.stderr, /kitFingerprint 漂移/);
 });
 
 test("requirements-mode local/external 由init与doctor联动", () => {
   const local = project();
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", local, "--runtime", "generic", "--profile", "lite", "--write"]).status, 0);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", local, "--runtime", "generic", "--profile", "lite", "--write"]).status, 0);
   const localBacklog = readFileSync(join(local, "docs/requirements/backlog.md"), "utf8");
   assert.match(localBacklog, /^#\s*需求\s*Backlog/m);
   assert.match(localBacklog, /^>\s*当前无已受理需求。$/m);
   assert.ok(existsSync(join(local, "docs/requirements/README.md")));
   assert.ok(existsSync(join(local, "docs/requirements/specs/_TEMPLATE.md")));
-  const localDoctor = run(process.execPath, ["scripts/doctor.mjs", "--target", local]);
+  const localDoctor = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", local]);
   assert.equal(localDoctor.status, 0, localDoctor.stderr);
   mkdirSync(join(local, "docs/requirements/specs"), { recursive: true });
   writeFileSync(
@@ -1017,13 +1017,13 @@ test("requirements-mode local/external 由init与doctor联动", () => {
     "- [ ] REQ-2026-001 | owner: team-a | priority: P1 | title: 交付一个可验收结果\n  - source_refs: customer-brief.md\n  - spec_refs: specs/REQ-2026-001-demo.md\n  - acceptance: 通过可执行验收清单\n  - evidence: pending",
   );
   writeFileSync(join(local, "docs/requirements/backlog.md"), activeBacklog);
-  const activeDoctor = run(process.execPath, ["scripts/doctor.mjs", "--target", local]);
+  const activeDoctor = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", local]);
   assert.equal(activeDoctor.status, 0, activeDoctor.stderr);
   writeFileSync(
     join(local, "docs/requirements/backlog.md"),
     activeBacklog.replace("## 进行中需求\n", "## 进行中需求\n\n> 当前无已受理需求。\n"),
   );
-  const conflictingDoctor = run(process.execPath, ["scripts/doctor.mjs", "--target", local]);
+  const conflictingDoctor = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", local]);
   assert.notEqual(conflictingDoctor.status, 0);
   assert.match(conflictingDoctor.stderr, /不能同时声明空状态和进行中需求/);
   const localPolicy = JSON.parse(readFileSync(join(local, "governance/policy.json"), "utf8"));
@@ -1033,7 +1033,7 @@ test("requirements-mode local/external 由init与doctor联动", () => {
 
   const external = project();
   const invalid = run(process.execPath, [
-    "scripts/init.mjs",
+    "scripts/init-v4.mjs",
     "--target", external,
     "--runtime", "generic",
     "--profile", "lite",
@@ -1044,7 +1044,7 @@ test("requirements-mode local/external 由init与doctor联动", () => {
   assert.notEqual(invalid.status, 0);
   assert.equal(
     run(process.execPath, [
-      "scripts/init.mjs",
+      "scripts/init-v4.mjs",
       "--target", external,
       "--runtime", "generic",
       "--profile", "lite",
@@ -1059,7 +1059,7 @@ test("requirements-mode local/external 由init与doctor联动", () => {
   assert.match(externalIndex, new RegExp(`\\| 需求 \\| \\[需求\\]\\(${requirementsSource}\\) \\|`));
   const hasBacklog = existsSync(join(external, "docs/requirements/backlog.md"));
   assert.equal(hasBacklog, false);
-  const externalDoctor = run(process.execPath, ["scripts/doctor.mjs", "--target", external]);
+  const externalDoctor = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", external]);
   assert.equal(externalDoctor.status, 0, externalDoctor.stderr);
   const externalPolicy = JSON.parse(readFileSync(join(external, "governance/policy.json"), "utf8"));
   assert.equal(externalPolicy.requirements.mode, "external");
@@ -1070,10 +1070,10 @@ test("requirements-mode local/external 由init与doctor联动", () => {
 test("doctor ignores installer-owned TODO examples but still reports a project TODO", () => {
   const dir = project();
   assert.equal(run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "standard", "--write"
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "standard", "--write"
   ]).status, 0);
 
-  const cleanDoctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  const cleanDoctor = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", dir]);
   assert.equal(cleanDoctor.status, 0, cleanDoctor.stderr);
   assert.doesNotMatch(cleanDoctor.stderr, /docs\/requirements\/README\.md/);
   assert.doesNotMatch(cleanDoctor.stderr, /docs\/requirements\/specs\/_TEMPLATE\.md/);
@@ -1082,7 +1082,7 @@ test("doctor ignores installer-owned TODO examples but still reports a project T
   for (const file of ["AGENTS.md", "CLAUDE.md"]) {
     writeFileSync(join(dir, file), readFileSync(join(dir, file), "utf8") + projectTodo);
   }
-  const todoDoctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  const todoDoctor = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", dir]);
   assert.equal(todoDoctor.status, 0, todoDoctor.stderr);
   assert.match(todoDoctor.stderr, /仍有待项目化内容/);
   assert.match(todoDoctor.stderr, /AGENTS\.md/);
@@ -1092,7 +1092,7 @@ test("doctor ignores installer-owned TODO examples but still reports a project T
 test("doctor ignores code examples and changelog history without weakening TODO detection", () => {
   const dir = project();
   assert.equal(run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "standard", "--write"
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "standard", "--write"
   ]).status, 0);
 
   for (const file of ["AGENTS.md", "CLAUDE.md"]) {
@@ -1102,12 +1102,12 @@ test("doctor ignores code examples and changelog history without weakening TODO 
       "本项目为团队提供可审计的治理脚手架，当前阶段聚焦稳定交付和可验证门禁。"
     ).replace("- TODO(owner): 添加项目特定红线；没有就删除本行。\n", ""));
   }
-  const confirmed = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  const confirmed = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", dir]);
   assert.equal(confirmed.status, 0, confirmed.stderr);
   assert.doesNotMatch(confirmed.stderr, /仍有待项目化内容: .*\b(?:AGENTS|CLAUDE)\.md/);
 
   writeFileSync(join(dir, "CHANGELOG.md"), "\nTODO(owner): historical note\n待负责人确认\n", { flag: "a" });
-  const withHistory = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  const withHistory = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", dir]);
   assert.equal(withHistory.status, 0, withHistory.stderr);
   assert.doesNotMatch(withHistory.stderr, /CHANGELOG\.md/);
 
@@ -1121,14 +1121,14 @@ test("doctor ignores code examples and changelog history without weakening TODO 
   for (const file of ["AGENTS.md", "CLAUDE.md"]) {
     writeFileSync(join(dir, file), `${readFileSync(join(dir, file), "utf8")}\n${codeExamples}`);
   }
-  const withExamples = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  const withExamples = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", dir]);
   assert.equal(withExamples.status, 0, withExamples.stderr);
   assert.doesNotMatch(withExamples.stderr, /仍有待项目化内容: .*AGENTS\.md/);
 
   for (const file of ["AGENTS.md", "CLAUDE.md"]) {
     writeFileSync(join(dir, file), `${readFileSync(join(dir, file), "utf8")}\nTODO(owner): 测试\n`);
   }
-  const withProjectTodo = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  const withProjectTodo = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", dir]);
   assert.equal(withProjectTodo.status, 0, withProjectTodo.stderr);
   assert.match(withProjectTodo.stderr, /仍有待项目化内容/);
   assert.match(withProjectTodo.stderr, /AGENTS\.md/);
@@ -1136,7 +1136,7 @@ test("doctor ignores code examples and changelog history without weakening TODO 
 
 test("local semantic requirements checker cannot be replaced with a successful custom validator", () => {
   const dir = project();
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]).status, 0);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]).status, 0);
   const policyPath = join(dir, "governance/policy.json");
   const policy = JSON.parse(readFileSync(policyPath, "utf8"));
   policy.requirements.validator = [["true"]];
@@ -1150,7 +1150,7 @@ test("local semantic requirements checker cannot be replaced with a successful c
 test("credential derived files are a git-check-ignore hard gate", () => {
   const dir = project();
   writeFileSync(join(dir, ".gitignore"), ".env.local\n");
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]).status, 0);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]).status, 0);
   for (const lintScript of [join(dir, "scripts/governance-lint.mjs"), "scripts/governance-lint.mjs"]) {
     const lint = run(process.execPath, [lintScript, "--root", dir], kit);
     assert.notEqual(lint.status, 0, lintScript);
@@ -1163,7 +1163,7 @@ test("external mode rejects pointer drift across policy, instruction, and docs i
   const dir = project();
   const source = "https://issues.example.com/requirements";
   assert.equal(run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
     "--requirements-mode", "external", "--requirements-source", source, "--write",
   ]).status, 0);
   writeFileSync(join(dir, "AGENTS.md"), readFileSync(join(dir, "AGENTS.md"), "utf8").replace(source, "https://wrong.example.com/requirements"));
@@ -1178,14 +1178,14 @@ test("ordinary init preserves an installed external policy and lock when require
   const dir = project();
   const source = "https://issues.example.com/requirements";
   assert.equal(run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
     "--requirements-mode", "external", "--requirements-source", source, "--write",
   ]).status, 0);
   const policyPath = join(dir, "governance/policy.json");
   const lockPath = join(dir, "governance.lock.json");
   const beforePolicy = readFileSync(policyPath, "utf8");
   const beforeLock = readFileSync(lockPath, "utf8");
-  const rerun = run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]);
+  const rerun = run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]);
   assert.equal(rerun.status, 0, rerun.stderr);
   assert.equal(readFileSync(policyPath, "utf8"), beforePolicy);
   assert.equal(readFileSync(lockPath, "utf8"), beforeLock);
@@ -1194,7 +1194,7 @@ test("ordinary init preserves an installed external policy and lock when require
 
 test("local requirements source must match the built-in checker authority", () => {
   const dir = project();
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]).status, 0);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]).status, 0);
   const policyPath = join(dir, "governance/policy.json");
   const policy = JSON.parse(readFileSync(policyPath, "utf8"));
   policy.requirements.source = "docs/other-requirements.md";
@@ -1208,7 +1208,7 @@ test("local requirements source must match the built-in checker authority", () =
 
 test("requirements validator rejects non-array shapes instead of silently disabling project checks", () => {
   const dir = project();
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]).status, 0);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]).status, 0);
   const policyPath = join(dir, "governance/policy.json");
   const policy = JSON.parse(readFileSync(policyPath, "utf8"));
   policy.requirements.validator = "true";
@@ -1222,9 +1222,9 @@ test("requirements validator rejects non-array shapes instead of silently disabl
 
 test("ordinary init refuses to half-migrate an installed local project to external", () => {
   const dir = project();
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]).status, 0);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]).status, 0);
   const result = run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
     "--requirements-mode", "external", "--requirements-source", "https://issues.example.com/requirements", "--write",
   ]);
   assert.notEqual(result.status, 0);
@@ -1238,7 +1238,7 @@ test("ordinary init refuses to half-migrate an installed external project to loc
   const dir = project();
   const source = "https://issues.example.com/requirements";
   assert.equal(run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
     "--requirements-mode", "external", "--requirements-source", source, "--write",
   ]).status, 0);
   const policyPath = join(dir, "governance/policy.json");
@@ -1253,7 +1253,7 @@ test("ordinary init refuses to half-migrate an installed external project to loc
   assert.ok(!existsSync(requirementsDir));
 
   const result = run(process.execPath, [
-    "scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
+    "scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite",
     "--requirements-mode", "local", "--write",
   ]);
 
@@ -1269,7 +1269,7 @@ test("ordinary init refuses to half-migrate an installed external project to loc
 
 test("top-level allowlist catches repository clutter", () => {
   const dir = project();
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]).status, 0);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]).status, 0);
   const policyPath = join(dir, "governance/policy.json");
   const policy = JSON.parse(readFileSync(policyPath, "utf8"));
   policy.allowedTopLevelEntries = readdirSync(dir).filter((x) => x !== ".git");
@@ -1282,14 +1282,14 @@ test("top-level allowlist catches repository clutter", () => {
 
 test("Generic Lite does not install Standard pre-commit machinery", () => {
   const dir = project();
-  const init = run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]);
+  const init = run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "generic", "--profile", "lite", "--write"]);
   assert.equal(init.status, 0, init.stderr);
   assert.ok(!existsSync(join(dir, ".githooks/pre-commit")));
 });
 
 test("Standard heartbeat is scheduled and counts table entries", () => {
   const dir = project();
-  const init = run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "standard", "--write"]);
+  const init = run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "standard", "--write"]);
   assert.equal(init.status, 0, init.stderr);
   writeFileSync(join(dir, "governance/incidents.md"), "| 日期 | 现象 |\n|---|---|\n| 2026-07-11 | example |\n");
   // 问题队列是 `##` 标题制(v3.2.0 起,与跨项目收件箱聚合器同一判据):一问一标题,标题行含「已裁决」即闭环
@@ -1306,8 +1306,8 @@ test("Standard heartbeat is scheduled and counts table entries", () => {
 
 test("High Assurance remains incomplete until CODEOWNERS is assigned", () => {
   const dir = project();
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "high-assurance", "--write"]).status, 0);
-  const doctor = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "high-assurance", "--write"]).status, 0);
+  const doctor = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", dir]);
   assert.notEqual(doctor.status, 0);
   assert.match(doctor.stderr, /CODEOWNERS仍是占位owner/);
 });
@@ -1315,18 +1315,18 @@ test("High Assurance remains incomplete until CODEOWNERS is assigned", () => {
 
 test("retired installedFiles entries do not resurrect removed capabilities", () => {
   const dir = project();
-  assert.equal(run(process.execPath, ["scripts/init.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
+  assert.equal(run(process.execPath, ["scripts/init-v4.mjs", "--target", dir, "--runtime", "codex", "--profile", "lite", "--write"]).status, 0);
   const path = join(dir, "governance.lock.json");
   const lock = JSON.parse(readFileSync(path, "utf8"));
   lock.installedFiles.push("retired-capability.md");
   writeFileSync(path, JSON.stringify(lock));
-  const healthy = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  const healthy = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", dir]);
   assert.equal(healthy.status, 0, healthy.stderr);
   const hooksPath = join(dir, ".codex/hooks.json");
   const hooks = JSON.parse(readFileSync(hooksPath, "utf8"));
   delete hooks.hooks.Stop;
   writeFileSync(hooksPath, JSON.stringify(hooks));
-  const broken = run(process.execPath, ["scripts/doctor.mjs", "--target", dir]);
+  const broken = run(process.execPath, ["scripts/doctor-v4.mjs", "--target", dir]);
   assert.notEqual(broken.status, 0);
   assert.match(broken.stderr, /Stop/);
 });

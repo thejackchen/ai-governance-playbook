@@ -39,10 +39,12 @@
       "sourcePaths": [
         "scripts/bootstrap.mjs",
         "scripts/doctor.mjs",
+        "scripts/doctor-v4.mjs",
         "scripts/governance-lint.mjs",
         "scripts/governance-status.mjs",
         "scripts/governance-verify.mjs",
         "scripts/init.mjs",
+        "scripts/init-v4.mjs",
         "scripts/requirements-check.mjs",
         "scripts/requirements-check.test.mjs",
         "scripts/upgrade.mjs",
@@ -175,7 +177,6 @@
       "boundaries": "检查和探针均有显式范围与时限；不把网络可达性当作业务验收，不输出响应正文或秘密。",
       "sourcePaths": [
         "scripts/lib.mjs",
-        "scripts/lib/boot-admission.mjs",
         "scripts/lib/extra-repo-facts.mjs",
         "scripts/lib/integration-line.mjs",
         "scripts/lib/playbook-update.mjs",
