@@ -1,4 +1,6 @@
-# 规则台账
+# v4 历史规则登记（停写）
+
+> 2026-09-26 起仅作历史证据。当前 Lite 防线以 CORE 与 governance.mjs 的行为为准；表内旧载体不再作为本仓开工义务。
 
 > Profile预算：24条。规则必须写清触发、判定和效果；“写在AGENTS里”不是完整载体描述。
 
@@ -21,3 +23,5 @@
 | R15 | 开机自检通过才允许施工 | S1/S3/S4 | session/action | 项目验证失败、任一运行时未经正确适配器注入、受管事件含额外 Hook、许可缺失/过期、版本或关键治理载体变化 | block | universal admission + 三运行时 SessionStart/PreToolUse adapters + 项目验证器 | Codex/Claude/Grok 共用项目级许可；治理控制面始终需认领；读与诊断放行；许可不进 git、不跨项目复用 | 2026-08-26 v3.6.1 假发证与 v3.7.2 Grok 施工面无许可两次零上下文验收 |
 | R16 | 项目发现只投影已声明事实 | S1/S3 | session/manual/commit | catalog、入口、凭据ID或显式范围缺失/无效，或把未声明范围当作全量覆盖 | block/warn | `project-catalog`/`discovery-map`/`catalog-search` + `governance-verify --fast` | 未配置就报告未配置；省略 `sourceRoots`/工作线时保持 unknown；地图不读凭据正文；项目资产留本地 | REQ-GOV-004；项目发现能力退出或被更强事实索引取代时复审 |
 | R17 | 可选文件安装必须显式且可回滚 | S2/S4 | manual/action | 选择直接安装工具时未选能力、请求 `full`、目标/来源脏或未登记定制，或验证失败后仍写入采用状态 | block | `scripts/upgrade.mjs --capability discovery --write` + capability contract test | 默认只读；仅安装 8 个 discovery 文件；不改 base version/admission/Hook/policy/项目事实；失败整批回滚；`file-install-only` 不等于语义采用；本规则不要求项目 AI 适配前逐能力请求授权 | REQ-GOV-004；禁止脚本覆盖与自主语义适配分开；文件安装接口变化时复审 |
+
+> 2026-09-26：R15 在母版自托管停用；上表保留历史，不再发证。旧载体只在显式 v4 兼容安装路径中维护。

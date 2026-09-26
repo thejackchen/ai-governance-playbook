@@ -243,7 +243,7 @@ try {
   finish();
 }
 
-for (const p of lock.installedFiles || []) required(p);
+// installedFiles 是历史记录，不是强制存在清单；实际采用的运行时仍检查接线。
 validateCredentialIgnoreRules();
 if (lock.runtime === "codex") {
   ["AGENTS.md", "CLAUDE.md", ".codex/config.toml", ".codex/hooks.json", ".codex/rules/default.rules"].forEach(required);

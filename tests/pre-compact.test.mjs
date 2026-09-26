@@ -5,11 +5,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { formatPreCompactReport, inspectPreCompact, isEphemeralPath } from "../scripts/governance-hooks/pre-compact.mjs";
+import { formatPreCompactReport, inspectPreCompact, isEphemeralPath } from "../templates/common/scripts/governance-hooks/pre-compact.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const script = join(root, "scripts/governance-hooks/pre-compact.mjs");
-const codexScript = join(root, "scripts/governance-hooks/pre-compact-codex.mjs");
+const script = join(root, "templates/common/scripts/governance-hooks/pre-compact.mjs");
+const codexScript = join(root, "templates/common/scripts/governance-hooks/pre-compact-codex.mjs");
 
 function gitRepo() {
   const dir = mkdtempSync(join(tmpdir(), "pre-compact-"));

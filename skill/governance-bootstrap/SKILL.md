@@ -3,17 +3,12 @@ name: governance-bootstrap
 description: 为新项目安装或为存量项目迁移AI治理。用于建立治理、对齐治理、升级治理载体、安装Codex或Claude Code Hooks/CI、审计旧规则、选择Lite/Standard/High Assurance Profile，以及使用ai-governance-playbook验证治理闭环。
 ---
 
-# Governance Bootstrap
+# 治理安装薄入口
 
-以本仓库为唯一流程权威，不在skill内复制安装细节。
+1. 读取母版 BOOTSTRAP.md 和 CORE.md，按任务查看 adapters/README.md。
+2. 新装默认 Lite，确认实际工具后用 --tools 生成只读计划，明确写入范围再 --write。
+3. 存量保留真实意图和 WIP，按 BOOTSTRAP 三步迁移，不用模板重置事实。
+4. 运行真实自检、项目原测试、客户端正反探针和独立无上下文考试；缺 gitleaks 即失败。
+5. 分别说明文件、自检、真实 hook、业务和发布证据；未验不代证。
 
-1. 新项目先读取`BOOTSTRAP.md`；存量或需要解释时再读取仓库当前`setup.md`、`CORE.md`和`CORE.md 附(运行时适配)`。
-2. 按`BOOTSTRAP.md`调用`detectRuntime()`并默认使用Standard；只有明确是极简原型时才按setup选择其它Profile。
-3. 存量项目先按`setup.md 附A(存量迁移)`逐条审计旧内容。
-4. 先运行`node scripts/init.mjs ...` dry-run，确认后加`--write`。
-5. 填写项目事实，启用并测试运行时Hooks/Rules/CI。
-6. 运行`node scripts/doctor.mjs --target <project>`并按`setup.md 附B(验收自检)`验收。
-7. 用无上下文AI执行真实案例；失败时修载体或判据，不泄露预期答案。
-8. 交付runtime/Profile、载体表、未安装项、验证证据和仍可绕过边界。
-
-保持skill简短；所有模板、命令和规则以仓库现读内容为准。
+本 Skill 不复制方法论，具体命令与验收只在 BOOTSTRAP。

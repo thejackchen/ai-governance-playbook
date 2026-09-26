@@ -1,6 +1,17 @@
 {
   "name": "lite",
-  "ruleBudget": 12,
-  "components": ["common", "runtime", "hooks", "doctor"],
-  "manualRequirements": []
+  "schemaVersion": 2,
+  "components": [
+    "constitution",
+    "cursor",
+    "session",
+    "single-runtime"
+  ],
+  "tools": "explicit",
+  "maxInstalledLines": 800,
+  "manualRequirements": [
+    "runtime-hook-trust",
+    "project-checks",
+    "independent-forward-test"
+  ]
 }

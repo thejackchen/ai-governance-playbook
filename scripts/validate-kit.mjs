@@ -2,11 +2,11 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { KIT_ROOT, walkFiles } from "./lib.mjs";
+import { KIT_ROOT, walkFiles, fingerprintKit } from "./lib.mjs";
 
 const errors = [];
 for (const p of [
-  "CORE.md", "setup.md", "VERSION",
+  "CORE.md", "BOOTSTRAP.md", "VERSION",
   "profiles/lite.json", "profiles/standard.json", "profiles/high-assurance.json",
   "adapters/codex/adapter.json", "adapters/claude-code/adapter.json", "adapters/generic/adapter.json"
 ]) if (!existsSync(join(KIT_ROOT, p))) errors.push(`缺少kit文件: ${p}`);
@@ -17,11 +17,12 @@ if (existsSync(join(KIT_ROOT, "VERSION"))) {
   const pkg = JSON.parse(readFileSync(join(KIT_ROOT, "package.json"), "utf8"));
   if (pkg.version !== anchor) errors.push(`版本漂移: VERSION锚点=${anchor}，package.json version=${pkg.version}`);
 
-  // 本仓库自托管v3安装产物，governance.lock.json.playbookVersion同样必须追平VERSION锚点，
+  // 本仓库自托管铭牌，governance.lock.json.playbookVersion同样必须追平VERSION锚点，
   // 否则下游对账（events/上游比对）会用一个过期版本号误判基版
   if (existsSync(join(KIT_ROOT, "governance.lock.json"))) {
     const lock = JSON.parse(readFileSync(join(KIT_ROOT, "governance.lock.json"), "utf8"));
     if (lock.playbookVersion !== anchor) errors.push(`自托管governance.lock.json版本漂移: VERSION锚点=${anchor}，playbookVersion=${lock.playbookVersion}`);
+    if (lock.kitFingerprint !== fingerprintKit()) errors.push("自托管governance.lock.json kitFingerprint 漂移");
   }
 }
 
@@ -42,50 +43,16 @@ for (const runtime of ["codex", "claude-code", "generic"]) {
   } catch (e) { errors.push(`${runtime} adapter无法解析: ${e.message}`); }
 }
 
-// root 自托管 hook 与 templates/common 副本必须字节一致(自托管不变式;root 副本保护本仓库自身,漂移即失守)
-for (const hook of ["session-start.mjs", "session-start-admission.mjs", "session-start-codex.mjs", "pre-tool-use.mjs", "pre-tool-use-admission.mjs", "pre-tool-use-codex.mjs", "stop.mjs", "pre-compact.mjs", "pre-compact-codex.mjs"]) {
-  const a = join(KIT_ROOT, "scripts/governance-hooks", hook);
-  const b = join(KIT_ROOT, "templates/common/scripts/governance-hooks", hook);
-  if (existsSync(a) && existsSync(b) && readFileSync(a, "utf8") !== readFileSync(b, "utf8")) {
-    errors.push(`root 与 templates/common 的 governance-hooks/${hook} 已漂移(必须字节一致)`);
-  }
-}
-for (const extra of [
-  "scripts/lib/extra-repo-facts.mjs",
-  "scripts/lib/integration-line.mjs",
-  "scripts/lib/boot-admission.mjs",
-  "scripts/governance-lint.mjs",
-]) {
-  const a = join(KIT_ROOT, extra);
-  const b = join(KIT_ROOT, "templates/common", extra);
-  if (existsSync(a) && existsSync(b) && readFileSync(a, "utf8") !== readFileSync(b, "utf8")) {
-    errors.push(`root 与 templates/common 的 ${extra} 已漂移(必须字节一致)`);
-  }
-}
+// 自托管允许选择不同 Profile；接线行为由集成测试验证，不以副本字节相等锁死演化。
 
-// 发现能力与项目验证器是发布面的一部分；root 自托管和 templates/common
-// 缺任一侧都必须报错，不能因双方都存在才比较而静默漏掉缺件。
-for (const required of [
-  "scripts/lib/catalog-search.mjs",
-  "scripts/lib/discovery-map.mjs",
-  "scripts/lib/docs-index.mjs",
-  "scripts/lib/environment-check.mjs",
-  "scripts/lib/project-catalog.mjs",
-  "scripts/project-catalog.mjs",
-  "scripts/discovery-map.mjs",
-  "scripts/environment-check.mjs",
-  "scripts/governance-verify.mjs",
-]) {
-  const rootFile = join(KIT_ROOT, required);
-  const templateFile = join(KIT_ROOT, "templates/common", required);
-  const rootExists = existsSync(rootFile);
-  const templateExists = existsSync(templateFile);
-  if (!rootExists) errors.push(`缺少root自托管文件: ${required}`);
-  if (!templateExists) errors.push(`缺少templates/common文件: ${required}`);
-  if (rootExists && templateExists && readFileSync(rootFile, "utf8") !== readFileSync(templateFile, "utf8")) {
-    errors.push(`root 与 templates/common 的 ${required} 已漂移(必须字节一致)`);
-  }
+for (const [file, limit] of [["CORE.md",150],["BOOTSTRAP.md",120],["templates/lite/AGENTS.md",80]]) {
+  if (readFileSync(join(KIT_ROOT,file),"utf8").trimEnd().split("\n").length > limit) errors.push(`${file} 超过 ${limit} 行`);
 }
+const version = readFileSync(join(KIT_ROOT,"VERSION"),"utf8").trim();
+const readme = readFileSync(join(KIT_ROOT,"README.md"),"utf8");
+// 已发布条目使用日期 · v版本 · 标题；Unreleased 和“候选”标题不冒充已发布版本。
+const release = readFileSync(join(KIT_ROOT,"CHANGELOG.md"),"utf8").match(/^## \d{4}-\d{2}-\d{2} · v(\d+\.\d+\.\d+) ·/m)?.[1];
+if (!readme.includes(`**${version}**`) || release !== version) errors.push("发布版本与 README/CHANGELOG 漂移（Unreleased 不算发布）");
 
 for (const error of errors) console.error(`[kit] ERROR ${error}`);
 console.log(`[kit] ${errors.length} error`);
